@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.mtmux.core.SshIntegrationTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-09-23T15:46:22.383Z" hostname="zyl-Super-Server" time="2.108">
+  <properties/>
+  <testcase name="named discovery and history do not alter tmux focus or execute names" classname="dev.mtmux.core.SshIntegrationTest" time="0.611"/>
+  <testcase name="ordinary shell executes draft and enter as one write and returns output" classname="dev.mtmux.core.SshIntegrationTest" time="0.122"/>
+  <testcase name="ed25519 and encrypted OpenSSH keys authenticate and execute UTF8" classname="dev.mtmux.core.SshIntegrationTest" time="0.429"/>
+  <testcase name="PTY resize input and explicit disconnect work without replay" classname="dev.mtmux.core.SshIntegrationTest" time="0.114"/>
+  <testcase name="bound replies never follow desktop focus and reject stale targets" classname="dev.mtmux.core.SshIntegrationTest" time="0.797"/>
+  <testcase name="unknown and changed host keys block before authentication" classname="dev.mtmux.core.SshIntegrationTest" time="0.034"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

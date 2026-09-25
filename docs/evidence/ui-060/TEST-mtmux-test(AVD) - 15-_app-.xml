@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuite name="dev.mtmux.TerminalUiTest" tests="24" failures="0" errors="0" skipped="0" time="131.006" timestamp="2026-09-24T13:56:09" hostname="localhost">
+  <properties>
+    <property name="device" value="mtmux-test(AVD) - 15" />
+    <property name="flavor" value="" />
+    <property name="project" value=":app" />
+  </properties>
+  <testcase name="credentialCipherRejectsTamperingAndWrongServer" classname="dev.mtmux.TerminalUiTest" time="1.829" />
+  <testcase name="connectionErrorsIdentifyTargetAndJumpWithoutCredentialText" classname="dev.mtmux.TerminalUiTest" time="3.646" />
+  <testcase name="agentHintsAndQuickRepliesNeverSendWithoutConfirmation" classname="dev.mtmux.TerminalUiTest" time="9.193" />
+  <testcase name="discoveryIntervalPersistsAndRespectsBoundaryAndTargetChanges" classname="dev.mtmux.TerminalUiTest" time="0.706" />
+  <testcase name="tmuxNamesAndHistoryIncludeOutputBeforeAttach" classname="dev.mtmux.TerminalUiTest" time="2.64" />
+  <testcase name="nativeSelectionCopiesImmutableUnicodeTextWithoutRemoteInput" classname="dev.mtmux.TerminalUiTest" time="4.523" />
+  <testcase name="folderValidationAndProfileDeletionDoNotLeaveMemberships" classname="dev.mtmux.TerminalUiTest" time="1.232" />
+  <testcase name="terminalRendersBytesAndSurvivesConfigurationPanelAndKeyboard" classname="dev.mtmux.TerminalUiTest" time="5.149" />
+  <testcase name="folderRefreshRespectsExternalEntryAndSavedCollapse" classname="dev.mtmux.TerminalUiTest" time="3.867" />
+  <testcase name="keyboardPreservesTopAnchorAndGridForHistoryAndAlternateScreen" classname="dev.mtmux.TerminalUiTest" time="20.46" />
+  <testcase name="draftIsRetainedWhenDesktopChangesPane" classname="dev.mtmux.TerminalUiTest" time="6.754" />
+  <testcase name="profilesRestoreEncryptedPasswordAndCanBeDeleted" classname="dev.mtmux.TerminalUiTest" time="3.214" />
+  <testcase name="sendButtonExecutesVisibleDraftAndClearsItOnlyAfterWrite" classname="dev.mtmux.TerminalUiTest" time="5.552" />
+  <testcase name="lightDarkAndSystemThemesPersistAndKeepTerminalContent" classname="dev.mtmux.TerminalUiTest" time="5.602" />
+  <testcase name="touchScrollAndClickOperateTheLiveTmuxTerminal" classname="dev.mtmux.TerminalUiTest" time="11.082" />
+  <testcase name="recentTaskSurvivesRecreationAndReconnectDoesNotReplayDraft" classname="dev.mtmux.TerminalUiTest" time="8.714" />
+  <testcase name="foldersSearchAndSortSurviveRecreationWithoutChangingConnections" classname="dev.mtmux.TerminalUiTest" time="6.904" />
+  <testcase name="remoteDisconnectPreservesOutputAndMarksItAsHistory" classname="dev.mtmux.TerminalUiTest" time="2.765" />
+  <testcase name="shellHistoryRespondsToTouchWithoutSendingInput" classname="dev.mtmux.TerminalUiTest" time="1.834" />
+  <testcase name="encryptedPrivateKeysRestoreAndConnectWithOneClick" classname="dev.mtmux.TerminalUiTest" time="1.835" />
+  <testcase name="recentTasksAreBoundedAndInvalidatedByProfileEditsAndDeletion" classname="dev.mtmux.TerminalUiTest" time="0.907" />
+  <testcase name="functionKeyPagesFillWidthAndDeliverAllTwelveKeysToBoundPane" classname="dev.mtmux.TerminalUiTest" time="5.527" />
+  <testcase name="homeCacheSettingsEditorAndTwoJumpConnectionWorkTogether" classname="dev.mtmux.TerminalUiTest" time="11.253" />
+  <testcase name="mouseEventsReachAFullScreenApplicationInsideTmux" classname="dev.mtmux.TerminalUiTest" time="2.864" />
+</testsuite>

@@ -1,0 +1,4 @@
+09-23 18:04:56.212  3861  3876 I System.out: TERMINAL_GEOMETRY native=464x479 web="{\"cols\":52,\"rows\":1,\"viewport\":[464,479],\"container\":[464,0],\"screen\":[441,16]}"
+09-23 18:05:11.638  3861  3876 E TestRunner: java.lang.AssertionError: Buffer contains text but Android terminal pixels are blank (0 green pixels); screenshot: /storage/emulated/0/Android/data/dev.mtmux.p0/files/ui-evidence/ssh-welcome-before-input.png
+09-23 18:04:39.491  3861  3876 I System.out: TERMINAL_GEOMETRY native=464x479 web="{\"cols\":52,\"rows\":1,\"viewport\":[464,479],\"container\":[464,0],\"screen\":[441,16]}"
+09-23 18:04:55.387  3861  3876 E TestRunner: java.lang.AssertionError: Buffer contains text but Android terminal pixels are blank (0 green pixels); screenshot: /storage/emulated/0/Android/data/dev.mtmux.p0/files/ui-evidence/local-terminal-output.png

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.mtmux.core.SshIntegrationTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-09-24T15:24:26.936Z" hostname="zyl-Super-Server" time="5.379">
+  <properties/>
+  <testcase name="resume restores exact window and pane without sending input or accepting rebuilt targets" classname="dev.mtmux.core.SshIntegrationTest" time="1.102"/>
+  <testcase name="server restart with identical session and pane IDs cannot resume old task" classname="dev.mtmux.core.SshIntegrationTest" time="0.304"/>
+  <testcase name="named discovery and history do not alter tmux focus or execute names" classname="dev.mtmux.core.SshIntegrationTest" time="0.532"/>
+  <testcase name="ordinary shell executes draft and enter as one write and returns output" classname="dev.mtmux.core.SshIntegrationTest" time="0.126"/>
+  <testcase name="ed25519 and encrypted OpenSSH keys authenticate and execute UTF8" classname="dev.mtmux.core.SshIntegrationTest" time="0.437"/>
+  <testcase name="batch snapshots arrive incrementally and preserve copy mode" classname="dev.mtmux.core.SshIntegrationTest" time="0.551"/>
+  <testcase name="two jump hosts verify each identity and carry exec and PTY without direct fallback" classname="dev.mtmux.core.SshIntegrationTest" time="1.344"/>
+  <testcase name="PTY resize input and explicit disconnect work without replay" classname="dev.mtmux.core.SshIntegrationTest" time="0.112"/>
+  <testcase name="bound replies never follow desktop focus and reject stale targets" classname="dev.mtmux.core.SshIntegrationTest" time="0.833"/>
+  <testcase name="invalid key fails locally with safe location and authentication guidance" classname="dev.mtmux.core.SshIntegrationTest" time="0.0"/>
+  <testcase name="unknown and changed host keys block before authentication" classname="dev.mtmux.core.SshIntegrationTest" time="0.036"/>
+  <system-out><![CDATA[BATCH_PROBE panes=10 channels=4 elapsedMs=296
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

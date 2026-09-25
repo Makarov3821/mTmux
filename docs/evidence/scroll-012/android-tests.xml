@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<testsuite name="dev.mtmux.TerminalUiTest" tests="10" failures="0" errors="0" skipped="0" time="40.495" timestamp="2026-09-23T15:14:53" hostname="localhost">
+  <properties>
+    <property name="device" value="mtmux-test(AVD) - 15" />
+    <property name="flavor" value="" />
+    <property name="project" value=":app" />
+  </properties>
+  <testcase name="credentialCipherRejectsTamperingAndWrongServer" classname="dev.mtmux.TerminalUiTest" time="2.68" />
+  <testcase name="tmuxNamesAndHistoryIncludeOutputBeforeAttach" classname="dev.mtmux.TerminalUiTest" time="4.926" />
+  <testcase name="terminalRendersBytesAndSurvivesConfigurationPanelAndKeyboard" classname="dev.mtmux.TerminalUiTest" time="6.182" />
+  <testcase name="profilesRestoreEncryptedPasswordAndCanBeDeleted" classname="dev.mtmux.TerminalUiTest" time="2.863" />
+  <testcase name="sendButtonExecutesVisibleDraftAndClearsItOnlyAfterWrite" classname="dev.mtmux.TerminalUiTest" time="5.651" />
+  <testcase name="touchScrollAndClickOperateTheLiveTmuxTerminal" classname="dev.mtmux.TerminalUiTest" time="7.335" />
+  <testcase name="remoteDisconnectPreservesOutputAndMarksItAsHistory" classname="dev.mtmux.TerminalUiTest" time="2.688" />
+  <testcase name="shellHistoryRespondsToTouchWithoutSendingInput" classname="dev.mtmux.TerminalUiTest" time="1.786" />
+  <testcase name="encryptedPrivateKeysRestoreAndConnectWithOneClick" classname="dev.mtmux.TerminalUiTest" time="2.212" />
+  <testcase name="mouseEventsReachAFullScreenApplicationInsideTmux" classname="dev.mtmux.TerminalUiTest" time="2.689" />
+</testsuite>

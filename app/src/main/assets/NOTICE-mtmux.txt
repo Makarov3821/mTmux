@@ -1,0 +1,11 @@
+mtmux 0.6.7-dev
+SPDX-License-Identifier: GPL-3.0-only
+
+mtmux original code is licensed under the GNU General Public License,
+version 3 only, not any later version. See LICENSE-mtmux.txt.
+This program is distributed without any warranty, including the implied
+warranties of merchantability or fitness for a particular purpose.
+
+Third-party components retain their respective licenses and notices.
+Corresponding source: https://github.com/Makarov3821/mTmux
+Version tag: v0.6.7-dev

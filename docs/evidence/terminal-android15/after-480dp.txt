@@ -1,0 +1,5 @@
+09-23 18:11:46.117  6772  6787 I System.out: TERMINAL_GEOMETRY native=464x479 web="{\"cols\":52,\"rows\":29,\"viewport\":[464,479],\"container\":[464,479],\"screen\":[441,464]}"
+09-23 18:11:48.018  6772  6787 I System.out: TERMINAL_GEOMETRY native=464x479 web="{\"cols\":52,\"rows\":29,\"viewport\":[464,479],\"container\":[464,479],\"screen\":[441,464]}"
+09-23 18:11:40.137  6772  6787 I System.out: TERMINAL_GEOMETRY native=464x479 web="{\"cols\":52,\"rows\":29,\"viewport\":[464,479],\"container\":[464,479],\"screen\":[441,464]}"
+09-23 18:11:41.684  6772  6787 I System.out: TERMINAL_GEOMETRY native=464x479 web="{\"cols\":52,\"rows\":29,\"viewport\":[464,479],\"container\":[464,479],\"screen\":[441,464]}"
+09-23 18:11:43.919  6772  6787 I System.out: TERMINAL_GEOMETRY native=464x479 web="{\"cols\":52,\"rows\":29,\"viewport\":[464,479],\"container\":[464,479],\"screen\":[441,464]}"

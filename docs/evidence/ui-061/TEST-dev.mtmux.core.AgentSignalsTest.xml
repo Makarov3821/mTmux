@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.mtmux.core.AgentSignalsTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-09-24T14:12:06.540Z" hostname="zyl-Super-Server" time="0.047">
+  <properties/>
+  <testcase name="snapshot lights require explicit cues and prefer newer evidence" classname="dev.mtmux.core.AgentSignalsTest" time="0.047"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

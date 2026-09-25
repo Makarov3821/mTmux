@@ -1,0 +1,2 @@
+09-23 23:07:22.398  3508  3523 I System.out: SLOW_DRAG stage=0 previous=0 position=0 trace="[[\"touchstart\",\"drag\",77.400390625]]"
+09-23 23:07:22.900  3508  3523 E TestRunner: java.lang.AssertionError: Held slow drag stopped at stage 0: 0 -> 0

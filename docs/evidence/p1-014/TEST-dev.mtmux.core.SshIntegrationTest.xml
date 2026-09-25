@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.mtmux.core.SshIntegrationTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-09-24T06:08:00.180Z" hostname="zyl-Super-Server" time="3.28">
+  <properties/>
+  <testcase name="resume restores exact window and pane without sending input or accepting rebuilt targets" classname="dev.mtmux.core.SshIntegrationTest" time="1.1"/>
+  <testcase name="server restart with identical session and pane IDs cannot resume old task" classname="dev.mtmux.core.SshIntegrationTest" time="0.298"/>
+  <testcase name="named discovery and history do not alter tmux focus or execute names" classname="dev.mtmux.core.SshIntegrationTest" time="0.393"/>
+  <testcase name="ordinary shell executes draft and enter as one write and returns output" classname="dev.mtmux.core.SshIntegrationTest" time="0.122"/>
+  <testcase name="ed25519 and encrypted OpenSSH keys authenticate and execute UTF8" classname="dev.mtmux.core.SshIntegrationTest" time="0.417"/>
+  <testcase name="PTY resize input and explicit disconnect work without replay" classname="dev.mtmux.core.SshIntegrationTest" time="0.109"/>
+  <testcase name="bound replies never follow desktop focus and reject stale targets" classname="dev.mtmux.core.SshIntegrationTest" time="0.81"/>
+  <testcase name="unknown and changed host keys block before authentication" classname="dev.mtmux.core.SshIntegrationTest" time="0.03"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

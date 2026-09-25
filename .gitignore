@@ -1,0 +1,59 @@
+# Gradle / Android local state and generated output
+.gradle/
+.kotlin/
+**/build/
+local.properties
+captures/
+.cxx/
+.externalNativeBuild/
+*.apk
+*.aab
+*.apks
+
+# Downloaded tools and dependencies
+/.tools/
+/downloads/
+node_modules/
+
+# IDE, editor and OS local files
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+/.agents/
+/.codex/
+
+# Local credentials, signing material and environment overrides
+*.jks
+*.keystore
+*.p12
+*.pfx
+key.properties
+keystore.properties
+signing.properties
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+.secrets/
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+*.key
+
+# Runtime/debug output and Python caches
+*.log
+*.hprof
+hs_err_pid*
+/logs/
+__pycache__/
+*.py[cod]
+.venv/
+
+# Keep Gradle wrapper JAR, npm lockfile, bundled terminal assets/licenses,
+# source tests, and curated docs/evidence under version control.

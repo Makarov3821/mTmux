@@ -1,0 +1,11 @@
+{'name': 'dev.mtmux.TerminalUiTest', 'tests': '10', 'failures': '0', 'errors': '0', 'skipped': '0', 'time': '37.2', 'timestamp': '2026-09-23T14:52:29', 'hostname': 'localhost'}
+credentialCipherRejectsTamperingAndWrongServer
+tmuxNamesAndHistoryIncludeOutputBeforeAttach
+terminalRendersBytesAndSurvivesConfigurationPanelAndKeyboard
+profilesRestoreEncryptedPasswordAndCanBeDeleted
+sendButtonExecutesVisibleDraftAndClearsItOnlyAfterWrite
+touchScrollAndClickOperateTheLiveTmuxTerminal
+remoteDisconnectPreservesOutputAndMarksItAsHistory
+shellHistoryRespondsToTouchWithoutSendingInput
+encryptedPrivateKeysRestoreAndConnectWithOneClick
+mouseEventsReachAFullScreenApplicationInsideTmux

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.mtmux.core.AgentSignalsTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-09-24T14:50:38.511Z" hostname="zyl-Super-Server" time="0.067">
+  <properties/>
+  <testcase name="Orca inspired title signals ignore names and stale shell titles" classname="dev.mtmux.core.AgentSignalsTest" time="0.054"/>
+  <testcase name="reported Kiro and OpenCode layouts and active controls" classname="dev.mtmux.core.AgentSignalsTest" time="0.006"/>
+  <testcase name="snapshot lights require explicit cues and prefer newer evidence" classname="dev.mtmux.core.AgentSignalsTest" time="0.007"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

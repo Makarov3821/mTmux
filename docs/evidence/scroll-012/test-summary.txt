@@ -1,0 +1,11 @@
+ on mtmux-test(AVD) - 15
+
+mtmux-test(AVD) - 15 Tests 2/10 completed. (0 skipped) (0 failed)
+mtmux-test(AVD) - 15 Tests 4/10 completed. (0 skipped) (0 failed)
+mtmux-test(AVD) - 15 Tests 6/10 completed. (0 skipped) (0 failed)
+mtmux-test(AVD) - 15 Tests 10/10 completed. (0 skipped) (0 failed)
+Finished 10 tests on mtmux-test(AVD) - 15
+
+BUILD SUCCESSFUL in 48s
+69 actionable tasks: 1 executed, 68 up-to-date
+PASS: disposable OpenSSH integration tests

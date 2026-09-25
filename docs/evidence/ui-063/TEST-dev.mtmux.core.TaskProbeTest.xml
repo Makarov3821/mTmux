@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.mtmux.core.TaskProbeTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-09-24T15:05:07.550Z" hostname="zyl-Super-Server" time="0.001">
+  <properties/>
+  <testcase name="framing preserves names and verifies before and after identity" classname="dev.mtmux.core.TaskProbeTest" time="0.001"/>
+  <testcase name="batch size and shell targets are bounded" classname="dev.mtmux.core.TaskProbeTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

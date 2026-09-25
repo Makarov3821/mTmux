@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="dev.mtmux.core.CoreTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-09-24T15:05:02.102Z" hostname="zyl-Super-Server" time="0.03">
+  <properties/>
+  <testcase name="quote round trips shell metacharacters without execution" classname="dev.mtmux.core.CoreTest" time="0.024"/>
+  <testcase name="invalid connection parameters fail before network use" classname="dev.mtmux.core.CoreTest" time="0.0"/>
+  <testcase name="unknown host requires confirmation and changed key is rejected" classname="dev.mtmux.core.CoreTest" time="0.002"/>
+  <testcase name="attach accepts only exact session IDs and never detaches another client" classname="dev.mtmux.core.CoreTest" time="0.001"/>
+  <testcase name="disconnect and reconnect invalidate every old input token" classname="dev.mtmux.core.CoreTest" time="0.001"/>
+  <testcase name="discovery fails closed on corrupt or injected metadata" classname="dev.mtmux.core.CoreTest" time="0.001"/>
+  <testcase name="color replies go to terminal client but OSC commands do not" classname="dev.mtmux.core.CoreTest" time="0.001"/>
+  <testcase name="only complete device attributes replies bypass pane paste" classname="dev.mtmux.core.CoreTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
