@@ -1,6 +1,6 @@
 # 0.1.1 Android 15 证据
 
-完整环境、边界和用户 tmux 配置见 [本次报告](../../p1-011.md)。[测试结果](test-results.txt) 为使用用户配置的 10 项测试，无失败或跳过。
+完整环境、边界和用户 tmux 配置见 [本次报告](../../releases/0.1.1.md)。[测试结果](test-results.txt) 为使用用户配置的 10 项测试，无失败或跳过。
 
 - [在实时 tmux 中滑动进入历史](android15-user-config/live-tmux-touch-history.png)
 - [轻点选择右侧 pane](android15-user-config/live-tmux-tap-pane.png)

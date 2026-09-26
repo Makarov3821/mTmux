@@ -1,6 +1,6 @@
 # P1 首批 Android 15 回归证据
 
-版本 0.1.0-dev；环境与测试边界见 [P1 报告](../../p1-report.md)。以下截图仅含合成数据；测试临时取消 FLAG_SECURE，正式 APK 仍禁止截图。测试清单见 [test-results.txt](test-results.txt)。
+版本 0.1.0-dev；环境与测试边界见 [P1 报告](../../releases/0.1.0.md)。以下截图仅含合成数据；测试临时取消 FLAG_SECURE，正式 APK 仍禁止截图。测试清单见 [test-results.txt](test-results.txt)。
 
 - [tmux 会话和窗口名称](360dp/tmux-readable-names.png)
 - [连接前已存在的 tmux 历史](360dp/tmux-before-attach-history.png)

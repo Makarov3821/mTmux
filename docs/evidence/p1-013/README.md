@@ -8,4 +8,4 @@
 
 Android 用例通过独立 SSH 控制端切换焦点，确认拦截时两边都未收到、草稿保留；随后恢复发送和显式换目标。核心用例另验证过期服务身份、pane 重建/删除、copy-mode、同步输入、连接失效及 buffer 清理。
 
-最终 debug 编译与 Android lint 通过。实际手机及真实 Agent 仍待验证，详见 [交付说明](../../p1-013.md)。
+最终 debug 编译与 Android lint 通过。实际手机及真实 Agent 仍待验证，详见 [交付说明](../../releases/0.1.3.md)。

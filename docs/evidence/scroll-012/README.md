@@ -9,4 +9,4 @@ Android 15 模拟器，2026-09-23；合成数据与独立 tmux 测试 socket。
 - [历史屏幕](live-tmux-touch-history.png)：慢拖后 `[20/137]` 与对应历史内容。
 - [点击 pane](live-tmux-tap-pane.png)：滚动后点击切换 pane 的屏幕。
 
-细节和限制见 [交付报告](../../p1-012.md)。
+细节和限制见 [交付报告](../../releases/0.1.2.md)。

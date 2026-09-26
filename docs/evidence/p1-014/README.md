@@ -9,4 +9,4 @@
 - [旧任务拒绝恢复](recent-task-stale-blocked.png)：提示重新选择，未连接，草稿仍在。两张截图已人工核对实际显示。
 - 最终 APK 编译和 Android lint 通过。页面截图使用合成内容，测试进程对重建 Activity 关闭防截图；正式 APK 保留防截图。
 
-实际手机网络切换、真实 Agent 版本和跨 Android 兼容性仍需验证。详见 [交付报告](../../p1-014.md)。
+实际手机网络切换、真实 Agent 版本和跨 Android 兼容性仍需验证。详见 [交付报告](../../releases/0.1.4.md)。
