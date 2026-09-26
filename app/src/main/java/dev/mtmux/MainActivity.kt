@@ -2,7 +2,7 @@ package dev.mtmux
 
 import android.os.Bundle
 import android.view.WindowManager
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -45,7 +46,7 @@ import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val writer = ThreadPoolExecutor(1, 1, 0, TimeUnit.MILLISECONDS, ArrayBlockingQueue(64))
     private val closer = java.util.concurrent.Executors.newSingleThreadExecutor()
@@ -56,11 +57,13 @@ class MainActivity : ComponentActivity() {
     private var busy by mutableStateOf(false)
     private var pastePending by mutableStateOf(false)
     private var renderedBytes by mutableLongStateOf(0L)
-    private var status by mutableStateOf("配置测试服务器后，先发现会话或连接 shell")
+    private var status by mutableStateOf(TerminalStatus(uiText(R.string.status_initial)))
     private var panes by mutableStateOf(emptyList<Pane>())
     private var challenge by mutableStateOf<HostKeyChallenge?>(null)
     private var terminalReady by mutableStateOf(false)
-    private var target by mutableStateOf("尚未连接")
+    /** user@host:port of the live/last connection; null when not connected. Never translated. */
+    private var target by mutableStateOf<String?>(null)
+    private var targetSession by mutableStateOf<String?>(null)
     private var enableTmuxMouse by mutableStateOf(true)
     private var connectedPath = "tmux"
     private var connectedSession by mutableStateOf<String?>(null)
@@ -74,6 +77,7 @@ class MainActivity : ComponentActivity() {
     private var activeProfile: ServerProfile? = null
     private var showConfig by mutableStateOf(true)
     private var initialHomeRefresh = true
+    private var reopenSettings = false
     private val pins by lazy { getSharedPreferences("host-pins", MODE_PRIVATE) }
 
     private val privacySettings by lazy { PrivacyDisplay(this) }
@@ -114,10 +118,11 @@ class MainActivity : ComponentActivity() {
         if (android.os.Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(false)
         updateCapturePolicy()
         recentTasks = profileRepository.recent()
+        if (savedInstanceState != null && AppLanguage.consumeRecreation()) { initialHomeRefresh = false; reopenSettings = true }
         setContent { App() }
     }
 
-    private fun disconnect(message: String = "已断开；不会自动重发输入", clear: Boolean = false) {
+    private fun disconnect(message: TerminalStatus = TerminalStatus(uiText(R.string.status_disconnected)), clear: Boolean = false) {
         DebugLog.event(DebugLog.Event.DISCONNECT,generation.toInt(),if(client!=null) 1 else 0)
         if(client!=null) DebugLog.event(DebugLog.Event.OUTPUT_SUMMARY,generation.toInt(),renderedBytes.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
         generation++
@@ -133,7 +138,8 @@ class MainActivity : ComponentActivity() {
         if (clear) {
             terminalView?.resetScreen()
             renderedBytes = 0L
-            target = "尚未连接"
+            target = null
+            targetSession = null
             reading = false
         }
         connectedSession = null
@@ -151,7 +157,7 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         DebugLog.event(DebugLog.Event.STOP)
         super.onStop()
-        disconnect("App 已退后台，SSH 已断开；返回后可重新连接")
+        disconnect(TerminalStatus(uiText(R.string.status_backgrounded)))
     }
 
     override fun onDestroy() {
@@ -173,7 +179,7 @@ class MainActivity : ComponentActivity() {
         if (token != wireToken || token.isEmpty()) return
         val epoch = connection.token() ?: return
         if (bytes.size > 65536) {
-            status = "输入过长；未发送"
+            status = TerminalStatus(uiText(R.string.status_input_too_long), alert = true)
             return
         }
         try {
@@ -184,7 +190,7 @@ class MainActivity : ComponentActivity() {
                             DebugLog.event(DebugLog.Event.INPUT_BLOCKED)
                             runOnUiThread { if (client === connection && token == wireToken) {
                                 pastePending = false
-                                status = "未发送：回复目标已变化、正在阅读历史或开启同步输入；草稿已保留"
+                                status = TerminalStatus(uiText(R.string.status_input_blocked), alert = true)
                             } }
                             return@execute
                         }
@@ -192,11 +198,11 @@ class MainActivity : ComponentActivity() {
                     runOnUiThread { if (client === connection && token == wireToken) onWritten?.invoke() }
                 }
                 catch (error: Exception) { DebugLog.event(DebugLog.Event.INPUT_FAILED,error=error); runOnUiThread {
-                    if (client === connection) disconnect("发送结果不确定；请检查远端输出，不会自动重发")
+                    if (client === connection) disconnect(TerminalStatus(uiText(R.string.status_send_uncertain)))
                 } }
             }
         } catch (_: java.util.concurrent.RejectedExecutionException) {
-            disconnect("输入过快，已断开；请核对远端结果，不会自动重发")
+            disconnect(TerminalStatus(uiText(R.string.status_input_overflow)))
         }
     }
 
@@ -218,7 +224,7 @@ class MainActivity : ComponentActivity() {
     private fun connectTask(login: Login, path: String, session: String?, discoverOnly: Boolean,
                             profile: ServerProfile?, recent: RecentTask?) {
         if (!discoverOnly) showConfig = false
-        disconnect("连接中…", clear = true)
+        disconnect(TerminalStatus(uiText(R.string.status_connecting)), clear = true)
         renderedBytes = 0L
         panes = emptyList()
         challenge = null
@@ -236,21 +242,21 @@ class MainActivity : ComponentActivity() {
                 var binding: PaneBinding? = null
                 val found = withContext(Dispatchers.IO) {
                     if (recent != null) {
-                        check(profile != null && recent.matches(profile)) { "服务器配置已改变，请重新选择任务" }
-                        check(pins.getString(login.trustEndpoint, null) == recent.hostKey) { "服务器信任记录已改变，请重新发现并选择任务" }
+                        if (profile == null || !recent.matches(profile)) throw AppError(R.string.err_profile_changed)
+                        if (pins.getString(login.trustEndpoint, null) != recent.hostKey) throw AppError(R.string.err_trust_changed)
                     }
-                    connection.connect(login) { progress -> DebugLog.stage(progress,attempt.toInt()); scope.launch { if (attempt == generation && busy) status = progress } }
-                    withContext(Dispatchers.Main) { if (attempt == generation) status = if (session != null || discoverOnly) "SSH 已连接 · 正在核对 tmux 目标…" else "SSH 已连接 · 正在打开终端…" }
-                    if (attempt != generation) { connection.close(); error("连接已取消") }
+                    connection.connect(login) { progress -> DebugLog.stage(progress,attempt.toInt()); scope.launch { if (attempt == generation && busy) status = TerminalStatus(progressText(progress)) } }
+                    withContext(Dispatchers.Main) { if (attempt == generation) status = TerminalStatus(uiText(if (session != null || discoverOnly) R.string.status_ssh_checking_tmux else R.string.status_ssh_opening_terminal)) }
+                    if (attempt != generation) { connection.close(); throw MtmuxException(ErrorCode.CANCELLED) }
                     if (discoverOnly) {
                         connection.discoverPanes(path)
                     } else {
                         val expected = recent?.binding
                         expected?.let { connection.verifyResume(it, path) }
                         val metadata = if (session != null) connection.discoverPanes(path).filter { it.session == session } else emptyList()
-                        check(session == null || metadata.isNotEmpty()) { "tmux 会话已消失，请重新发现" }
+                        if (session != null && metadata.isEmpty()) throw AppError(R.string.err_session_gone)
                         if (session != null && mouseForSession) {
-                            check(connection.exec(Tmux.enableMouse(session, path)).status == 0) { "无法为该 tmux 会话开启鼠标，请检查权限" }
+                            if (connection.exec(Tmux.enableMouse(session, path)).status != 0) throw AppError(R.string.err_enable_mouse)
                         }
                         binding = expected ?: session?.let { connection.bindPane(it, path) }
                         connection.openTerminal(expected?.let { Tmux.resume(it, path) } ?: session?.let { Tmux.attach(it, path) }, cols, rows)
@@ -263,7 +269,7 @@ class MainActivity : ComponentActivity() {
                 DebugLog.event(DebugLog.Event.CONNECTED,attempt.toInt(),if(discoverOnly) 0 else 1)
                 if (discoverOnly) {
                     panes = found
-                    status = if (found.isEmpty()) "未发现 pane；仍可连接 shell" else "发现 ${found.size} 个 pane，可按名称选择会话"
+                    status = TerminalStatus(if (found.isEmpty()) uiText(R.string.status_no_panes) else UiText.Plural(R.plurals.status_found_panes, found.size))
                     connection.close()
                     client = null
                 } else {
@@ -272,15 +278,16 @@ class MainActivity : ComponentActivity() {
                     connectedSession = session
                     replyPane = binding
                     draftScopeKey = "${login.trustEndpoint}/${login.user}/${binding?.identity ?: "shell"}"
-                    target = "${login.user}@${login.host}:${login.port} · ${found.firstOrNull()?.sessionName ?: "普通 shell"}"
+                    target = "${login.user}@${login.host}:${login.port}"
+                    targetSession = found.firstOrNull()?.sessionName
                     wireToken = "$attempt:${connection.token()}"
                     terminalView?.resetScreen()
                     terminalView?.connection(wireToken)
-                    status = if (session == null) "普通 shell：不保证断线后任务存活" else "已连接：回复绑定到指定 pane；窗口与尺寸仍与电脑共享"
-                    if (!rememberTask(profile, binding, found)) status += "；最近任务未能保存"
+                    status = TerminalStatus(uiText(if (session == null) R.string.status_connected_shell else R.string.status_connected_tmux))
+                    if (!rememberTask(profile, binding, found)) status = status.withAlert(uiText(R.string.status_recent_not_saved))
                     val renderToken = wireToken
-                    withContext(Dispatchers.IO) { connection.pump { terminalView?.render(it, renderToken) ?: error("终端不存在") } }
-                    if (attempt == generation) disconnect("终端已断开；核对远端结果后手动重连，不会重放输入")
+                    withContext(Dispatchers.IO) { connection.pump { terminalView?.render(it, renderToken) ?: throw MtmuxException(ErrorCode.TERMINAL_CLOSED) } }
+                    if (attempt == generation) disconnect(TerminalStatus(uiText(R.string.status_terminal_closed)))
                 }
             } catch (error: Exception) {
                 DebugLog.event(DebugLog.Event.CONNECTION_FAILED,attempt.toInt(),error=error)
@@ -293,10 +300,10 @@ class MainActivity : ComponentActivity() {
                     client = null
                     if (error is HostKeyRejected) {
                         challenge = error.challenge
-                        status = "连接已拦截：请核对服务器主机密钥"
+                        status = TerminalStatus(uiText(R.string.status_host_key_blocked))
                     } else {
                         // Never display arbitrary SSH exception text that might contain private paths/data.
-                        status = connectionErrorText(error)
+                        status = TerminalStatus(errorText(error))
                     }
                 }
             }
@@ -357,22 +364,22 @@ class MainActivity : ComponentActivity() {
                 val result = withContext(Dispatchers.IO) { runCatching {
                     val visible = connection.bindPane(session, connectedPath)
                     val response = connection.exec(Tmux.leaveCopyMode(visible, connectedPath))
-                    check(response.status == 0 && response.output.trim() == "MTMUX_LATEST") { "目标已变化，请重试" }
+                    check(response.status == 0 && response.output.trim() == "MTMUX_LATEST")
                 } }
-                if (token == wireToken) result.fold({ terminalView?.latest(); reading = false }, { status = "回到底端失败：目标已变化或连接不可用" })
+                if (token == wireToken) result.fold({ terminalView?.latest(); reading = false }, { status = TerminalStatus(uiText(R.string.status_latest_failed), alert = true) })
             }
         }
         fun resumeTask(task: RecentTask) {
             if (busy || wireToken.isNotEmpty() || !terminalReady) return
             val profile = profileStore.all().firstOrNull { task.matches(it) }
-            if (profile == null) { status = "服务器配置已改变，请重新选择任务"; recentTasks = profileStore.recent(); return }
+            if (profile == null) { status = TerminalStatus(uiText(R.string.err_profile_changed), alert = true); recentTasks = profileStore.recent(); return }
             try {
                 connectTask(profileStore.login(profile), profile.path, task.binding?.session, false, profile, task)
                 focusManager.clearFocus(force = true); keyboard?.hide()
-            } catch (_: Exception) { status = "无法读取最近任务或本机凭据，请重新选择配置" }
+            } catch (_: Exception) { status = TerminalStatus(uiText(R.string.status_recent_unreadable), alert = true) }
         }
         fun home() {
-            disconnect("已返回服务器列表")
+            disconnect(TerminalStatus(uiText(R.string.status_returned_home)))
             focusManager.clearFocus(force = true); keyboard?.hide(); showConfig = true
         }
         BackHandler(enabled = !showConfig) { home() }
@@ -399,13 +406,15 @@ class MainActivity : ComponentActivity() {
                 // keyboard-free size, so focus changes cannot resize/reflow remote tmux.
                 val gridHeight = (maxHeight - 204.dp).coerceAtLeast(48.dp)
                 Column(Modifier.fillMaxSize().imePadding().padding(horizontal = 12.dp)) {
+                    val backHomeLabel = stringResource(R.string.terminal_back_home)
+                    val latestLabel = stringResource(R.string.terminal_latest)
                     Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { home() }, contentPadding = PaddingValues(0.dp), modifier = Modifier.width(40.dp).semantics { contentDescription = "返回服务器首页" }.testTag("terminal-home")) { Text("‹", style = MaterialTheme.typography.headlineMedium) }
-                        val server = activeProfile?.let { privacySettings.label(it, privacyDisplay) } ?: if (privacyDisplay && target != "尚未连接") "当前服务器" else target.substringBefore(" · ")
+                        TextButton(onClick = { home() }, contentPadding = PaddingValues(0.dp), modifier = Modifier.width(40.dp).semantics { contentDescription = backHomeLabel }.testTag("terminal-home")) { Text("‹", style = MaterialTheme.typography.headlineMedium) }
+                        val server = activeProfile?.let { privacySettings.label(it, privacyDisplay) } ?: target?.let { if (privacyDisplay) stringResource(R.string.terminal_current_server) else it } ?: stringResource(R.string.terminal_not_connected)
                         val pane = panes.firstOrNull { it.id == replyPane?.pane }
                         val taskName = pane?.let { "${it.sessionName} / ${it.windowName}" } ?: if (connectedSession != null) "tmux" else "SSH"
                         Text("$server · $taskName", Modifier.weight(1f).clickable { showDetails = true }.testTag("terminal-title"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        TextButton(onClick = { latest() }, contentPadding = PaddingValues(0.dp), modifier = Modifier.width(44.dp).semantics { contentDescription = "回到底端" }.testTag("terminal-latest")) { Text("⇣", style = MaterialTheme.typography.headlineSmall) }
+                        TextButton(onClick = { latest() }, contentPadding = PaddingValues(0.dp), modifier = Modifier.width(44.dp).semantics { contentDescription = latestLabel }.testTag("terminal-latest")) { Text("⇣", style = MaterialTheme.typography.headlineSmall) }
                     }
                     Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().onSizeChanged { visibleTerminalHeight = it.height; terminalView?.viewport(it.height / density.density) }.testTag("terminal-panel")) {
                     AndroidView(factory = { context ->
@@ -435,12 +444,12 @@ class MainActivity : ComponentActivity() {
                                         }
                                         pendingDraft = null
                                         pastePending = false
-                                        status = if (request.enter) "已发送文本和回车，请查看终端结果" else "已粘贴文本；点击 Enter 提交"
+                                        status = TerminalStatus(uiText(if (request.enter) R.string.status_sent_enter else R.string.status_pasted))
                                     })
                                 }
                             },
                             onRendered = { if(renderedBytes==0L) DebugLog.event(DebugLog.Event.FIRST_RENDER,generation.toInt()); renderedBytes += it },
-                            onFailure = { message -> disconnect(message); terminalReady = false },
+                            onFailure = { message -> disconnect(TerminalStatus(message)); terminalReady = false },
                             onPasteFinished = { if (it == wireToken) pastePending = false },
                             onNotice = { status = it },
                             onReading = { reading = it },
@@ -449,25 +458,25 @@ class MainActivity : ComponentActivity() {
                     }, update = { it.appearance(dark); it.viewport(visibleTerminalHeight / density.density) }, modifier = Modifier.fillMaxWidth().wrapContentHeight(Alignment.Top, unbounded = true).requiredHeight(gridHeight).align(Alignment.TopStart).testTag("terminal-webview"))
                     if (renderedBytes == 0L) {
                         Text(
-                            when {
-                                !terminalReady -> "终端显示区加载中…"
-                                wireToken.isNotEmpty() -> "SSH 已连接，等待服务器输出。\n在下方输入 pwd，再点“发送并回车”。"
-                                busy -> "正在建立连接，请查看上方进度…"
-                                else -> "尚未连接 · 请查看上方提示\n可返回首页检查配置或重新连接。"
-                            },
+                            stringResource(when {
+                                !terminalReady -> R.string.terminal_placeholder_loading
+                                wireToken.isNotEmpty() -> R.string.terminal_placeholder_waiting
+                                busy -> R.string.terminal_placeholder_connecting
+                                else -> R.string.terminal_placeholder_disconnected
+                            }),
                             modifier = Modifier.align(Alignment.Center).padding(16.dp),
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
                     // Status overlays do not change terminal size or move its reading anchor.
-                    if (status.isNotBlank() && (wireToken.isEmpty() || status.contains("未发送") || status.contains("失败") || status.contains("已改变") || status.contains("已结束") || status.contains("未能"))) {
+                    if (!status.isEmpty && (wireToken.isEmpty() || status.alert)) {
                         Surface(Modifier.align(Alignment.TopCenter).fillMaxWidth(), color=MaterialTheme.colorScheme.surfaceVariant) {
                             Column(Modifier.padding(8.dp)) {
-                                Text(status, modifier=Modifier.testTag("connection-status"), style=MaterialTheme.typography.bodySmall)
-                                if(wireToken.isEmpty() && renderedBytes>0) Text("已断开 · 以下为历史内容",modifier=Modifier.testTag("disconnected-history"),color=MaterialTheme.colorScheme.error)
+                                Text(status.text.string(), modifier=Modifier.testTag("connection-status"), style=MaterialTheme.typography.bodySmall)
+                                if(wireToken.isEmpty() && renderedBytes>0) Text(stringResource(R.string.terminal_disconnected_history),modifier=Modifier.testTag("disconnected-history"),color=MaterialTheme.colorScheme.error)
                                 if(wireToken.isEmpty() && !busy && recentTasks.isNotEmpty()) Row {
-                                    TextButton(onClick={resumeTask(recentTasks.first())},enabled=terminalReady,modifier=Modifier.testTag("reconnect-recent")){Text("重连最近任务")}
-                                    TextButton(onClick={home()}){Text("重新选择任务")}
+                                    TextButton(onClick={resumeTask(recentTasks.first())},enabled=terminalReady,modifier=Modifier.testTag("reconnect-recent")){Text(stringResource(R.string.terminal_reconnect_recent))}
+                                    TextButton(onClick={home()}){Text(stringResource(R.string.terminal_reselect_task))}
                                 }
                             }
                         }
@@ -478,23 +487,23 @@ class MainActivity : ComponentActivity() {
                             if (label == "Enter") requestDraft(true)
                             else submitBytes(wireToken, data.toByteArray(), bound = replyPane)
                         }
-                        TextField(draft,{draft=it},placeholder={Text("输入命令或回复…")},maxLines=2,shape=RoundedCornerShape(10.dp),
+                        TextField(draft,{draft=it},placeholder={Text(stringResource(R.string.terminal_input_placeholder))},maxLines=2,shape=RoundedCornerShape(10.dp),
                             colors=TextFieldDefaults.colors(focusedContainerColor=MaterialTheme.colorScheme.surfaceVariant,unfocusedContainerColor=MaterialTheme.colorScheme.surfaceVariant,focusedIndicatorColor=Color.Transparent,unfocusedIndicatorColor=Color.Transparent),
                             modifier=Modifier.fillMaxWidth().height(64.dp).focusRequester(draftFocus).testTag("command-input"))
                         Row(Modifier.fillMaxWidth().height(52.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
-                            TextButton(onClick={showTools=true},contentPadding=PaddingValues(0.dp),modifier=Modifier.weight(0.7f)){Text("工具",maxLines=1)}
-                            TextButton(onClick={focusManager.clearFocus();keyboard?.hide()},enabled=imeVisible,contentPadding=PaddingValues(0.dp),modifier=Modifier.weight(1.1f).testTag("hide-keyboard")){Text("收起键盘",maxLines=1)}
-                            TextButton(onClick={quickReplyToken=wireToken},enabled=wireToken.isNotEmpty() && !pastePending,contentPadding=PaddingValues(0.dp),modifier=Modifier.weight(1.1f).testTag("quick-replies")){Text("快捷回复",maxLines=1)}
-                            Button(onClick={requestDraft(true)},enabled=wireToken.isNotEmpty() && !pastePending && draft.isNotEmpty(),shape=RoundedCornerShape(10.dp),contentPadding=PaddingValues(horizontal=8.dp),modifier=Modifier.weight(1.2f).testTag("send-enter")){Text(if(pastePending) "发送中…" else "发送回车",maxLines=1)}
+                            TextButton(onClick={showTools=true},contentPadding=PaddingValues(0.dp),modifier=Modifier.weight(0.7f)){Text(stringResource(R.string.terminal_tools),maxLines=1)}
+                            TextButton(onClick={focusManager.clearFocus();keyboard?.hide()},enabled=imeVisible,contentPadding=PaddingValues(0.dp),modifier=Modifier.weight(1.1f).testTag("hide-keyboard")){Text(stringResource(R.string.terminal_hide_keyboard),maxLines=1)}
+                            TextButton(onClick={quickReplyToken=wireToken},enabled=wireToken.isNotEmpty() && !pastePending,contentPadding=PaddingValues(0.dp),modifier=Modifier.weight(1.1f).testTag("quick-replies")){Text(stringResource(R.string.terminal_quick_replies),maxLines=1)}
+                            Button(onClick={requestDraft(true)},enabled=wireToken.isNotEmpty() && !pastePending && draft.isNotEmpty(),shape=RoundedCornerShape(10.dp),contentPadding=PaddingValues(horizontal=8.dp),modifier=Modifier.weight(1.2f).testTag("send-enter")){Text(stringResource(if(pastePending) R.string.terminal_sending else R.string.terminal_send_enter),maxLines=1)}
                         }
                     }
                 }
                 }
                 if (showConfig) {
-                    ServerHome(privacyDisplay=privacyDisplay, onPrivacyDisplay=::changePrivacyDisplay, refreshOnEntry = initialHomeRefresh, onEntryHandled = { initialHomeRefresh = false }, onOpen = { profile, task ->
+                    ServerHome(openSettings=reopenSettings, privacyDisplay=privacyDisplay, onPrivacyDisplay=::changePrivacyDisplay, refreshOnEntry = initialHomeRefresh, onEntryHandled = { initialHomeRefresh = false; reopenSettings = false }, onOpen = { profile, task ->
                         try {
                             connectTask(profileStore.login(profile),profile.path,task?.binding?.session,false,profile,task)
-                        } catch (_: Exception) { showConfig = false; status = "凭据无法读取，请返回服务器列表编辑配置" }
+                        } catch (_: Exception) { showConfig = false; status = TerminalStatus(uiText(R.string.status_credentials_unreadable)) }
                     }, appearance=appearance,onAppearance={appearance=it;terminalPreferences.edit {putString("appearance",it.name)}},
                         onPreferences = { font, speed, touch ->
                         fontSize=font;scrollSensitivity=speed;remoteTouch=touch
@@ -502,15 +511,15 @@ class MainActivity : ComponentActivity() {
                     })
                 }
                 if (showDetails) ProtectSensitiveContent()
-                if (showDetails) AlertDialog(properties=protectedDialogProperties,onDismissRequest={showDetails=false},title={Text("当前连接")},text={Text("${activeProfile?.name.orEmpty()}\n$target\n${panes.firstOrNull { it.id == replyPane?.pane }?.let { "${it.sessionName} / ${it.windowName}" }.orEmpty()}\n$status")},confirmButton={TextButton(onClick={showDetails=false}){Text("关闭")}})
+                if (showDetails) AlertDialog(properties=protectedDialogProperties,onDismissRequest={showDetails=false},title={Text(stringResource(R.string.terminal_details_title))},text={Text("${activeProfile?.name.orEmpty()}\n${target ?: stringResource(R.string.terminal_not_connected)} · ${targetSession ?: stringResource(R.string.terminal_plain_shell)}\n${panes.firstOrNull { it.id == replyPane?.pane }?.let { "${it.sessionName} / ${it.windowName}" }.orEmpty()}\n${status.text.string()}")},confirmButton={TextButton(onClick={showDetails=false}){Text(stringResource(R.string.common_close))}})
                 if (showTools) {
                     ModalBottomSheet(onDismissRequest = { showTools = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
                         Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).padding(horizontal=16.dp)) {
                         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                            Text("终端工具",style=MaterialTheme.typography.titleLarge)
+                            Text(stringResource(R.string.tools_title),style=MaterialTheme.typography.titleLarge)
                     replyPane?.let { bound ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("回复目标 ${bound.pane}", modifier = Modifier.weight(1f).testTag("reply-target"))
+                            Text(stringResource(R.string.tools_reply_target, bound.pane), modifier = Modifier.weight(1f).testTag("reply-target"))
                             TextButton(enabled = draft.isEmpty() && !pastePending && !busy, onClick = {
                                 val connection = client ?: return@TextButton
                                 val token = wireToken
@@ -522,89 +531,89 @@ class MainActivity : ComponentActivity() {
                                         result.fold({ next ->
                                             replyPane = next
                                             draftScopeKey = draftScopeKey.substringBeforeLast('/') + "/" + next.identity
-                                            status = "回复目标已确认为 ${next.pane}"
-                                            if (!rememberTask(activeProfile, next, panes)) status += "；最近任务未能保存"
-                                        }, { status = "无法确认目标，请重新发现会话" })
+                                            status = TerminalStatus(uiText(R.string.status_reply_target_confirmed, next.pane))
+                                            if (!rememberTask(activeProfile, next, panes)) status = status.withAlert(uiText(R.string.status_recent_not_saved))
+                                        }, { status = TerminalStatus(uiText(R.string.status_bind_failed), alert = true) })
                                     }
                                 }
-                            }) { Text("使用当前 pane") }
+                            }) { Text(stringResource(R.string.tools_use_current_pane)) }
                         }
                     }
 
-                            TextButton(onClick={showTools=false;requestDraft(false)},enabled=wireToken.isNotEmpty() && draft.isNotEmpty()){Text("仅粘贴")}
+                            TextButton(onClick={showTools=false;requestDraft(false)},enabled=wireToken.isNotEmpty() && draft.isNotEmpty()){Text(stringResource(R.string.tools_paste_only))}
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Switch(checked = remoteTouch, onCheckedChange = { remoteTouch = it; terminalView?.remoteTouch(it); terminalPreferences.edit { putBoolean("remoteTouch", it) } })
-                                Text(if (remoteTouch) "触摸发送滚轮和点击" else "仅滑动手机本地历史")
+                                Text(stringResource(if (remoteTouch) R.string.tools_touch_remote else R.string.tools_touch_local))
                             }
-                            Text("轻点左键，长按后松开右键；上下滑动滚轮。实际行为由 tmux / Agent 的鼠标支持决定。", style = MaterialTheme.typography.bodySmall)
-                            Text("远端滚动速度：${"%.1f".format(java.util.Locale.ROOT, scrollSensitivity)}×")
+                            Text(stringResource(R.string.tools_touch_help), style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.scroll_speed, "%.1f".format(java.util.Locale.ROOT, scrollSensitivity)))
                             Slider(value = scrollSensitivity, onValueChange = {
                                 scrollSensitivity = it; terminalView?.scrollSensitivity(it)
                             }, onValueChangeFinished = { terminalPreferences.edit { putFloat("scrollSensitivity", scrollSensitivity) } },
                                 valueRange = 0.5f..2f, steps = 2, modifier = Modifier.testTag("scroll-speed"))
-                            Text("慢拖逐步滚动，松手即停。", style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.tools_scroll_help), style = MaterialTheme.typography.bodySmall)
                             Row {
-                                TextButton(onClick = { fontSize = (fontSize - 1).coerceAtLeast(8); terminalView?.font(fontSize); terminalPreferences.edit { putInt("fontSize", fontSize) } }) { Text("字号−") }
-                                TextButton(onClick = { fontSize = (fontSize + 1).coerceAtMost(28); terminalView?.font(fontSize); terminalPreferences.edit { putInt("fontSize", fontSize) } }) { Text("字号+") }
+                                TextButton(onClick = { fontSize = (fontSize - 1).coerceAtLeast(8); terminalView?.font(fontSize); terminalPreferences.edit { putInt("fontSize", fontSize) } }) { Text(stringResource(R.string.tools_font_smaller)) }
+                                TextButton(onClick = { fontSize = (fontSize + 1).coerceAtMost(28); terminalView?.font(fontSize); terminalPreferences.edit { putInt("fontSize", fontSize) } }) { Text(stringResource(R.string.tools_font_larger)) }
                             }
                             TextButton(onClick = {
                                 showTools = false; keyboard?.hide()
                                 terminalView?.snapshot { snapshot -> copySnapshot = snapshot }
-                            }, modifier=Modifier.testTag("select-terminal-text")) { Text("选择复制") }
+                            }, modifier=Modifier.testTag("select-terminal-text")) { Text(stringResource(R.string.tools_select_copy)) }
                             
-                            TextButton(onClick = { draft = ""; showTools = false }) { Text("清空草稿") }
-                            Text("终端 ${cols}×${rows}，已解析 $renderedBytes 字节", style = MaterialTheme.typography.bodySmall)
+                            TextButton(onClick = { draft = ""; showTools = false }) { Text(stringResource(R.string.tools_clear_draft)) }
+                            Text(stringResource(R.string.tools_terminal_info, cols, rows, renderedBytes), style = MaterialTheme.typography.bodySmall)
                         }
-                            TextButton(onClick = { showTools = false }) { Text("关闭") }
+                            TextButton(onClick = { showTools = false }) { Text(stringResource(R.string.common_close)) }
                         }
                     }
                 }
                 quickReplyToken?.let { openedToken -> QuickReplySheet(onDismiss={quickReplyToken=null},onPick={text ->
                     quickReplyToken=null
-                    if(openedToken!=wireToken || wireToken.isEmpty() || pastePending) status="连接已改变；快捷回复未填入"
+                    if(openedToken!=wireToken || wireToken.isEmpty() || pastePending) status=TerminalStatus(uiText(R.string.status_quick_reply_stale), alert = true)
                     else if(draft.isEmpty()) {draft=text}
                     else pendingReply=openedToken to text
                 }) }
-                pendingReply?.let { (token,text) -> AlertDialog(onDismissRequest={pendingReply=null},title={Text("保留已有草稿？")},text={Text("当前输入框已有内容。可以追加快捷回复，或明确替换草稿；都不会自动发送。")},confirmButton={
-                    TextButton(onClick={if(token==wireToken && token.isNotEmpty() && !pastePending) {draft=if(draft.isEmpty()) text else draft+"\n"+text} else status="连接已改变；快捷回复未填入";pendingReply=null},modifier=Modifier.testTag("append-quick-reply")){Text("追加到草稿")}
+                pendingReply?.let { (token,text) -> AlertDialog(onDismissRequest={pendingReply=null},title={Text(stringResource(R.string.quick_reply_keep_title))},text={Text(stringResource(R.string.quick_reply_keep_body))},confirmButton={
+                    TextButton(onClick={if(token==wireToken && token.isNotEmpty() && !pastePending) {draft=if(draft.isEmpty()) text else draft+"\n"+text} else status=TerminalStatus(uiText(R.string.status_quick_reply_stale), alert = true);pendingReply=null},modifier=Modifier.testTag("append-quick-reply")){Text(stringResource(R.string.quick_reply_append))}
                 },dismissButton={Row {
-                    TextButton(onClick={if(token==wireToken && token.isNotEmpty() && !pastePending) {draft=text} else status="连接已改变；快捷回复未填入";pendingReply=null},modifier=Modifier.testTag("replace-quick-reply")){Text("替换草稿")}
-                    TextButton(onClick={pendingReply=null}){Text("取消")}
+                    TextButton(onClick={if(token==wireToken && token.isNotEmpty() && !pastePending) {draft=text} else status=TerminalStatus(uiText(R.string.status_quick_reply_stale), alert = true);pendingReply=null},modifier=Modifier.testTag("replace-quick-reply")){Text(stringResource(R.string.quick_reply_replace))}
+                    TextButton(onClick={pendingReply=null}){Text(stringResource(R.string.common_cancel))}
                 }}) }
                 copySnapshot?.let { snapshot -> TerminalCopyDialog(snapshot, fontSize, dark, onClose={copySnapshot=null}) }
                 if (preview) {
                     val previewToken = remember { wireToken }
                     val previewText = remember { draft }
-                    val previewTarget = activeProfile?.let { privacySettings.label(it, privacyDisplay) } ?: if (privacyDisplay) "当前服务器" else target
+                    val previewTarget = activeProfile?.let { privacySettings.label(it, privacyDisplay) } ?: target?.let { if (privacyDisplay) stringResource(R.string.terminal_current_server) else it } ?: stringResource(R.string.terminal_not_connected)
                     val submitWithEnter = remember { previewEnter }
-                    AlertDialog(onDismissRequest = { preview = false }, title = { Text("${if (submitWithEnter) "发送到" else "粘贴到"} $previewTarget") },
+                    AlertDialog(onDismissRequest = { preview = false }, title = { Text(stringResource(if (submitWithEnter) R.string.preview_send_to else R.string.preview_paste_to, previewTarget)) },
                         text = { Column(Modifier.heightIn(max = 260.dp).verticalScroll(rememberScrollState())) {
-                            Text("回复与快捷键绑定到显示的 pane；焦点变化时停止发送并保留草稿。多行需要目标程序启用 bracketed paste。")
+                            Text(stringResource(R.string.preview_body))
                             Text(previewText)
                         } },
                         confirmButton = { TextButton(onClick = {
                             if (previewToken == wireToken && wireToken.isNotEmpty()) {
                                 sendDraft(previewText, submitWithEnter, previewToken)
                             }
-                            else status = "连接已改变；文本未发送"
+                            else status = TerminalStatus(uiText(R.string.status_text_stale), alert = true)
                             preview = false
-                        }) { Text(if (submitWithEnter) "发送并回车" else "仅粘贴，不回车") } },
-                        dismissButton = { TextButton(onClick = { preview = false }) { Text("取消") } })
+                        }) { Text(stringResource(if (submitWithEnter) R.string.preview_send_enter else R.string.preview_paste_only)) } },
+                        dismissButton = { TextButton(onClick = { preview = false }) { Text(stringResource(R.string.common_cancel)) } })
                 }
                 challenge?.let { item ->
                     ProtectSensitiveContent()
                     AlertDialog(properties=protectedDialogProperties,onDismissRequest = { challenge = null },
-                        title = { Text(if (item.changed) "主机密钥已改变：禁止连接" else "首次连接：核对指纹") },
-                        text = { Text("${item.endpoint}\n${item.fingerprint}\n请通过服务器管理员或可信终端核对。" + if (item.changed) "\nP0 不提供覆盖入口，核对原因后才能清除应用信任记录。" else "\n信任后请重新点击连接。") },
+                        title = { Text(stringResource(if (item.changed) R.string.host_key_changed_title else R.string.host_key_first_title)) },
+                        text = { Text("${item.endpoint}\n${item.fingerprint}\n" + stringResource(R.string.host_key_verify_hint) + "\n" + stringResource(if (item.changed) R.string.host_key_changed_hint else R.string.host_key_first_hint)) },
                         confirmButton = {
                             if (!item.changed) TextButton(onClick = {
                                 pins.edit { putString(item.endpoint, item.key) }
                                 challenge = null
-                                status = "已保存该主机密钥，请重新连接"
-                            }) { Text("指纹一致，信任") }
+                                status = TerminalStatus(uiText(R.string.status_host_key_saved))
+                            }) { Text(stringResource(R.string.host_key_trust)) }
                         },
-                        dismissButton = { TextButton(onClick = { challenge = null }) { Text("关闭") } })
+                        dismissButton = { TextButton(onClick = { challenge = null }) { Text(stringResource(R.string.common_close)) } })
                 }
             }
         }
@@ -621,6 +630,16 @@ private fun java.io.InputStream.readBytesLimited(limit: Int): ByteArray {
         result.write(buffer, 0, count)
     }
     return result.toByteArray()
+}
+
+/** Alert statuses stay visible over a live terminal; others only while disconnected. */
+data class TerminalStatus(val text: UiText, val alert: Boolean = false) {
+    val isEmpty: Boolean get() = text == EMPTY_TEXT
+    fun withAlert(extra: UiText) = TerminalStatus(text + extra, alert = true)
+    companion object {
+        private val EMPTY_TEXT = UiText.Raw("")
+        val NONE = TerminalStatus(EMPTY_TEXT)
+    }
 }
 
 private data class PendingDraft(val id: String, val token: String, val text: String, val enter: Boolean)

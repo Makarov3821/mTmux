@@ -47,6 +47,9 @@ try {
   assert.equal(await page.evaluate(() => events.filter(e => e[0] === 'input').length), count);
   await page.evaluate(() => { setConnection('session-b'); pasteDraft('stale', 'session-a'); pasteDraft('one\ntwo', 'session-b'); });
   assert.equal(await page.evaluate(() => events.filter(e => e[0] === 'input').length), count);
+  // Notices are stable codes for native localization, never page-built display text.
+  assert.deepEqual(await page.evaluate(() => events.filter(e => e[0] === 'notice').slice(-2).map(e => e[1])),
+    ['CONNECTION_CHANGED', 'PASTE_MULTILINE_UNSUPPORTED']);
   await feed('\x1b[?2004h', 'bracketed');
   await page.evaluate(() => pasteDraft('one\ntwo', 'session-b'));
   const pasted = await page.evaluate(() => events.filter(e => e[0] === 'input').at(-1));

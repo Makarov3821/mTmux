@@ -36,14 +36,14 @@ class ServerProfiles(context: Context) {
     }
     private fun encodeTasks(tasks: List<RecentTask>) = JSONArray().also { array -> tasks.forEach { array.put(it.encode()) } }.toString()
     fun rememberTask(task: RecentTask) {
-        check(all().any { task.matches(it) }) { "服务器配置已改变，无法保存最近任务" }
+        check(all().any { task.matches(it) }) { "profile changed; recent task not saved" }
         val tasks = listOf(task) + recent().filterNot {
             it.profileId == task.profileId && (it.identity == task.identity ||
                 it.hostKey != task.hostKey || (it.binding != null && task.binding != null &&
                 (it.binding!!.pane == task.binding!!.pane ||
                     it.identity!!.split(':').take(2) != task.identity!!.split(':').take(2))))
         }
-        check(preferences.edit().putString("recent-tasks", encodeTasks(tasks.take(10))).putString("last", task.profileId).putLong("used:${task.profileId}", task.usedAt).commit()) { "最近任务保存失败" }
+        check(preferences.edit().putString("recent-tasks", encodeTasks(tasks.take(10))).putString("last", task.profileId).putLong("used:${task.profileId}", task.usedAt).commit()) { "recent task commit failed" }
     }
     fun credentials(profile: ServerProfile): SavedCredentials? {
         val encoded = preferences.getString("credential:${profile.id}", null) ?: return null
@@ -61,15 +61,15 @@ class ServerProfiles(context: Context) {
     fun save(profile: ServerProfile, credentials: SavedCredentials? = null) {
         // Encryption must succeed before changing metadata. One commit stores both.
         val encrypted = credentials?.let {
-            require(!profile.keyAuthentication || it.privateKey != null) { "请导入私钥后保存" }
+            require(!profile.keyAuthentication || it.privateKey != null) { "private key required" }
             fun encodeCredential(key: Boolean, secret: SavedCredentials): JSONObject {
-                require(!key || secret.privateKey != null) { "请导入私钥后保存" }
+                require(!key || secret.privateKey != null) { "private key required" }
                 return JSONObject().put("password", if (key) "" else secret.password)
                     .put("privateKey", if (key) Base64.getEncoder().encodeToString(secret.privateKey!!) else "")
                     .put("passphrase", if (key) secret.passphrase else "")
             }
             val hops = JSONObject()
-            profile.jumps.forEach { hop -> hops.put(hop.id, encodeCredential(hop.keyAuthentication, it.jumps[hop.id] ?: error("缺少跳板凭据"))) }
+            profile.jumps.forEach { hop -> hops.put(hop.id, encodeCredential(hop.keyAuthentication, it.jumps[hop.id] ?: error("missing jump credentials"))) }
             val bytes = JSONObject().put("jumps", hops).put("password", if (profile.keyAuthentication) "" else it.password)
                 .put("privateKey", if (profile.keyAuthentication) Base64.getEncoder().encodeToString(it.privateKey!!) else "")
                 .put("passphrase", if (profile.keyAuthentication) it.passphrase else "").toString().toByteArray(Charsets.UTF_8)
@@ -82,14 +82,14 @@ class ServerProfiles(context: Context) {
         if (previous != null && (previous.host != profile.host || previous.port != profile.port ||
                 previous.user != profile.user || previous.path != profile.path || previous.routeContext() != profile.routeContext())) editor.remove("probe:${profile.id}").remove("cache:${profile.id}").putString("recent-tasks", encodeTasks(recent().filterNot { it.profileId == profile.id }))
         if (encrypted != null) editor.putString("credential:${profile.id}", encrypted)
-        check(editor.commit()) { "保存配置失败，请检查设备存储空间" }
+        check(editor.commit()) { "profile commit failed" }
     }
     fun delete(id: String) {
         val profiles = all()
         val unusedPins = profiles.firstOrNull { it.id == id }?.trustEndpoints().orEmpty() -
             profiles.filterNot { it.id == id }.flatMap { it.trustEndpoints() }.toSet()
         check(preferences.edit().putString("profiles", encode(profiles.filterNot { it.id == id }))
-            .putString("last", last()?.takeUnless { it == id }).remove("folder-of:$id").remove("used:$id").remove("credential:$id").remove("cache:$id").remove("probe:$id").remove("collapsed:$id").putString("recent-tasks", encodeTasks(recent().filterNot { it.profileId == id })).commit()) { "删除配置失败" }
+            .putString("last", last()?.takeUnless { it == id }).remove("folder-of:$id").remove("used:$id").remove("credential:$id").remove("cache:$id").remove("probe:$id").remove("collapsed:$id").putString("recent-tasks", encodeTasks(recent().filterNot { it.profileId == id })).commit()) { "profile delete failed" }
         pins.edit().also { editor -> unusedPins.forEach { editor.remove(it) } }.apply()
     }
     private fun encode(profiles: List<ServerProfile>): String {

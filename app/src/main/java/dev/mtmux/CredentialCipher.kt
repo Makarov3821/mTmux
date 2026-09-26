@@ -16,7 +16,7 @@ internal class CredentialCipher {
     private fun key(create: Boolean): SecretKey = synchronized(CredentialCipher::class.java) {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (store.getKey(alias, null) as? SecretKey) ?: run {
-            check(create) { "本机凭据密钥不可用，请重新输入凭据" }
+            if (!create) throw AppError(R.string.err_keystore_unavailable)
             KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply {
                 init(KeyGenParameterSpec.Builder(alias, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
                     .setKeySize(256).setBlockModes(KeyProperties.BLOCK_MODE_GCM)
@@ -38,7 +38,7 @@ internal class CredentialCipher {
     }
     fun decrypt(profile: ServerProfile, encoded: String): ByteArray {
         val record = JSONObject(encoded)
-        check(record.getInt("v") == 1) { "凭据格式不受支持" }
+        if (record.getInt("v") != 1) throw AppError(R.string.err_credential_format)
         val iv = Base64.getDecoder().decode(record.getString("iv"))
         require(iv.size == 12)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")

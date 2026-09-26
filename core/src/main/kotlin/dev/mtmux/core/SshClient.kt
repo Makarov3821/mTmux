@@ -15,9 +15,7 @@ class Login(
     val jumps: List<Login> = emptyList()
 ) {
     init {
-        require(host.isNotBlank() && host.none { it.isWhitespace() } && port in 1..65535 && user.isNotBlank()) {
-            "请检查服务器、端口和用户名"
-        }
+        requireValid(host.isNotBlank() && host.none { it.isWhitespace() } && port in 1..65535 && user.isNotBlank(), ErrorCode.INVALID_LOGIN)
     }
     val endpoint: String get() = "[$host]:$port"
     val trustEndpoint: String get() = if (jumps.isEmpty()) endpoint else endpoint + "|via:" +
@@ -38,22 +36,22 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
     private val chain = java.util.concurrent.CopyOnWriteArrayList<Session>()
     @Volatile private var connectGeneration = 0L
 
-    fun connect(login: Login, onProgress: (String) -> Unit = {}) {
+    fun connect(login: Login, onProgress: (ConnectProgress) -> Unit = {}) {
         close()
         val generation = connectGeneration
         val hops = login.jumps + login
-        require(login.jumps.none { it.jumps.isNotEmpty() }) { "跳板链格式无效" }
+        requireValid(login.jumps.none { it.jumps.isNotEmpty() }, ErrorCode.INVALID_JUMP_CHAIN)
         var previous: Session? = null
         try {
             hops.forEachIndexed { index, hop ->
-                check(generation == connectGeneration) { "连接已取消" }
+                ensure(generation == connectGeneration, ErrorCode.CANCELLED)
                 val scoped = Login(hop.host, hop.port, hop.user, hop.password, hop.privateKey, hop.passphrase, hops.take(index))
                 val jsch = JSch()
                 val verifier = PinnedHostKeys(scoped.trustEndpoint, pins)
                 jsch.hostKeyRepository = verifier
-                val location = if (index < hops.lastIndex) "跳板 ${index + 1}" else "目标服务器"
+                val hopNumber = if (index < hops.lastIndex) index + 1 else 0
                 try {
-                    onProgress("$location · 正在准备认证")
+                    onProgress(ConnectProgress(hopNumber, ConnectProgress.Stage.PREPARING))
                     hop.privateKey?.let { jsch.addIdentity("memory-key", it, null, hop.passphrase.toByteArray()) }
                     val forwarded = previous?.setPortForwardingL("127.0.0.1", 0, hop.host, hop.port)
                     val candidate = jsch.getSession(hop.user, if (forwarded == null) hop.host else "127.0.0.1", forwarded ?: hop.port)
@@ -64,14 +62,15 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
                     candidate.setPassword(hop.password.toByteArray())
                     candidate.setServerAliveInterval(15_000)
                     candidate.setServerAliveCountMax(2)
-                    check(generation == connectGeneration) { "连接已取消" }
-                    onProgress("$location · 正在连接并验证身份…")
+                    ensure(generation == connectGeneration, ErrorCode.CANCELLED)
+                    onProgress(ConnectProgress(hopNumber, ConnectProgress.Stage.AUTHENTICATING))
                     candidate.connect(15_000)
-                    check(generation == connectGeneration) { "连接已取消" }
+                    ensure(generation == connectGeneration, ErrorCode.CANCELLED)
                     previous = candidate
                 } catch (error: Exception) {
                     verifier.challenge?.let { throw HostKeyRejected(it) }
-                    throw ConnectionFailure(location, connectionFailureReason(error), error)
+                    if (error is MtmuxException && error.code == ErrorCode.CANCELLED) throw error
+                    throw ConnectionFailure(hopNumber, connectionFailureReason(error), error)
                 } finally { jsch.removeAllIdentity() }
             }
             session = previous
@@ -79,7 +78,7 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
     }
 
     fun exec(command: String, stdin: ByteArray? = null): ExecResult {
-        val connection = session ?: error("SSH 未连接")
+        val connection = session ?: fail(ErrorCode.NOT_CONNECTED)
         val channel = connection.openChannel("exec") as ChannelExec
         val stdout = LimitedOutput(512 * 1024)
         val stderr = LimitedOutput(32 * 1024)
@@ -91,10 +90,10 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
             channel.connect(10_000)
             val deadline = System.nanoTime() + 10_000_000_000L
             while (!channel.isClosed) {
-                check(System.nanoTime() < deadline) { "远端命令超时" }
+                ensure(System.nanoTime() < deadline, ErrorCode.REMOTE_TIMEOUT)
                 Thread.sleep(10)
             }
-            check(!stdout.overflow && !stderr.overflow) { "远端元数据超出限制" }
+            ensure(!stdout.overflow && !stderr.overflow, ErrorCode.REMOTE_OUTPUT_LIMIT)
             return ExecResult(channel.exitStatus, stdout.toString("UTF-8"), stderr.toString("UTF-8"))
         } finally { channel.disconnect() }
     }
@@ -102,17 +101,17 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
     /** Names travel as separate bounded responses, never as tab/newline-delimited records. */
     fun discoverPanes(path: String): List<Pane> {
         val version = exec(Tmux.version(path))
-        check(version.status == 0) { "tmux 未安装、不可执行或不在 PATH；请检查绝对路径" }
+        ensure(version.status == 0, ErrorCode.TMUX_UNAVAILABLE)
         val result = exec(Tmux.discover(path))
         if (result.status != 0 && (result.error.contains("no server running on") || (result.error.contains("error connecting to") && result.error.contains("No such file or directory")))) return emptyList()
-        check(result.status == 0) { "tmux 发现失败；请检查是否已有会话、socket 或权限" }
+        ensure(result.status == 0, ErrorCode.TMUX_DISCOVERY_FAILED)
         val panes = Tmux.parse(result.output)
-        check(panes.size <= 256) { "pane 数量超过当前上限 256" }
+        ensure(panes.size <= 256, ErrorCode.TOO_MANY_PANES)
         val sessions = mutableMapOf<String, String>()
         val windows = mutableMapOf<String, Pair<String, String>>()
         fun field(pane: Pane, name: String): String {
             val value = exec(Tmux.field(pane, name, path))
-            check(value.status == 0) { "tmux 目标已改变，请刷新列表" }
+            ensure(value.status == 0, ErrorCode.TMUX_TARGET_CHANGED)
             return value.output.removeSuffix("\n").take(512)
         }
         return panes.map { pane ->
@@ -125,7 +124,7 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
     }
 
     fun openTerminal(command: String?, cols: Int, rows: Int): Long {
-        val connection = session ?: error("SSH 未连接")
+        val connection = session ?: fail(ErrorCode.NOT_CONNECTED)
         val channel: com.jcraft.jsch.Channel = if (command == null) {
             (connection.openChannel("shell") as ChannelShell).apply {
                 setPtyType("xterm-256color", cols, rows, 0, 0)
@@ -146,9 +145,9 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
 
     /** Runs on an IO thread. The consumer must apply bounded backpressure. */
     fun pump(consume: (ByteArray) -> Unit) {
-        val channel = terminal ?: error("终端未连接")
+        val channel = terminal ?: fail(ErrorCode.TERMINAL_NOT_CONNECTED)
         try {
-            val stream = input ?: error("终端输入流不存在")
+            val stream = input ?: fail(ErrorCode.TERMINAL_NOT_CONNECTED)
             val buffer = ByteArray(8192)
             while (true) {
                 val count = stream.read(buffer)
@@ -161,38 +160,36 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
     fun token() = epoch.token()
     fun bindPane(session: String, path: String): PaneBinding {
         val result = exec(Tmux.binding(session, path))
-        check(result.status == 0) { "无法确认回复目标，请重新发现" }
+        ensure(result.status == 0, ErrorCode.BIND_FAILED)
         return PaneBinding.parse(session, result.output.trim())
     }
 
     fun verifyResume(binding: PaneBinding, path: String) {
         val result = exec(Tmux.exactBinding(binding, path))
-        check(result.status == 0 && result.output.trim() == binding.identity + ":0") {
-            "原任务已结束、移动或重建；请重新选择任务，不会自动连接同名任务"
-        }
+        ensure(result.status == 0 && result.output.trim() == binding.identity + ":0", ErrorCode.TASK_GONE)
     }
 
     /** Payload goes over SSH stdin, never in shell arguments or command logs. */
     fun sendToPane(token: Long, binding: PaneBinding, path: String, bytes: ByteArray): Boolean = synchronized(writeLock) {
-        check(epoch.accepts(token) && terminal?.isConnected == true) { "连接已改变；输入未发送" }
+        ensure(epoch.accepts(token) && terminal?.isConnected == true, ErrorCode.CONNECTION_CHANGED)
         val result = exec(Tmux.pasteBound(binding, path), bytes)
-        check(result.status == 0) { "发送结果不确定，请检查远端输出" }
+        ensure(result.status == 0, ErrorCode.SEND_UNCERTAIN)
         when (result.output.trim()) {
             "MTMUX_SENT" -> true
             "MTMUX_BLOCKED" -> false
-            else -> error("发送结果不确定，请检查远端输出")
+            else -> fail(ErrorCode.SEND_UNCERTAIN)
         }
     }
     fun invalidateInput() = epoch.close()
     fun send(token: Long, bytes: ByteArray) = synchronized(writeLock) {
-        check(epoch.accepts(token)) { "连接已改变；输入未发送" }
+        ensure(epoch.accepts(token), ErrorCode.CONNECTION_CHANGED)
         try {
-            check(terminal?.isConnected == true) { "终端已断开" }
+            ensure(terminal?.isConnected == true, ErrorCode.TERMINAL_CLOSED)
             output!!.write(bytes)
             output!!.flush()
         } catch (error: Exception) {
             close()
-            throw IllegalStateException("发送结果不确定，请检查远端输出；不会自动重发", error)
+            throw MtmuxException(ErrorCode.SEND_UNCERTAIN, error)
         }
     }
 

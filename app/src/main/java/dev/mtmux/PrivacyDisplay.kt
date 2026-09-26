@@ -9,7 +9,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
 
-class PrivacyDisplay(context: Context) {
+class PrivacyDisplay(private val context: Context) {
     private val preferences = context.getSharedPreferences("privacy-display", Context.MODE_PRIVATE)
     fun enabled() = preferences.getBoolean("enabled", true)
     fun enabled(value: Boolean) { preferences.edit().putBoolean("enabled", value).apply() }
@@ -23,7 +23,7 @@ class PrivacyDisplay(context: Context) {
             number = preferences.getInt("next-number", 1)
             preferences.edit().putInt(key, number).putInt("next-number", number + 1).apply()
         }
-        return "服务器 $number"
+        return context.getString(R.string.privacy_server_number, number)
     }
 }
 

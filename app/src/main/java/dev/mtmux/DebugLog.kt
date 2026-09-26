@@ -4,7 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.os.Build
 import dev.mtmux.core.DiagnosticJournal
-import dev.mtmux.core.connectionFailureReason
+import dev.mtmux.core.ConnectProgress
 import java.io.File
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
@@ -38,16 +38,15 @@ object DebugLog {
             previous?.uncaughtException(thread,error)
         }
     }
-    fun stage(progress: String, correlation: Int) {
-        // Only a known stage code enters the journal, never arbitrary progress text.
-        val code = when { "准备" in progress -> 1; "验证" in progress -> 2; "已连接" in progress -> 3; else -> 0 }
-        val hop=Regex("跳板 ([0-9]+)").find(progress)?.groupValues?.get(1)?.toIntOrNull() ?: 0
-        event(Event.SSH_STAGE,correlation,hop.coerceIn(0,99)*10+code)
+    /** Stage codes (1 preparing, 2 authenticating) come from structured progress, independent of UI language. */
+    fun stage(progress: ConnectProgress, correlation: Int) {
+        val code = when (progress.stage) { ConnectProgress.Stage.PREPARING -> 1; ConnectProgress.Stage.AUTHENTICATING -> 2 }
+        event(Event.SSH_STAGE,correlation,progress.hop.coerceIn(0,99)*10+code)
     }
     private fun line(event: Event, a: Int, b: Int, error: Throwable?): String {
         val failure = error?.let {
             // Fixed reason classifier, never Throwable.message or toString/printStackTrace.
-            " type=${it.javaClass.simpleName.take(80)} reason=${connectionFailureReason(it)} frames=" +
+            " type=${it.javaClass.simpleName.take(80)} reason=${diagnosticReason(it)} frames=" +
                 it.stackTrace.take(5).joinToString(";") { frame -> "${frame.className}.${frame.methodName}:${frame.lineNumber}" }
         }.orEmpty()
         return "${java.time.Instant.now()} ${event.name} a=$a b=$b$failure"

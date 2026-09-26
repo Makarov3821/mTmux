@@ -14,13 +14,13 @@ data class JumpHost(val id: String = UUID.randomUUID().toString(), val host: Str
 }
 fun ServerProfile.routeContext(): String = if (jumps.isEmpty()) "" else JSONArray().also { a -> jumps.forEach { a.put(it.json()) } }.toString()
 fun ServerProfiles.login(profile: ServerProfile): Login {
-    val credentials = credentials(profile) ?: error("请编辑服务器，补充登录凭据")
+    val credentials = credentials(profile) ?: throw AppError(R.string.err_missing_credentials)
     fun auth(host: String, port: Int, user: String, key: Boolean, saved: SavedCredentials, jumps: List<Login> = emptyList()): Login {
-        check(!key || saved.privateKey != null) { "请重新导入私钥" }
+        if (key && saved.privateKey == null) throw AppError(R.string.err_reimport_key)
         return Login(host, port, user, saved.password, if (key) saved.privateKey else null, saved.passphrase, jumps)
     }
     val hops = profile.jumps.map { hop -> auth(hop.host, hop.port, hop.user, hop.keyAuthentication,
-        credentials.jumps[hop.id] ?: error("请补充跳板凭据")) }
+        credentials.jumps[hop.id] ?: throw AppError(R.string.err_missing_jump_credentials)) }
     return auth(profile.host, profile.port, profile.user, profile.keyAuthentication, credentials, hops)
 }
 fun ServerProfile.trustEndpoint(): String = Login(host, port, user, "", jumps = jumps.map { Login(it.host, it.port, it.user, "") }).trustEndpoint

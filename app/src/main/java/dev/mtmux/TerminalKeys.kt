@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -22,6 +23,7 @@ private val keyPages = listOf(
 
 @Composable fun TerminalKeys(enabled: Boolean, onKey: (String, String) -> Unit) {
     val pager = rememberPagerState(pageCount = { keyPages.size })
+    val pageLabel = stringResource(R.string.keys_page, pager.currentPage + 1, keyPages.size)
     Box(Modifier.fillMaxWidth().height(40.dp)) {
         HorizontalPager(pager, modifier = Modifier.fillMaxSize().testTag("terminal-key-pages")) { page ->
             Row(Modifier.fillMaxSize()) {
@@ -33,7 +35,7 @@ private val keyPages = listOf(
                 }
             }
         }
-        Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp).semantics { contentDescription = "快捷键第 ${pager.currentPage + 1} 页，共 3 页" }, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp).semantics { contentDescription = pageLabel }, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             repeat(3) { page ->
                 Box(Modifier.size(3.dp).background(if (page == pager.currentPage) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, CircleShape))
             }

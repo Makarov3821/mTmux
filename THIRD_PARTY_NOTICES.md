@@ -2,7 +2,7 @@
 
 项目自有代码采用 GPL-3.0-only，见根目录 LICENSE。以下第三方代码、资源及构建工具保留原许可证；本项目的许可声明不替换它们的版权与许可文本。
 
-mtmux 0.6.7-dev 采用下列组件；版本固定在 Gradle 构建文件及 `web/package-lock.json` 中。表格是直接依赖的初步审查，不代表正式发布前的完整法律或供应链审计。
+mtmux 0.7.0-dev 采用下列组件；版本固定在 Gradle 构建文件及 `web/package-lock.json` 中。表格是直接依赖的初步审查，不代表正式发布前的完整法律或供应链审计。
 
 | 组件 | 版本 | 许可证 | 用途 / 来源 |
 | --- | --- | --- | --- |
@@ -12,7 +12,7 @@ mtmux 0.6.7-dev 采用下列组件；版本固定在 Gradle 构建文件及 `web
 | xterm addon-fit | 0.10.0 | MIT | 根据 WebView 容器计算行列 |
 | xterm headless | 5.5.0 | MIT | 仅 Node 测试，不进入 APK |
 | playwright-core | 1.56.1 | Apache-2.0 | 仅桌面浏览器测试，不进入 APK |
-| AndroidX Activity / Compose / WebKit | 见 app/build.gradle.kts 与依赖树 | Apache-2.0 | 原生 UI、生命周期与本地资产加载 |
+| AndroidX Activity / AppCompat / Compose / WebKit | 见 app/build.gradle.kts 与依赖树 | Apache-2.0 | 原生 UI、生命周期、应用内语言与本地资产加载 |
 | Kotlin / kotlinx.coroutines | 2.2.21 / 1.10.2 | Apache-2.0 | 语言运行时与后台 IO |
 | JUnit 4 / kotlin-test | 4.13.2 / 2.2.21 | EPL-1.0 / Apache-2.0 | 仅测试，不进入 APK |
 | Gradle wrapper | 8.13 | Apache-2.0 | 构建工具，不进入 APK |

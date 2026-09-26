@@ -3,7 +3,7 @@ package dev.mtmux
 import androidx.compose.material3.*
 import androidx.compose.ui.graphics.Color
 
-enum class AppAppearance(val label: String) { SYSTEM("跟随系统"), LIGHT("浅色"), DARK("深色");
+enum class AppAppearance(@androidx.annotation.StringRes val label: Int) { SYSTEM(R.string.follow_system), LIGHT(R.string.theme_light), DARK(R.string.theme_dark);
     fun dark(systemDark: Boolean) = this == DARK || (this == SYSTEM && systemDark)
     companion object { fun read(value: String?) = entries.firstOrNull { it.name == value } ?: DARK }
 }

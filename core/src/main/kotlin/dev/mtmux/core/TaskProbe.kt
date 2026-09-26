@@ -39,9 +39,7 @@ object TaskProbe {
 
     fun parse(output: String, panes: List<Pane>): List<Snapshot> {
         val lines = output.removeSuffix("\n").split('\n')
-        require(lines.size == 2 + panes.size * 9 && lines.first() == "MTMUX_PROBE_1" && lines.last() == "MTMUX_END") {
-            "无法解析状态快照（输出截断或 shell 启动输出）"
-        }
+        requireValid(lines.size == 2 + panes.size * 9 && lines.first() == "MTMUX_PROBE_1" && lines.last() == "MTMUX_END", ErrorCode.STATUS_PARSE_FAILED)
         return panes.mapIndexedNotNull { index, pane ->
             val fields = lines.subList(1 + index * 9, 1 + (index + 1) * 9)
             val before = fields[0]
@@ -57,16 +55,16 @@ object TaskProbe {
 
 /** Two initial channels plus one per eight panes; no per-pane SSH round trips. */
 fun SshClient.discoverTaskSnapshots(path: String, onBatch: (List<TaskProbe.Snapshot>) -> Unit = {}): List<TaskProbe.Snapshot> {
-    check(exec(Tmux.version(path)).status == 0) { "tmux 未安装、不可执行或不在 PATH；请检查绝对路径" }
+    ensure(exec(Tmux.version(path)).status == 0, ErrorCode.TMUX_UNAVAILABLE)
     val listed = exec(Tmux.discover(path))
     if (listed.status != 0 && (listed.error.contains("no server running on") ||
                 (listed.error.contains("error connecting to") && listed.error.contains("No such file or directory")))) return emptyList()
-    check(listed.status == 0) { "tmux 发现失败；请检查 socket 或权限" }
+    ensure(listed.status == 0, ErrorCode.TMUX_DISCOVERY_FAILED)
     val panes = Tmux.parse(listed.output)
-    check(panes.size <= 256) { "pane 数量超过当前上限 256" }
+    ensure(panes.size <= 256, ErrorCode.TOO_MANY_PANES)
     return panes.chunked(TaskProbe.BATCH_SIZE).flatMap { batch ->
         val result = exec(TaskProbe.command(batch, path))
-        check(result.status == 0) { "状态读取失败；请检查 tmux 与 base64 命令是否可用" }
+        ensure(result.status == 0, ErrorCode.STATUS_READ_FAILED)
         TaskProbe.parse(result.output, batch).also(onBatch)
     }
 }

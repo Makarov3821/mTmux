@@ -26,8 +26,8 @@ class SshIntegrationTest {
             val failure=assertFailsWith<ConnectionFailure> {
                 client.connect(Login(first.host,first.port,first.user,"", "PRIVATE_INVALID_MARKER".toByteArray()))
             }
-            assertEquals("目标服务器",failure.location)
-            assertTrue(failure.reason.contains("私钥"))
+            assertEquals(0,failure.hop)
+            assertEquals(FailureReason.PRIVATE_KEY,failure.reason)
             assertFalse(failure.message!!.contains("PRIVATE_INVALID_MARKER"))
         }
     }
@@ -60,9 +60,9 @@ class SshIntegrationTest {
         }
         val bad=Login(first.host,first.port,first.user,"bad-password")
         trusted().use { client ->
-            val failure=assertFailsWith<IllegalStateException> { client.connect(Login(first.host,first.port,first.user,"",first.privateKey,jumps=listOf(first,bad))) }
-            assertTrue(failure.message!!.contains("跳板 2"))
-            assertTrue(failure.message!!.contains("认证失败"))
+            val failure=assertFailsWith<ConnectionFailure> { client.connect(Login(first.host,first.port,first.user,"",first.privateKey,jumps=listOf(first,bad))) }
+            assertEquals(2,failure.hop)
+            assertEquals(FailureReason.AUTH,failure.reason)
             assertFailsWith<IllegalStateException> { client.exec("printf must-not-fallback") }
         }
     }

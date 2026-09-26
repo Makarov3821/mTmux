@@ -2,6 +2,24 @@
 
 所有版本均为 Android debug 开发版（`-dev`），未经完整真机验收。每个版本的实现细节、验证结果、截图与 APK SHA-256 见对应的「详细记录」；测试证据在 [docs/evidence/](docs/evidence/)。文档目录说明见 [docs/README.md](docs/README.md)。
 
+## [0.7.0-dev] — 2026-09-26 · versionCode 25
+
+详细记录：[0.7.0](docs/releases/0.7.0.md)
+
+### 新增
+- 界面语言：设置中可选跟随系统 / 简体中文 / English；默认英文资源，无对应语言时回退英文。Android 13+ 与系统“应用语言”联动。
+
+### 变更
+- 全部界面文本移入字符串资源；用户别名、文件夹、已保存快捷回复、tmux 名称和终端内容不翻译。
+- core 错误与连接进度改为结构化代码，由界面层翻译；诊断日志的 `reason=` 改为稳定英文枚举名。
+- 终端网页提示改为固定代码，由原生层翻译。
+- 新增依赖 AndroidX AppCompat 1.7.1；`MainActivity` 改为 `AppCompatActivity`。
+- 英文搜索框提示缩短为单行。
+
+### 修复
+- 诊断日志的 SSH 阶段依赖中文文字识别，非中文界面下会全部记为未知。
+- 语言切换引起的 Activity 重建不再触发首页自动刷新。
+
 ## [0.6.7-dev] — 2026-09-25 · versionCode 24
 
 首个公开开发快照，源码标签 `v0.6.7-dev`。项目自有代码采用 GPL-3.0-only。详细记录：[0.6.7](docs/releases/0.6.7.md)

@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -37,18 +38,18 @@ data class TerminalSnapshot(val text: String, val clipped: Boolean, val viewport
         Surface(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)) {
                 Row(Modifier.fillMaxWidth()) {
-                    TextButton(onClick=onClose,modifier=Modifier.testTag("close-terminal-copy")) { Text("‹ 返回终端") }
+                    TextButton(onClick=onClose,modifier=Modifier.testTag("close-terminal-copy")) { Text(stringResource(R.string.copy_back)) }
                     Spacer(Modifier.weight(1f))
                     TextButton(onClick={
                         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
-                            .setPrimaryClip(ClipData.newPlainText("终端文字",snapshot.text))
+                            .setPrimaryClip(ClipData.newPlainText(context.getString(R.string.clip_terminal_text),snapshot.text))
                         copied=true
-                    },enabled=snapshot.text.isNotEmpty(),modifier=Modifier.testTag("copy-all-terminal")) { Text(if(copied) "已复制" else "复制全部") }
+                    },enabled=snapshot.text.isNotEmpty(),modifier=Modifier.testTag("copy-all-terminal")) { Text(stringResource(if(copied) R.string.copy_done else R.string.copy_all)) }
                 }
-                Text("选择复制",style=MaterialTheme.typography.titleLarge)
-                Text("长按文字并拖动选区，使用系统菜单复制。这里是已加载内容的静态副本；更早的 tmux 历史需返回终端滚动后再打开。",style=MaterialTheme.typography.bodySmall)
-                if(snapshot.clipped) Text("内容较多，仅保留最近 20 万字符。",style=MaterialTheme.typography.bodySmall)
-                if(snapshot.text.isEmpty()) Text("暂无可复制的终端文字",Modifier.padding(top=24.dp))
+                Text(stringResource(R.string.tools_select_copy),style=MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.copy_help),style=MaterialTheme.typography.bodySmall)
+                if(snapshot.clipped) Text(stringResource(R.string.copy_clipped),style=MaterialTheme.typography.bodySmall)
+                if(snapshot.text.isEmpty()) Text(stringResource(R.string.copy_empty),Modifier.padding(top=24.dp))
                 AndroidView(factory={ ctx ->
                     ScrollView(ctx).apply {
                         isFillViewport=true

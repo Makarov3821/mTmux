@@ -8,7 +8,7 @@ object Tmux {
     fun resume(binding: PaneBinding, path: String): String {
         val condition = "#{&&:#{==:$bindingFormat,${binding.identity}},#{==:#{pane_dead},0}}"
         val commands = "select-window -t '${binding.target}' ; select-pane -t '${binding.target}' ; attach-session -t '${binding.session}'"
-        return "${executable(path)} if-shell -F -t ${quote(binding.target)} ${quote(condition)} ${quote(commands)} ${quote("display-message -p '原任务已改变，请重新选择'")}"
+        return "${executable(path)} if-shell -F -t ${quote(binding.target)} ${quote(condition)} ${quote(commands)} ${quote("display-message -p 'mtmux: task changed'")}"
     }
     fun binding(session: String, path: String): String {
         require(Regex("\\$[0-9]+").matches(session))
@@ -32,9 +32,7 @@ object Tmux {
     }
 
     private fun executable(path: String): String {
-        require(path == "tmux" || (path.startsWith('/') && '\n' !in path && '\r' !in path)) {
-            "tmux 路径须为绝对路径或 tmux"
-        }
+        requireValid(path == "tmux" || (path.startsWith('/') && '\n' !in path && '\r' !in path), ErrorCode.TMUX_PATH_INVALID)
         return quote(path) + " -u"
     }
 
@@ -83,9 +81,9 @@ object Tmux {
 
     fun parse(output: String): List<Pane> = output.lineSequence().filter { it.isNotBlank() }.map { line ->
         val fields = line.split('\t')
-        require(fields.size == 4 && Regex("\\$[0-9]+").matches(fields[0]) &&
+        requireValid(fields.size == 4 && Regex("\\$[0-9]+").matches(fields[0]) &&
             Regex("@[0-9]+").matches(fields[1]) && Regex("%[0-9]+").matches(fields[2]) &&
-            fields[3] in listOf("0", "1")) { "无法解析 tmux 元数据（可能包含 shell 启动输出）" }
+            fields[3] in listOf("0", "1"), ErrorCode.TMUX_METADATA_INVALID)
         Pane(fields[0], fields[1], fields[2], fields[3] == "1")
     }.toList()
 }
@@ -94,9 +92,9 @@ data class PaneBinding private constructor(val session: String, val pane: String
     val target: String get() = "$session:${identity.split(':')[3]}.$pane"
     companion object {
         fun parse(session: String, value: String): PaneBinding {
-            require(Regex("[0-9]+:[0-9]+:\\$[0-9]+:@[0-9]+:%[0-9]+:[0-9]+").matches(value)) { "无法核对 tmux 目标身份" }
+            requireValid(Regex("[0-9]+:[0-9]+:\\$[0-9]+:@[0-9]+:%[0-9]+:[0-9]+").matches(value), ErrorCode.TMUX_IDENTITY_INVALID)
             val fields = value.split(':')
-            require(fields[2] == session) { "tmux 会话已改变" }
+            requireValid(fields[2] == session, ErrorCode.TMUX_SESSION_CHANGED)
             return PaneBinding(session, fields[4], value)
         }
     }

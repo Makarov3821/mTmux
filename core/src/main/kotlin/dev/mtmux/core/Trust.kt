@@ -11,7 +11,7 @@ interface PinStore {
 }
 
 data class HostKeyChallenge(val endpoint: String, val key: String, val fingerprint: String, val changed: Boolean)
-class HostKeyRejected(val challenge: HostKeyChallenge) : Exception("服务器主机密钥尚未信任或已改变")
+class HostKeyRejected(val challenge: HostKeyChallenge) : Exception("host key not trusted or changed")
 
 class PinnedHostKeys(private val endpoint: String, private val pins: PinStore) : HostKeyRepository {
     var challenge: HostKeyChallenge? = null

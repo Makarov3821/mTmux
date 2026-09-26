@@ -1,8 +1,7 @@
 package dev.mtmux.core
 
-enum class TaskState(val label: String) {
-    UNKNOWN("未知或已过期"), ATTENTION("可能需要回答或处理"), RUNNING("正在运行"), COMPLETED("本轮结束或已就绪")
-}
+/** Display text lives in the Android resources. */
+enum class TaskState { UNKNOWN, ATTENTION, RUNNING, COMPLETED }
 
 /** A snapshot hint, not Agent telemetry. Silence and an idle shell are never completion. */
 object TaskStates {

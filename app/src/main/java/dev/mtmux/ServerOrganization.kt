@@ -7,7 +7,7 @@ import java.text.Collator
 import java.util.UUID
 
 data class ServerFolder(val id: String = UUID.randomUUID().toString(), val name: String)
-enum class ServerSort(val label: String) { ADDED("添加顺序"), NAME("名称"), RECENT("最近使用") }
+enum class ServerSort(@androidx.annotation.StringRes val label: Int) { ADDED(R.string.sort_added), NAME(R.string.sort_name), RECENT(R.string.sort_recent) }
 
 /** Presentation metadata is separate from credentials and SSH target identity. */
 class ServerOrganization(context: Context) {
@@ -18,26 +18,26 @@ class ServerOrganization(context: Context) {
     }
     fun saveFolder(id: String? = null, name: String): ServerFolder {
         val value = name.trim()
-        require(value.isNotEmpty() && value.length <= 60) { "文件夹名称须为 1–60 个字符" }
+        if (value.isEmpty() || value.length > 60) throw AppError(R.string.folder_name_length)
         val existing = folders()
-        require(existing.none { it.id != id && it.name.equals(value, ignoreCase = true) }) { "文件夹名称已存在" }
-        require(id == null || existing.any { it.id == id }) { "文件夹已不存在" }
+        if (existing.any { it.id != id && it.name.equals(value, ignoreCase = true) }) throw AppError(R.string.folder_name_exists)
+        if (id != null && existing.none { it.id == id }) throw AppError(R.string.folder_gone)
         val folder = ServerFolder(id ?: UUID.randomUUID().toString(), value)
         val updated = if (id == null) existing + folder else existing.map { if (it.id == id) folder else it }
-        check(prefs.edit().putString("folders", encode(updated)).commit()) { "文件夹保存失败" }
+        check(prefs.edit().putString("folders", encode(updated)).commit()) { "folder commit failed" }
         return folder
     }
     fun deleteFolder(id: String) {
         val editor = prefs.edit().putString("folders", encode(folders().filterNot { it.id == id })).remove("folder-collapsed:$id")
         prefs.all.filter { (key,value) -> key.startsWith("folder-of:") && value == id }.keys.forEach { editor.remove(it) }
-        check(editor.commit()) { "文件夹删除失败" }
+        check(editor.commit()) { "folder delete failed" }
     }
     fun folderOf(profileId: String): String? = prefs.getString("folder-of:$profileId", null)?.takeIf { id -> folders().any { it.id == id } }
     fun move(profileId: String, folderId: String?) {
-        require(folderId == null || folders().any { it.id == folderId }) { "文件夹已不存在" }
+        if (folderId != null && folders().none { it.id == folderId }) throw AppError(R.string.folder_gone)
         val profiles = JSONArray(prefs.getString("profiles", "[]"))
-        require((0 until profiles.length()).any { profiles.getJSONObject(it).getString("id") == profileId }) { "服务器已不存在" }
-        check(prefs.edit().putString("folder-of:$profileId", folderId).commit()) { "移动服务器失败" }
+        require((0 until profiles.length()).any { profiles.getJSONObject(it).getString("id") == profileId }) { "server no longer exists" }
+        check(prefs.edit().putString("folder-of:$profileId", folderId).commit()) { "move commit failed" }
     }
     fun collapsed(id: String) = prefs.getBoolean("folder-collapsed:$id", false)
     fun collapse(id: String, collapsed: Boolean) { check(prefs.edit().putBoolean("folder-collapsed:$id", collapsed).commit()) }

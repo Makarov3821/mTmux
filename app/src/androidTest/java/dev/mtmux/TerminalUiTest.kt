@@ -15,6 +15,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import org.junit.Assert.*
 import org.junit.Rule
+import org.junit.rules.RuleChain
 import dev.mtmux.core.discoverTaskSnapshots
 import org.junit.Test
 import org.junit.Assume.assumeTrue
@@ -27,7 +28,9 @@ import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class TerminalUiTest {
-    @get:Rule val compose = createAndroidComposeRule<MainActivity>()
+    // Assertions below use the Chinese UI text; pin the app language before the Activity starts.
+    val compose = createAndroidComposeRule<MainActivity>()
+    @get:Rule val rules: RuleChain = RuleChain.outerRule(AppLocaleRule("zh-CN")).around(compose)
 
     /** Component-only rendering tests expose the terminal without a real SSH login. */
     private fun showTerminalForFixture() {
@@ -38,7 +41,7 @@ class TerminalUiTest {
             (field.get(compose.activity) as androidx.compose.runtime.MutableState<Boolean>).value = false
             val status=MainActivity::class.java.getDeclaredField("status\$delegate").apply { isAccessible=true }
             @Suppress("UNCHECKED_CAST")
-            (status.get(compose.activity) as androidx.compose.runtime.MutableState<String>).value=""
+            (status.get(compose.activity) as androidx.compose.runtime.MutableState<TerminalStatus>).value=TerminalStatus.NONE
         }
         compose.waitForIdle()
     }
@@ -114,9 +117,9 @@ class TerminalUiTest {
     private fun disconnectFixture() {
         // Disconnect is no longer a product button; still exercise stale-output protection.
         compose.runOnUiThread {
-            val method=MainActivity::class.java.getDeclaredMethod("disconnect",String::class.java,Boolean::class.javaPrimitiveType)
+            val method=MainActivity::class.java.getDeclaredMethod("disconnect",TerminalStatus::class.java,Boolean::class.javaPrimitiveType)
             method.isAccessible=true
-            method.invoke(compose.activity,"已断开；不会自动重发输入",true)
+            method.invoke(compose.activity,TerminalStatus(uiText(R.string.status_disconnected)),true)
         }
     }
 
@@ -223,8 +226,11 @@ class TerminalUiTest {
     @Test fun debugLogsAreRedactedBoundedAndExportable() {
         DebugLog.clear()
         DebugLog.event(DebugLog.Event.CONNECTION_FAILED,7,error=IllegalStateException("SECRET_MARKER password=abc key=PRIVATE command=echo-private"))
-        DebugLog.stage("SECRET_PROGRESS host=example.invalid",7)
+        DebugLog.stage(dev.mtmux.core.ConnectProgress(2,dev.mtmux.core.ConnectProgress.Stage.AUTHENTICATING),7)
         val snapshot=DebugLog.snapshot().toString(Charsets.UTF_8)
+        // Stage codes are structural (hop*10+stage), independent of UI language.
+        assertTrue(snapshot.contains("SSH_STAGE a=7 b=22"))
+        assertTrue(snapshot.contains("CONNECTION_FAILED a=7 b=0 type=IllegalStateException reason=OTHER "))
         assertTrue(snapshot.contains("CONNECTION_FAILED"));assertTrue(snapshot.contains("processStartedAt="))
         assertFalse(snapshot.contains("SECRET_MARKER"));assertFalse(snapshot.contains("SECRET_PROGRESS"))
         assertFalse(snapshot.contains("echo-private"));assertFalse(snapshot.contains("example.invalid"))
@@ -269,7 +275,7 @@ class TerminalUiTest {
             compose.activityRule.scenario.recreate()
             tasks.forEachIndexed {i,task ->
                 val expected=if(i==4) dev.mtmux.core.TaskState.UNKNOWN else states[i]
-                compose.onNodeWithTag("task-status-${profile.id}-${task.binding!!.pane}",useUnmergedTree=true).performScrollTo().assertContentDescriptionEquals("上次刷新：${expected.label}")
+                compose.onNodeWithTag("task-status-${profile.id}-${task.binding!!.pane}",useUnmergedTree=true).performScrollTo().assertContentDescriptionEquals("上次刷新：${compose.activity.getString(expected.text())}")
                 assertEquals(dev.mtmux.core.TaskState.UNKNOWN,written.taskState(task,written.updatedAt+30*60*1000L))
             }
             assertEquals(dev.mtmux.core.TaskState.COMPLETED,ServerCache(compose.activity).read(profile)!!.taskState(tasks[2]))
@@ -325,7 +331,7 @@ class TerminalUiTest {
             compose.onNodeWithTag(tag,useUnmergedTree=true).assertContentDescriptionEquals("上次刷新：未知或已过期")
             compose.onNodeWithTag("refresh-${profile.id}").performScrollTo().performClick()
             compose.waitUntil(10000) {
-                compose.onAllNodes(hasTestTag(tag) and hasContentDescription("上次刷新：${dev.mtmux.core.TaskState.COMPLETED.label}"),useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()
+                compose.onAllNodes(hasTestTag(tag) and hasContentDescription("上次刷新：${compose.activity.getString(dev.mtmux.core.TaskState.COMPLETED.text())}"),useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty()
             }
             saveScreenshot("home-status-immediate")
         } finally {
@@ -996,9 +1002,9 @@ class TerminalUiTest {
             saveScreenshot("ui-server-home")
             compose.onNodeWithTag("settings").performClick()
             saveScreenshot("ui-settings")
-            compose.onNodeWithTag("settings-speed").performTouchInput { click(androidx.compose.ui.geometry.Offset(width*0.9f,height*0.5f)) }
+            compose.onNodeWithTag("settings-speed").performScrollTo().performTouchInput { click(androidx.compose.ui.geometry.Offset(width*0.9f,height*0.5f)) }
             val updated=ServerCache(compose.activity).read(profile)!!.updatedAt
-            compose.onNodeWithText("‹ 返回").performClick()
+            compose.onNodeWithText("‹ 返回").performScrollTo().performClick()
             compose.waitForIdle()
             assertEquals(updated,ServerCache(compose.activity).read(profile)!!.updatedAt)
             compose.activityRule.scenario.recreate()
@@ -1007,7 +1013,7 @@ class TerminalUiTest {
             // Internal navigation never refreshes, even when the interval has expired.
             ServerCache(compose.activity).markAttempt(profile,System.currentTimeMillis()-30*60*1000L)
             compose.onNodeWithTag("settings").performClick()
-            compose.onNodeWithText("‹ 返回").performClick()
+            compose.onNodeWithText("‹ 返回").performScrollTo().performClick()
             compose.waitForIdle()
             assertEquals(updated,ServerCache(compose.activity).read(profile)!!.updatedAt)
             compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)

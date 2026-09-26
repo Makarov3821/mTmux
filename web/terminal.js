@@ -46,7 +46,7 @@ window.setConnection = token => {
 };
 window.pasteDraft = (text, token) => {
   try {
-    if (!connected || token !== connectionToken) return NativeTerminal.notice('连接已改变；文本未发送');
+    if (!connected || token !== connectionToken) return NativeTerminal.notice('CONNECTION_CHANGED');
     const error = TerminalProtocol.validatePaste(text, terminal.modes.bracketedPasteMode);
     if (error) return NativeTerminal.notice(error);
     terminal.paste(text);
@@ -57,7 +57,7 @@ window.pasteDraft = (text, token) => {
 };
 window.sendDraft = (text, token, id, enter) => {
   if (!connected || token !== connectionToken) {
-    NativeTerminal.notice('连接已改变；文本未发送');
+    NativeTerminal.notice('CONNECTION_CHANGED');
     return NativeTerminal.pasteFinished(token);
   }
   const error = TerminalProtocol.validatePaste(text, terminal.modes.bracketedPasteMode);

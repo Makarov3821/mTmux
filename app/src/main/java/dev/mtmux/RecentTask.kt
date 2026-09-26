@@ -10,7 +10,6 @@ data class RecentTask(
     val usedAt: Long = System.currentTimeMillis(), val route: String = ""
 ) {
     val binding: PaneBinding? get() = identity?.let { PaneBinding.parse(it.split(':')[2], it) }
-    val label: String get() = if (identity == null) "普通 shell（新连接）" else "$sessionName · $windowName · ${binding!!.pane}"
     fun matches(profile: ServerProfile) = profileId == profile.id && host == profile.host && port == profile.port &&
         user == profile.user && path == profile.path && route == profile.routeContext()
     fun encode(): String = JSONObject().put("profile", profileId).put("host", host).put("port", port)

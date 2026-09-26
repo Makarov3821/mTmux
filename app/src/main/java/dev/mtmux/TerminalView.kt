@@ -31,9 +31,9 @@ class TerminalView(
     private val onInput: (String, String) -> Unit,
     private val onDraftInput: (String, String, String) -> Unit,
     private val onRendered: (Int) -> Unit,
-    private val onFailure: (String) -> Unit,
+    private val onFailure: (UiText) -> Unit,
     private val onPasteFinished: (String) -> Unit,
-    private val onNotice: (String) -> Unit,
+    private val onNotice: (TerminalStatus) -> Unit,
     private val onReading: (Boolean) -> Unit = {},
     private val onBinaryInput: (String, ByteArray) -> Unit = { _, _ -> }
 ) : WebView(context) {
@@ -56,7 +56,7 @@ class TerminalView(
         webViewClient = object : WebViewClient() {
             override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
                 DebugLog.event(DebugLog.Event.WEB_LOAD_FAILED,error.errorCode)
-                if (request.isForMainFrame) onFailure("终端页面加载失败，请关闭并重新打开应用")
+                if (request.isForMainFrame) onFailure(uiText(R.string.web_load_failed))
             }
             override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) = true
             override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse {
@@ -68,7 +68,7 @@ class TerminalView(
             override fun onConsoleMessage(message: ConsoleMessage): Boolean {
                 if (message.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
                     DebugLog.event(DebugLog.Event.WEB_SCRIPT_FAILED,message.lineNumber())
-                    onFailure("终端页面运行异常，请更新 Android System WebView 后重新打开应用")
+                    onFailure(uiText(R.string.web_script_failed))
                 }
                 return true // Never log terminal output or JavaScript payloads.
             }
@@ -111,7 +111,7 @@ class TerminalView(
             runCatching {
                 val value = JSONObject(result)
                 TerminalSnapshot(value.getString("text"),value.getBoolean("clipped"),value.getInt("viewportOffset"))
-            }.onSuccess(onResult).onFailure { onNotice("读取终端文字失败，请稍后重试") }
+            }.onSuccess(onResult).onFailure { onNotice(TerminalStatus(uiText(R.string.web_snapshot_failed), alert = true)) }
         }
     }
     private var loggedViewport = -1
@@ -126,12 +126,12 @@ class TerminalView(
         if(disposed) return
         if(pageReady) evaluateJavascript(code,null)
         else if(pendingScripts.size<128) pendingScripts.add(code)
-        else {pendingScripts.clear();onFailure("终端初始化未完成，请重新打开应用")}
+        else {pendingScripts.clear();onFailure(uiText(R.string.web_init_incomplete))}
     }
 
     /** One SSH chunk is outstanding at a time; xterm acknowledges after parsing it. */
     fun render(bytes: ByteArray, token: String) {
-        check(!disposed) { "终端已关闭" }
+        if (disposed) throw dev.mtmux.core.MtmuxException(dev.mtmux.core.ErrorCode.TERMINAL_CLOSED)
         if (activeToken != token) return
         val id = sequence.incrementAndGet().toString()
         val latch = CountDownLatch(1)
@@ -142,7 +142,7 @@ class TerminalView(
             else latch.countDown()
         }
         try {
-            check(latch.await(10, TimeUnit.SECONDS) && !disposed) { "终端渲染超时，连接已关闭" }
+            if (!latch.await(10, TimeUnit.SECONDS) || disposed) throw AppError(R.string.err_render_timeout)
             post { if (activeToken == token) onRendered(bytes.size) }
         }
         finally { acknowledgements.remove(id) }
@@ -176,14 +176,23 @@ class TerminalView(
         @JavascriptInterface fun input(token: String, data: String) { post { onInput(token, data) } }
         @JavascriptInterface fun draftInput(token: String, id: String, data: String) { post { onDraftInput(token, id, data) } }
         @JavascriptInterface fun pasteFinished(token: String) { post { onPasteFinished(token) } }
-        @JavascriptInterface fun notice(message: String) { post { onNotice(message) } }
+        @JavascriptInterface fun notice(code: String) { post { onNotice(webNotice(code)) } }
         @JavascriptInterface fun ack(id: String) { acknowledgements[id]?.countDown() }
         @JavascriptInterface fun copy(text: String) {
             if (text.isNotEmpty()) post {
                 (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
-                    .setPrimaryClip(ClipData.newPlainText("终端选区", text))
-                onNotice("已复制选区；终端内容可能含敏感信息")
+                    .setPrimaryClip(ClipData.newPlainText(context.getString(R.string.clip_terminal_selection), text))
+                onNotice(TerminalStatus(uiText(R.string.web_selection_copied)))
             }
         }
     }
 }
+
+/** The web page reports fixed codes only; unknown codes never pass page text through. */
+internal fun webNotice(code: String): TerminalStatus = TerminalStatus(uiText(when (code) {
+    "CONNECTION_CHANGED" -> R.string.status_text_stale
+    "PASTE_TOO_LONG" -> R.string.web_paste_too_long
+    "PASTE_CONTROL" -> R.string.web_paste_control
+    "PASTE_MULTILINE_UNSUPPORTED" -> R.string.web_paste_multiline
+    else -> R.string.web_paste_rejected
+}), alert = true)

@@ -26,14 +26,14 @@ class ServerCache(context: Context) {
         val data = JSONObject().put("context", context(profile)).put("time", time)
             .put("tasks", JSONArray().also { a -> tasks.forEach { a.put(it.encode()) } })
             .put("states",JSONObject().also { j -> states.forEach { (id,state) -> j.put(id,state.name) } })
-        check(prefs.edit().putString("cache:${profile.id}", data.toString()).commit()) { "列表缓存保存失败" }
+        check(prefs.edit().putString("cache:${profile.id}", data.toString()).commit()) { "cache commit failed" }
         return ServerSnapshot(tasks, time, states)
     }
     fun clearTaskStates(profile: ServerProfile): ServerSnapshot? {
         val snapshot=read(profile) ?: return null
         val key="cache:${profile.id}"
         val data=JSONObject(prefs.getString(key,null) ?: return null).put("states",JSONObject())
-        check(prefs.edit().putString(key,data.toString()).commit()) { "状态缓存更新失败" }
+        check(prefs.edit().putString(key,data.toString()).commit()) { "state cache commit failed" }
         return snapshot.copy(states=emptyMap())
     }
     // Attempts, including failures, are throttled across page/app recreation.
@@ -44,7 +44,7 @@ class ServerCache(context: Context) {
         return last <= 0 || now < last || now - last >= 30 * 60 * 1000L
     }
     fun markAttempt(profile: ServerProfile, now: Long = System.currentTimeMillis()) {
-        check(prefs.edit().putString("probe:${profile.id}", JSONObject().put("context", context(profile)).put("time", now).toString()).commit()) { "刷新时间保存失败" }
+        check(prefs.edit().putString("probe:${profile.id}", JSONObject().put("context", context(profile)).put("time", now).toString()).commit()) { "probe time commit failed" }
     }
     fun collapsed(id: String) = prefs.getBoolean("collapsed:$id", false)
     fun collapse(id: String, value: Boolean) { prefs.edit().putBoolean("collapsed:$id", value).apply() }
@@ -53,7 +53,7 @@ class ServerCache(context: Context) {
 fun SshClient.discoverTasks(profile: ServerProfile, hostKey: String): List<RecentTask> = discoverPanes(profile.path).mapNotNull { pane ->
     val format = "#{pid}:#{start_time}:#{session_id}:#{window_id}:#{pane_id}:#{pane_pid}"
     val result = exec("${Tmux.quote(profile.path)} -u display-message -p -t ${Tmux.quote("${pane.session}:${pane.window}.${pane.id}")} ${Tmux.quote(format + ":#{pane_dead}")}")
-    check(result.status == 0) { "任务已变化，请刷新列表" }
+    if (result.status != 0) throw MtmuxException(ErrorCode.TMUX_TARGET_CHANGED)
     val raw = result.output.trim()
     if (!raw.endsWith(":0")) return@mapNotNull null
     val binding = PaneBinding.parse(pane.session, raw.removeSuffix(":0"))

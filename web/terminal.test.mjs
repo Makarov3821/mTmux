@@ -21,11 +21,12 @@ test('alternate-screen exit restores shell output', async () => {
   term.dispose();
 });
 test('paste rejects terminal escape injection and unsafe multiline fallback', () => {
-  assert.ok(protocol.validatePaste('\x1b[201~rm -rf', true));
-  assert.ok(protocol.validatePaste('first\nsecond', false));
+  // Stable codes only; the Android host localizes them.
+  assert.equal(protocol.validatePaste('\x1b[201~rm -rf', true), 'PASTE_CONTROL');
+  assert.equal(protocol.validatePaste('first\nsecond', false), 'PASTE_MULTILINE_UNSUPPORTED');
   assert.equal(protocol.validatePaste('first\nsecond', true), null);
   assert.equal(protocol.validatePaste('中文 $HOME; echo test', false), null);
-  assert.ok(protocol.validatePaste('中'.repeat(12000), true));
+  assert.equal(protocol.validatePaste('中'.repeat(12000), true), 'PASTE_TOO_LONG');
 });
 test('scrollback remains bounded under large output and resize', async () => {
   const term = new Terminal({ cols: 80, rows: 24, scrollback: 3000, allowProposedApi: true });

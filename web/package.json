@@ -1,7 +1,7 @@
 {
   "name": "mtmux-terminal",
   "private": true,
-  "version": "0.6.7-dev",
+  "version": "0.7.0-dev",
   "scripts": {
     "bundle": "node bundle.mjs",
     "test": "node --test *.test.mjs",
