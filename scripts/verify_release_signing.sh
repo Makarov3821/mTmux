@@ -13,7 +13,16 @@ keystore=${1:?usage: $0 path/to/release.jks [alias]}
 alias=${2:-mtmux}
 [ -f "$keystore" ] || { echo "Keystore not found: $keystore" >&2; exit 1; }
 
-keytool=${JAVA_HOME:+$JAVA_HOME/bin/}keytool
+# Gradle needs JDK 17. Fall back to the workspace toolchain in .tools/ when JAVA_HOME is unset.
+if [ -z "${JAVA_HOME:-}" ]; then
+  jdk=$(ls -d "$PWD"/.tools/jdk-17* 2>/dev/null | sort -V | tail -1)
+  [ -n "$jdk" ] && export JAVA_HOME="$jdk"
+fi
+if [ -z "${GRADLE_USER_HOME:-}" ] && [ -d .tools/gradle-home ]; then export GRADLE_USER_HOME="$PWD/.tools/gradle-home"; fi
+if [ -z "${ANDROID_HOME:-}${ANDROID_SDK_ROOT:-}" ] && [ -d .tools/android-sdk ]; then export ANDROID_HOME="$PWD/.tools/android-sdk"; fi
+[ -n "${JAVA_HOME:-}" ] || { echo "JDK 17 not found; set JAVA_HOME" >&2; exit 1; }
+
+keytool=$JAVA_HOME/bin/keytool
 sdk=${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$(sed -n 's/^sdk\.dir=//p' local.properties 2>/dev/null)}}
 apksigner=$(ls -d "$sdk"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)
 [ -x "$apksigner" ] || { echo "apksigner not found; set ANDROID_HOME" >&2; exit 1; }
