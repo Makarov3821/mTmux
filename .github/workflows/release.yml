@@ -43,8 +43,17 @@ jobs:
           [ -n "$MTMUX_KEY_PASSWORD" ] || missing+=(MTMUX_KEY_PASSWORD)
           if [ ${#missing[@]} -gt 0 ]; then echo "::error::Missing secrets: ${missing[*]}"; exit 1; fi
           echo "$KEYSTORE_B64" | base64 -d > "$MTMUX_KEYSTORE" || { echo "::error::MTMUX_KEYSTORE_BASE64 is not valid base64"; exit 1; }
+          # Diagnostics without revealing values: file hash (compare with `sha256sum` locally),
+          # whether each secret has surrounding whitespace, then password and alias separately.
+          echo "Decoded keystore: $(wc -c < "$MTMUX_KEYSTORE") bytes, sha256 $(sha256sum "$MTMUX_KEYSTORE" | cut -d' ' -f1)"
+          for name in MTMUX_KEYSTORE_PASSWORD MTMUX_KEY_ALIAS MTMUX_KEY_PASSWORD; do
+            value=${!name}; trimmed=$(printf '%s' "$value" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+            [ "$value" = "$trimmed" ] || echo "::warning::$name has leading/trailing whitespace or a newline"
+          done
+          keytool -list -keystore "$MTMUX_KEYSTORE" -storepass:env MTMUX_KEYSTORE_PASSWORD >/dev/null 2>&1 \
+            || { echo "::error::MTMUX_KEYSTORE_PASSWORD does not open this keystore (or MTMUX_KEYSTORE_BASE64 is not the same file)"; exit 1; }
           keytool -list -keystore "$MTMUX_KEYSTORE" -storepass:env MTMUX_KEYSTORE_PASSWORD -alias "$MTMUX_KEY_ALIAS" >/dev/null 2>&1 \
-            || { echo "::error::Keystore cannot be opened: wrong MTMUX_KEYSTORE_PASSWORD, wrong MTMUX_KEY_ALIAS, or corrupted keystore"; exit 1; }
+            || { echo "::error::Password is correct, but alias MTMUX_KEY_ALIAS does not exist in the keystore"; exit 1; }
           echo "Keystore opened with the configured password and alias."
 
       - name: Test and build signed release
