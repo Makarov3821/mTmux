@@ -54,6 +54,14 @@ jobs:
             || { echo "::error::MTMUX_KEYSTORE_PASSWORD does not open this keystore (or MTMUX_KEYSTORE_BASE64 is not the same file)"; exit 1; }
           keytool -list -keystore "$MTMUX_KEYSTORE" -storepass:env MTMUX_KEYSTORE_PASSWORD -alias "$MTMUX_KEY_ALIAS" >/dev/null 2>&1 \
             || { echo "::error::Password is correct, but alias MTMUX_KEY_ALIAS does not exist in the keystore"; exit 1; }
+          # PKCS12 (keytool's default) requires the key password to equal the keystore password.
+          type=$(keytool -J-Duser.language=en -list -v -keystore "$MTMUX_KEYSTORE" -storepass:env MTMUX_KEYSTORE_PASSWORD 2>/dev/null | sed -n 's/^Keystore type: //p')
+          if [ "$type" = PKCS12 ] && [ "$MTMUX_KEY_PASSWORD" != "$MTMUX_KEYSTORE_PASSWORD" ]; then
+            echo "::error::Keystore is PKCS12, so MTMUX_KEY_PASSWORD must equal MTMUX_KEYSTORE_PASSWORD"; exit 1
+          fi
+          keytool -certreq -keystore "$MTMUX_KEYSTORE" -storepass:env MTMUX_KEYSTORE_PASSWORD -alias "$MTMUX_KEY_ALIAS" \
+              -keypass:env MTMUX_KEY_PASSWORD -file /dev/null >/dev/null 2>&1 \
+            || { echo "::error::MTMUX_KEY_PASSWORD cannot unlock the private key"; exit 1; }
           echo "Keystore opened with the configured password and alias."
 
       - name: Test and build signed release
