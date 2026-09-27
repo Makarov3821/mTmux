@@ -2,7 +2,7 @@
 
 Android 上的 SSH + tmux Agent 控制端。目标是离开电脑后，打开手机查看远程 Agent 输出、回复并继续工作；不在服务器安装常驻服务。
 
-**当前为 0.7.0-dev：新增中英文界面切换（默认英文资源），尚未完成整个 P1 或真机验收，非稳定发行版。** 完整产品范围见 [plan.md](plan.md)，验证结果和剩余门槛见 [P0 报告](docs/testing/p0-report.md)。
+**当前为 0.7.1-dev（应用 ID `dev.mtmux`，名称 mTmux）：含中英文界面切换（默认英文资源）与签名发布流程，尚未完成整个 P1 或真机验收，非稳定发行版。** 完整产品范围见 [plan.md](plan.md)，验证结果和剩余门槛见 [P0 报告](docs/testing/p0-report.md)。
 
 版本功能清单见 [CHANGELOG.md](CHANGELOG.md)；最近的源码标签为首个公开快照 `v0.6.7-dev`。
 
@@ -104,6 +104,28 @@ python3 scripts/test_ssh.py
 SSH 集成用例在普通 `:core:test` 中会明确跳过，只有 fixture 启动后才执行。`scripts/test_ssh.py` 测试未加密和加密 OpenSSH Ed25519 私钥、未知/变化主机密钥、命令 stdout/stderr/退出码、PTY 尺寸、中文输入、普通 shell 执行，以及无 UTF-8 locale 的 tmux 中文/特殊字符名称、链接窗口所属会话和连接前历史；还覆盖两级跳板、每级主机身份、跳板失败清理和不直连回退；密码认证仍需真机测试。测试脚本结束时清理自己创建的服务和密钥，不连接你的生产服务器。
 
 CI 配置见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，包含测试、终端资产一致性、APK 编译、Android lint 及报告上传。本地测试结果不等于 CI 已实际运行，也不等于 Android 真机兼容性通过。
+
+### 签名发布（GitHub Release）
+
+[.github/workflows/release.yml](.github/workflows/release.yml)：推送 `v*` 标签时用固定密钥签名 release APK，校验证书后发布为 GitHub pre-release；在 Actions 页手动运行则只检查并上传 artifact，不发布。签名只从环境变量读取，未配置时 release 包不签名。
+
+```bash
+# 一次性：生成密钥（离线备份，切勿提交），本地验证并取得公开证书指纹
+keytool -genkeypair -v -keystore mtmux-release.jks -alias mtmux -keyalg RSA -keysize 4096 -validity 10000
+scripts/verify_release_signing.sh mtmux-release.jks mtmux
+
+# 写入仓库 Secrets / Variables（值不会显示在日志中）
+base64 -w0 mtmux-release.jks | gh secret set MTMUX_KEYSTORE_BASE64
+gh secret set MTMUX_KEYSTORE_PASSWORD
+gh secret set MTMUX_KEY_ALIAS --body mtmux
+gh secret set MTMUX_KEY_PASSWORD
+gh variable set MTMUX_CERT_SHA256 --body <脚本输出的指纹>
+
+# 发版
+git tag v0.7.1-dev && git push origin v0.7.1-dev
+```
+
+release 与 debug 签名不同，已装 debug 版需卸载后才能安装 release 版（本机配置和凭据会丢失）；每次发版需递增 versionCode。
 
 
 Android 页面回归测试（连接测试设备或模拟器后）：

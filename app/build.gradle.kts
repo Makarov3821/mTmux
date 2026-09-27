@@ -7,12 +7,30 @@ android {
     namespace = "dev.mtmux"
     compileSdk = 36
     defaultConfig {
-        applicationId = "dev.mtmux.p0"
+        applicationId = "dev.mtmux"
         minSdk = 26
         targetSdk = 36
-        versionCode = 25
-        versionName = "0.7.0-dev"
+        versionCode = 26
+        versionName = "0.7.1-dev"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+    // Release signing comes only from environment variables (CI secrets or
+    // scripts/verify_release_signing.sh). Without them the release APK is unsigned.
+    val releaseKeystore = System.getenv("MTMUX_KEYSTORE")?.takeIf { it.isNotBlank() }
+    signingConfigs {
+        if (releaseKeystore != null) create("release") {
+            storeFile = file(releaseKeystore)
+            storePassword = System.getenv("MTMUX_KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("MTMUX_KEY_ALIAS")
+            keyPassword = System.getenv("MTMUX_KEY_PASSWORD")
+        }
+    }
+    buildTypes {
+        release {
+            // R8 may break JSch / Bouncy Castle reflection; keep disabled until verified.
+            isMinifyEnabled = false
+            if (releaseKeystore != null) signingConfig = signingConfigs.getByName("release")
+        }
     }
     buildFeatures { compose = true }
     compileOptions {

@@ -2,6 +2,17 @@
 
 所有版本均为 Android debug 开发版（`-dev`），未经完整真机验收。每个版本的实现细节、验证结果、截图与 APK SHA-256 见对应的「详细记录」；测试证据在 [docs/evidence/](docs/evidence/)。文档目录说明见 [docs/README.md](docs/README.md)。
 
+## [0.7.1-dev] — 2026-09-28 · versionCode 26
+
+首个经 GitHub Actions 签名发布的版本。
+
+### 变更
+- 应用 ID 由 `dev.mtmux.p0` 改为 `dev.mtmux`，显示名称改为 mTmux。系统视为新应用，旧版不会被覆盖，需要重新配置服务器和凭据。
+- 新增签名 release 构建与发布流程（`.github/workflows/release.yml`）及本地校验脚本 `scripts/verify_release_signing.sh`；签名信息只来自环境变量。
+
+### 验证
+- Android 15 模拟器全套 32 项通过（0 失败、0 跳过）；core、lint 通过。签名流程用临时密钥验证过正确、缺失、密码错误、别名错误与证书不匹配等情况。
+
 ## [0.7.0-dev] — 2026-09-26 · versionCode 25
 
 详细记录：[0.7.0](docs/releases/0.7.0.md)

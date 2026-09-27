@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">mtmux P0</string>
+    <string name="app_name" translatable="false">mTmux</string>
     <string name="language_chinese" translatable="false">简体中文</string>
     <string name="language_english" translatable="false">English</string>
     <string name="common_back">‹ Back</string>
