@@ -12,13 +12,15 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          # Default list includes the removed 'tools' package, which makes sdkmanager fail.
+          packages: "platform-tools platforms;android-36 build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: web/package-lock.json
-      - run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
       - run: npm ci --ignore-scripts && npm test && npm run bundle
         working-directory: web
       - run: git diff --exit-code -- app/src/main/assets/terminal
