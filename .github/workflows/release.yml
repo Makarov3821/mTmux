@@ -1,5 +1,6 @@
 name: Release APK
-# Tag push (v*) builds, verifies and publishes a signed APK as a GitHub pre-release.
+# Tag push (v*) builds, verifies and publishes a signed APK as a GitHub release
+# (pre-release when the tag has a "-" suffix such as v0.7.1-dev).
 # Manual run (Actions → Release APK → Run workflow) is a dry run: it checks the signing
 # secrets and uploads the APK as an artifact, without creating a release.
 on:
@@ -10,23 +11,31 @@ permissions:
   contents: write   # gh release create
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       MTMUX_KEYSTORE_PASSWORD: ${{ secrets.MTMUX_KEYSTORE_PASSWORD }}
       MTMUX_KEY_ALIAS: ${{ secrets.MTMUX_KEY_ALIAS }}
       MTMUX_KEY_PASSWORD: ${{ secrets.MTMUX_KEY_PASSWORD }}
       EXPECTED_CERT: ${{ vars.MTMUX_CERT_SHA256 }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
         with:
           # Default list includes the removed 'tools' package, which makes sdkmanager fail.
           packages: "platform-tools platforms;android-36 build-tools;35.0.0"
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
+      # gradle/actions v6 bundles a proprietary caching component with separate terms; stay on v5 (MIT).
+
+      - name: Check tag matches versionName
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(sed -n 's/^ *versionName = "\(.*\)"/\1/p' app/build.gradle.kts)
+          [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "::error::Tag $GITHUB_REF_NAME does not match versionName $version in app/build.gradle.kts"; exit 1; }
+          echo "Tag matches versionName $version"
 
       # Only reports which secrets are missing; values are never printed (and are masked anyway).
       - name: Check signing secrets are present
@@ -86,18 +95,22 @@ jobs:
           sha256sum "$name" > "$name.sha256"
           echo "APK_NAME=$name" >> "$GITHUB_ENV"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: signed-release-apk
           path: |
             ${{ env.APK_NAME }}
             ${{ env.APK_NAME }}.sha256
 
-      - name: Publish GitHub pre-release
+      - name: Publish GitHub release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "$APK_NAME" "$APK_NAME.sha256" --prerelease --generate-notes --title "mtmux $GITHUB_REF_NAME"
+        run: |
+          # v0.7.1 -> normal release; v0.7.1-dev / v0.8.0-rc.1 (any "-" suffix) -> pre-release
+          flag=""
+          case "$GITHUB_REF_NAME" in *-*) flag="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" "$APK_NAME" "$APK_NAME.sha256" $flag --generate-notes --title "mTmux $GITHUB_REF_NAME"
 
       - name: Remove keystore
         if: always()

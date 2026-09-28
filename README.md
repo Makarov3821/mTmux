@@ -107,7 +107,7 @@ CI 配置见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，包含测试
 
 ### 签名发布（GitHub Release）
 
-[.github/workflows/release.yml](.github/workflows/release.yml)：推送 `v*` 标签时用固定密钥签名 release APK，校验证书后发布为 GitHub pre-release；在 Actions 页手动运行则只检查并上传 artifact，不发布。签名只从环境变量读取，未配置时 release 包不签名。
+[.github/workflows/release.yml](.github/workflows/release.yml)：推送 `v*` 标签时用固定密钥签名 release APK，校验证书后发布：带 `-` 后缀的标签（如 `v0.7.1-dev`、`v1.0.0-rc.1`）为 pre-release，`v0.7.1` 这类为正式 release。标签须与 `versionName` 一致（`v` + versionName），否则 CI 报错；在 Actions 页手动运行则只检查并上传 artifact，不发布。签名只从环境变量读取，未配置时 release 包不签名。
 
 ```bash
 # 一次性：生成密钥（离线备份，切勿提交），本地验证并取得公开证书指纹
