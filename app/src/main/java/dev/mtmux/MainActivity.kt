@@ -286,8 +286,16 @@ class MainActivity : AppCompatActivity() {
                     status = TerminalStatus(uiText(if (session == null) R.string.status_connected_shell else R.string.status_connected_tmux))
                     if (!rememberTask(profile, binding, found)) status = status.withAlert(uiText(R.string.status_recent_not_saved))
                     val renderToken = wireToken
-                    withContext(Dispatchers.IO) { connection.pump { terminalView?.render(it, renderToken) ?: throw MtmuxException(ErrorCode.TERMINAL_CLOSED) } }
-                    if (attempt == generation) disconnect(TerminalStatus(uiText(R.string.status_terminal_closed)))
+                    val exitStatus = withContext(Dispatchers.IO) { connection.pump { terminalView?.render(it, renderToken) ?: throw MtmuxException(ErrorCode.TERMINAL_CLOSED) } }
+                    if (attempt == generation) {
+                        if (exitStatus >= 0) {
+                            // The remote program ended on its own (`exit`, tmux detach): nothing left to
+                            // read, so go back to the server list. Drops without an exit status keep history.
+                            DebugLog.event(DebugLog.Event.REMOTE_EXIT,attempt.toInt(),exitStatus.coerceIn(0,255))
+                            disconnect(TerminalStatus(uiText(R.string.status_remote_exited)), clear = true)
+                            showConfig = true
+                        } else disconnect(TerminalStatus(uiText(R.string.status_terminal_closed)))
+                    }
                 }
             } catch (error: Exception) {
                 DebugLog.event(DebugLog.Event.CONNECTION_FAILED,attempt.toInt(),error=error)
@@ -383,6 +391,8 @@ class MainActivity : AppCompatActivity() {
             focusManager.clearFocus(force = true); keyboard?.hide(); showConfig = true
         }
         BackHandler(enabled = !showConfig) { home() }
+        // Returning home from outside the composable (remote exit) must also drop the terminal's input focus.
+        LaunchedEffect(showConfig) { if (showConfig) { focusManager.clearFocus(force = true); keyboard?.hide() } }
         fun sendDraft(text: String, enter: Boolean, token: String = wireToken) {
             if (token.isEmpty() || token != wireToken || pastePending) return
             draftSequence++

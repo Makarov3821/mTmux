@@ -300,4 +300,12 @@
         <item>Please explain your plan first; do not run anything yet.</item>
         <item>Please run the relevant tests and report the results.</item>
     </string-array>
+    <string name="status_remote_exited">The remote session ended; returned to the server list.</string>
+    <string name="editor_folder">Folder</string>
+    <string name="editor_folder_none_hint">Create folders on the home page to group servers.</string>
+    <string name="editor_jump_from_saved">＋ From saved server</string>
+    <string name="editor_jump_pick_title">Use a saved server as a jump host</string>
+    <string name="editor_jump_pick_help">Its address, username and credentials are copied into this route. Its own jump hosts are added before it. Later edits to that server are not synced.</string>
+    <string name="editor_jump_pick_empty">No other saved servers</string>
+    <string name="editor_jump_pick_failed">Cannot read that server\'s saved credentials. Edit it and save again.</string>
 </resources>

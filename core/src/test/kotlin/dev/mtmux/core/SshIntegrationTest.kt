@@ -20,6 +20,20 @@ class SshIntegrationTest {
         override fun get(endpoint: String) = System.getenv("MTMUX_TEST_HOST_KEY")
     })
 
+    @Test fun `pump reports exit status for a normal exit and -1 when the connection drops`() {
+        for ((command, expected) in listOf("printf done; exit 3" to 3, "printf done; kill -9 \$PPID" to -1)) {
+            trusted().use { client ->
+                client.connect(login())
+                client.openTerminal(command, 80, 24)
+                var status = Int.MIN_VALUE
+                val reader = thread(isDaemon = true) { runCatching { status = client.pump { } } }
+                reader.join(10_000)
+                assertFalse(reader.isAlive, command)
+                assertEquals(expected, status, command)
+            }
+        }
+    }
+
     @Test fun `invalid key fails locally with safe location and authentication guidance`() {
         val first=login()
         trusted().use { client ->

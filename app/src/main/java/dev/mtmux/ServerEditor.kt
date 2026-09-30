@@ -102,6 +102,24 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
     var jumpsEnabled by remember { mutableStateOf(initial?.jumps?.isNotEmpty() == true) }
     val hops = remember { mutableStateListOf<AuthFields>().apply { initial?.jumps?.forEach { add(AuthFields(it.host,it.port,it.user,it.keyAuthentication,loaded.getOrNull()?.jumps?.get(it.id),it.id)) } } }
     var dirty by remember { mutableStateOf(false) }; var abandon by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val organization = remember { ServerOrganization(context) }
+    val folders = remember { organization.folders() }
+    // Presentation only: stored separately from the SSH target and credentials.
+    var folderId by remember { mutableStateOf(initial?.let { organization.folderOf(it.id) }) }
+    var folderMenu by remember { mutableStateOf(false) }
+    var pickJump by remember { mutableStateOf(false) }
+    /** Copies a saved server (and its own jump chain, in order) into this route as new hops. */
+    fun importJump(source: ServerProfile): Boolean {
+        val saved = runCatching { store.credentials(source) }.getOrNull() ?: return false
+        val chain = source.jumps.map { j -> AuthFields(j.host, j.port, j.user, j.keyAuthentication, saved.jumps[j.id] ?: return false) } +
+            AuthFields(source.host, source.port, source.user, source.keyAuthentication, SavedCredentials(saved.password, saved.privateKey, saved.passphrase))
+        chain.forEach { it.expanded = false }
+        // Replace the blank hop added when Jump Host was switched on.
+        if (hops.size == 1 && hops[0].host.isBlank() && hops[0].user.isBlank()) hops.clear()
+        hops.addAll(chain); jumpsEnabled = true; dirty = true
+        return true
+    }
     var error by remember { mutableStateOf(if (loaded.isFailure) R.string.editor_err_credentials_unreadable else null) }
     fun close() { if (dirty) abandon = true else onClose() }
     BackHandler { close() }
@@ -120,6 +138,7 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
                         if (jumpsEnabled) hops.map { JumpHost(it.id,it.host.trim(),it.port.toInt(),it.user.trim(),it.key) } else emptyList())
                     store.save(profile,SavedCredentials(target.password,target.privateKey,target.passphrase,
                         if (jumpsEnabled) hops.associate { it.id to it.secret() } else emptyMap()))
+                    if (folderId != (initial?.let { organization.folderOf(it.id) })) runCatching { organization.move(profile.id, folderId) }
                     onSaved()
                 }.onFailure { error = R.string.editor_err_save }
             }, modifier = Modifier.testTag("save-server")) { Text(stringResource(R.string.common_save)) }
@@ -133,6 +152,22 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
                 Text("${if (advanced) "⌄" else "›"} " + stringResource(R.string.editor_advanced) + if (jumpsEnabled) " · " + pluralStringResource(R.plurals.editor_jump_count, hops.size, hops.size) else "")
             }
             if (advanced) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(stringResource(R.string.editor_folder))
+                    Box {
+                        TextButton(onClick = { folderMenu = true }, enabled = folders.isNotEmpty(), modifier = Modifier.testTag("editor-folder")) {
+                            Text((folders.firstOrNull { it.id == folderId }?.name ?: stringResource(R.string.home_ungrouped)) + " ▾")
+                        }
+                        DropdownMenu(expanded = folderMenu, onDismissRequest = { folderMenu = false }) {
+                            (listOf<ServerFolder?>(null) + folders).forEach { folder ->
+                                DropdownMenuItem(text = { Text((if (folder?.id == folderId) "✓ " else "") + (folder?.name ?: stringResource(R.string.home_ungrouped))) },
+                                    onClick = { folderId = folder?.id; folderMenu = false; dirty = true },
+                                    modifier = Modifier.testTag("editor-folder-${folder?.id ?: "ungrouped"}"))
+                            }
+                        }
+                    }
+                }
+                if (folders.isEmpty()) Text(stringResource(R.string.editor_folder_none_hint), style = MaterialTheme.typography.bodySmall)
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Jump Host")
                     Switch(checked = jumpsEnabled, onCheckedChange = { jumpsEnabled = it; dirty = true; if (it && hops.isEmpty()) hops.add(AuthFields()) }, modifier = Modifier.testTag("jump-enabled"))
@@ -153,13 +188,36 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
                             HorizontalDivider()
                         }
                     } }
-                    OutlinedButton(onClick = { hops.add(AuthFields()); dirty = true }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.editor_add_jump)) }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { hops.add(AuthFields()); dirty = true }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.editor_add_jump)) }
+                        OutlinedButton(onClick = { pickJump = true }, modifier = Modifier.weight(1f).testTag("jump-from-saved")) { Text(stringResource(R.string.editor_jump_from_saved)) }
+                    }
                 }
                 OutlinedTextField(path, { path = it; dirty = true }, label = { Text(stringResource(R.string.editor_tmux_path)) }, modifier = Modifier.fillMaxWidth())
                 Row(verticalAlignment = Alignment.CenterVertically) { Switch(mouse, { mouse = it; dirty = true }); Text(stringResource(R.string.editor_tmux_mouse), style = MaterialTheme.typography.bodyMedium) }
             }
             Spacer(Modifier.height(24.dp))
         }
+    }
+    if (pickJump) {
+        val privacy = remember { PrivacyDisplay(context) }
+        val candidates = remember { store.all().filter { it.id != initial?.id } }
+        AlertDialog(properties = protectedDialogProperties, onDismissRequest = { pickJump = false },
+            title = { Text(stringResource(R.string.editor_jump_pick_title)) },
+            text = { Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
+                Text(stringResource(R.string.editor_jump_pick_help), style = MaterialTheme.typography.bodySmall)
+                if (candidates.isEmpty()) Text(stringResource(R.string.editor_jump_pick_empty), Modifier.padding(top = 12.dp))
+                candidates.forEach { candidate ->
+                    TextButton(onClick = {
+                        if (!importJump(candidate)) error = R.string.editor_jump_pick_failed
+                        pickJump = false
+                    }, modifier = Modifier.fillMaxWidth().testTag("jump-pick-${candidate.id}")) {
+                        Text(privacy.label(candidate, privacy.enabled()) + if (candidate.jumps.isNotEmpty()) " · " + pluralStringResource(R.plurals.editor_jump_count, candidate.jumps.size, candidate.jumps.size) else "",
+                            Modifier.fillMaxWidth())
+                    }
+                }
+            } },
+            confirmButton = { TextButton(onClick = { pickJump = false }) { Text(stringResource(R.string.common_cancel)) } })
     }
     if (abandon) AlertDialog(properties=protectedDialogProperties,onDismissRequest = { abandon = false }, title = { Text(stringResource(R.string.editor_abandon_title)) },
         confirmButton = { TextButton(onClick = onClose) { Text(stringResource(R.string.editor_abandon)) } }, dismissButton = { TextButton(onClick = { abandon = false }) { Text(stringResource(R.string.editor_keep_editing)) } })

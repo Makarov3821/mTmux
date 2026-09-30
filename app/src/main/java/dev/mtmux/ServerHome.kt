@@ -162,7 +162,7 @@ private data class HomeRow(val snapshot: ServerSnapshot? = null, val refreshing:
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (page) {
             "edit" -> ServerEditor(store, edit, onClose = { page = "home" }, onSaved = {
-                profiles = store.all(); rows.clear(); message = null; page = "home"
+                profiles = store.all(); organizationRevision++; rows.clear(); message = null; page = "home"
             })
             "settings" -> {
                 BackHandler { page = "home" }

@@ -144,7 +144,11 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
     }
 
     /** Runs on an IO thread. The consumer must apply bounded backpressure. */
-    fun pump(consume: (ByteArray) -> Unit) {
+    /**
+     * Returns the remote exit status when the remote program ended normally (e.g. the user
+     * typed `exit` or detached tmux), or -1 when the connection dropped without one.
+     */
+    fun pump(consume: (ByteArray) -> Unit): Int {
         val channel = terminal ?: fail(ErrorCode.TERMINAL_NOT_CONNECTED)
         try {
             val stream = input ?: fail(ErrorCode.TERMINAL_NOT_CONNECTED)
@@ -154,6 +158,10 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
                 if (count < 0) break
                 consume(buffer.copyOf(count))
             }
+            // EOF can arrive slightly before the exit-status message; wait briefly for it.
+            val deadline = System.nanoTime() + 1_500_000_000L
+            while (channel.exitStatus == -1 && !channel.isClosed && System.nanoTime() < deadline) Thread.sleep(20)
+            return channel.exitStatus
         } finally { close() }
     }
 

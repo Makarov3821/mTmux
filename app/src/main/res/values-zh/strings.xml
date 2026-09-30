@@ -294,4 +294,12 @@
         <item>请先解释你的方案，暂时不要执行。</item>
         <item>请运行相关测试并报告结果。</item>
     </string-array>
+    <string name="status_remote_exited">远端会话已结束，已返回服务器列表</string>
+    <string name="editor_folder">文件夹</string>
+    <string name="editor_folder_none_hint">可在首页新建文件夹来分组服务器</string>
+    <string name="editor_jump_from_saved">＋ 从已保存服务器选择</string>
+    <string name="editor_jump_pick_title">选择已保存的服务器作为跳板</string>
+    <string name="editor_jump_pick_help">复制其地址、用户名和凭据到此链路；它自己的跳板会一并加在前面。之后修改该服务器不会同步到这里。</string>
+    <string name="editor_jump_pick_empty">没有其他已保存的服务器</string>
+    <string name="editor_jump_pick_failed">无法读取该服务器的已保存凭据，请编辑后重新保存</string>
 </resources>

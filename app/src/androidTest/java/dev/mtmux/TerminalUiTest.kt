@@ -1126,9 +1126,7 @@ class TerminalUiTest {
         disconnectFixture()
     }
 
-    @Test fun remoteDisconnectPreservesOutputAndMarksItAsHistory() {
-        val args = InstrumentationRegistry.getArguments()
-        assumeTrue(args.containsKey("fixturePort"))
+    private fun connectFixtureShell(args: android.os.Bundle): TerminalView {
         val port = args.getString("fixturePort")!!.toInt()
         showTerminalForFixture()
         val view = terminal()
@@ -1144,12 +1142,88 @@ class TerminalUiTest {
             method.invoke(compose.activity, login, "tmux", null, false)
         }
         compose.waitUntil(30000) { evaluate(view,"connected") == "true" }
-        compose.onNodeWithTag("command-input").performTextInput("printf 'REMOTE_DONE\\n'; exit")
+        return view
+    }
+
+    @Test fun remoteDisconnectPreservesOutputAndMarksItAsHistory() {
+        val args = InstrumentationRegistry.getArguments()
+        assumeTrue(args.containsKey("fixturePort"))
+        val view = connectFixtureShell(args)
+        // Kill the per-session sshd process: the connection drops without an exit status.
+        compose.onNodeWithTag("command-input").performTextInput("printf 'REMOTE_DONE\\n'; kill -9 \$PPID")
         compose.onNodeWithText("发送回车").performClick()
         compose.waitUntil(30000) { compose.onAllNodesWithTag("disconnected-history").fetchSemanticsNodes().isNotEmpty() }
         assertTrue(evaluate(view, "Array.from({length:terminal.buffer.active.length},(_,i)=>terminal.buffer.active.getLine(i).translateToString(true)).join('\\n')").contains("REMOTE_DONE"))
         compose.onNodeWithText("发送回车").assertIsNotEnabled()
+        compose.onNodeWithTag("add-server").assertDoesNotExist() // stays on the terminal
         saveScreenshot("remote-disconnect-retained")
+    }
+
+    @Test fun remoteExitReturnsToServerList() {
+        val args = InstrumentationRegistry.getArguments()
+        assumeTrue(args.containsKey("fixturePort"))
+        connectFixtureShell(args)
+        compose.onNodeWithTag("command-input").performTextInput("exit")
+        compose.onNodeWithText("发送回车").performClick()
+        compose.waitUntil(30000) { compose.onAllNodesWithTag("add-server").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("服务器").assertIsDisplayed()
+        val field = MainActivity::class.java.getDeclaredField("wireToken\$delegate").apply { isAccessible = true }
+        @Suppress("UNCHECKED_CAST")
+        assertEquals("", (field.get(compose.activity) as androidx.compose.runtime.MutableState<String>).value)
+        assertTrue(DebugLog.snapshot().toString(Charsets.UTF_8).contains("REMOTE_EXIT"))
+        saveScreenshot("remote-exit-home")
+    }
+
+    @Test fun editorChoosesFolderAndCopiesSavedServerAsJumpHosts() {
+        val store=ServerProfiles(compose.activity); store.all().forEach { store.delete(it.id) }
+        val organization=ServerOrganization(compose.activity); organization.folders().forEach { organization.deleteFolder(it.id) }
+        val folder=organization.saveFolder(null,"工作")
+        // A saved server that itself goes through one jump host: both hops must be copied, in order.
+        val innerJump=JumpHost(host="198.51.100.1",port=2201,user="bastion",keyAuthentication=false)
+        val saved=ServerProfile(name="已存跳板",host="198.51.100.2",port=2202,user="relay",path="tmux",keyAuthentication=false,jumps=listOf(innerJump))
+        store.save(saved,SavedCredentials("relay-secret",jumps=mapOf(innerJump.id to SavedCredentials("bastion-secret"))))
+        try {
+            compose.activityRule.scenario.recreate()
+            compose.onNodeWithTag("add-server").performClick()
+            compose.onNodeWithTag("profile-name").performTextInput("新服务器")
+            compose.onNodeWithTag("server-host").performTextInput("203.0.113.9")
+            compose.onNodeWithTag("server-user").performTextInput("target")
+            compose.onNodeWithText("密码",useUnmergedTree=true).performScrollTo().performClick()
+            compose.onNodeWithTag("server-secret").performScrollTo().performTextInput("target-secret")
+            compose.onNodeWithTag("advanced").performScrollTo().performClick()
+            compose.onNodeWithTag("editor-folder").performScrollTo().assertTextContains("未分组",substring=true).performClick()
+            compose.onNodeWithTag("editor-folder-${folder.id}").performClick()
+            compose.onNodeWithTag("editor-folder").assertTextContains("工作",substring=true)
+            compose.onNodeWithTag("jump-enabled").performScrollTo().performClick()
+            compose.onNodeWithTag("jump-from-saved").performScrollTo().performClick()
+            compose.onNodeWithTag("jump-pick-${saved.id}").assertTextContains("已存跳板",substring=true).performClick()
+            // Blank hop from the switch is replaced; imported hops are collapsed summaries.
+            compose.onNodeWithText("relay@198.51.100.2:2202").performScrollTo().assertIsDisplayed()
+            saveScreenshot("editor-folder-saved-jumps")
+            compose.onNodeWithTag("save-server").performClick()
+            compose.waitForIdle()
+            val created=store.all().single { it.name=="新服务器" }
+            assertEquals(folder.id,organization.folderOf(created.id))
+            assertEquals(listOf("bastion@198.51.100.1:2201","relay@198.51.100.2:2202"),created.jumps.map { "${it.user}@${it.host}:${it.port}" })
+            assertTrue(created.jumps.none { it.id==innerJump.id }) // copies, not shared hop IDs
+            val secrets=store.credentials(created)!!
+            assertEquals("target-secret",secrets.password)
+            assertEquals(listOf("bastion-secret","relay-secret"),created.jumps.map { secrets.jumps[it.id]!!.password })
+            compose.onNodeWithTag("profile-${created.id}").assertExists() // listed under the folder
+            // Editing can move it back to ungrouped without touching credentials.
+            compose.onNodeWithTag("more-${created.id}").performClick()
+            compose.onNodeWithText("编辑服务器").performClick()
+            compose.onNodeWithTag("advanced").performScrollTo().performClick()
+            compose.onNodeWithTag("editor-folder").performScrollTo().performClick()
+            compose.onNodeWithTag("editor-folder-ungrouped").performClick()
+            compose.onNodeWithTag("save-server").performClick()
+            compose.waitForIdle()
+            assertNull(organization.folderOf(created.id))
+            assertEquals("target-secret",store.credentials(created)!!.password)
+        } finally {
+            store.all().forEach { store.delete(it.id) }
+            organization.deleteFolder(folder.id)
+        }
     }
 
     @Test fun encryptedPrivateKeysRestoreAndConnectWithOneClick() {
