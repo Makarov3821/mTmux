@@ -288,4 +288,4 @@ pane 目标保护已在 0.1.3 修复，最近任务与安全重连在 0.1.4 完�
 
 ### 2026-10-02：双版本离线语音计划
 
-下一步改为先做语音基准原型，再决定产品实现：standard 保持无麦克风权限和无模型；voice 在“收起键盘”和“快捷回复”之间增加语音按钮，转写只填入可编辑草稿，绝不自动发送。首选候选为 whisper.cpp multilingual tiny q5_1，base q5_1 为质量备选；系统 SpeechRecognizer 只作可选后备。架构、体积、隐私、测试门槛与 15–27 人日估算见 [双版本语音输入实施计划](docs/design/voice-input-plan.md)。
+下一步改为先做语音基准原型，再决定产品实现：standard 保持无麦克风权限和无模型；voice 在“收起键盘”和“快捷回复”之间增加语音按钮，转写只填入可编辑草稿，绝不自动发送。用户可接受完整包约 100 MB 后，首选候选调整为 whisper.cpp multilingual base q5_1，tiny q5_1 作为低内存/体积回退与对照；系统 SpeechRecognizer 只作可选后备。官方中文 Common Voice 9 / FLEURS 数据中 base 相对 tiny 的 CER 分别下降约 14.3% / 15.8%，但个别语言和单条音频不保证单调改善，仍须真机实测。架构、体积、隐私、测试门槛与 15–27 人日估算见 [双版本语音输入实施计划](docs/design/voice-input-plan.md)。
