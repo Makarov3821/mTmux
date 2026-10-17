@@ -17,6 +17,17 @@ import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class VoiceProductTest {
+    @Test fun bundledBaseModelExtractsAndNativeProbe() {
+        val context=InstrumentationRegistry.getInstrumentation().targetContext
+        File(context.noBackupFilesDir,"voice").deleteRecursively()
+        val engine=WhisperTranscriber(context)
+        assertEquals("base",engine.probeModel())
+        val model=File(context.noBackupFilesDir,"voice/${WhisperTranscriber.MODEL_NAME}")
+        assertEquals(WhisperTranscriber.MODEL_BYTES,model.length())
+        assertEquals(WhisperTranscriber.MODEL_SHA256,sha256(model))
+        assertFalse(File(model.parentFile,"${WhisperTranscriber.MODEL_NAME}.part").exists())
+    }
+
     @Test fun bundledBaseModelExtractsAndTranscribesPinnedWav() {
         val instrumentation=InstrumentationRegistry.getInstrumentation()
         val context=instrumentation.targetContext

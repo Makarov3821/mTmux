@@ -78,7 +78,7 @@ jobs:
           done
           "$zipalign" -c -P 16 -v 4 "$voice"
           "$zipalign" -c -P 16 -v 4 "$benchmark"
-      - name: Run bundled-model and voice UI smoke tests on Android 15
+      - name: Run bundled-model probe and voice UI smoke tests on Android 15
         run: |
           echo no | avdmanager create avd --force --name voice-ci --package 'system-images;android-35;google_apis;x86_64' --device pixel_2
           emulator -avd voice-ci -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 4096 >/tmp/voice-emulator.log 2>&1 &
@@ -86,8 +86,8 @@ jobs:
           trap 'kill $emulator_pid || true' EXIT
           adb wait-for-device
           timeout 300 bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\\r")" = 1 ]; do sleep 2; done'
-          ./gradlew :app:connectedVoiceDebugAndroidTest --console=plain \
-            -Pandroid.testInstrumentationRunnerArguments.class='dev.mtmux.VoiceProductTest,dev.mtmux.TerminalUiTest#flavorExposesOnlyItsVoiceCapability,dev.mtmux.TerminalUiTest#voiceFlavorRecordsAndTranscribesWithoutAutoSending'
+          timeout 900 ./gradlew :app:connectedVoiceDebugAndroidTest --console=plain \
+            -Pandroid.testInstrumentationRunnerArguments.class='dev.mtmux.VoiceProductTest#bundledBaseModelExtractsAndNativeProbe,dev.mtmux.VoiceProductTest#cancellationBeforeInferenceNeverReturnsText,dev.mtmux.VoiceProductTest#audioRecordCapturesOrFailsCleanlyAndReleases,dev.mtmux.TerminalUiTest#flavorExposesOnlyItsVoiceCapability'
       - uses: actions/upload-artifact@v7
         if: always()
         with:

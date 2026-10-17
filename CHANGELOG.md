@@ -15,7 +15,7 @@
 - 独立 `:voice-benchmark`、固定供应链下载/校验及 ADB runner；模型和源码缓存不提交 Git。
 
 ### 验证
-- Android 15 x86_64：standard 完整 36 项、voice 完整 40 项均通过（0 失败/跳过）；voice 另覆盖 bundled base 提取/校验/转写、native 前/推理中取消、AudioRecord 可用或干净失败、语音 UI/设置/不自动发送。
+- Android 15 x86_64：standard 完整 36 项、voice 完整 41 项均通过（0 失败/跳过）；voice 另覆盖 bundled base 提取/校验/转写、native 前/推理中取消、AudioRecord 可用或干净失败、语音 UI/设置/不自动发送。
 - 本地 throwaway 签名：standard 12,114,355 bytes，voice 74,492,953 bytes；同证书/包名/0.8.0-dev code28，可相互覆盖并保留数据。
 - V0 JFK 11 秒显式 English 中位数：tiny 4.707s / RTF 0.428 / peak RSS 231MB；base 11.680s / RTF 1.062 / 281MB。仅为模拟器链路数据，不代表 ARM/中文体验。
 

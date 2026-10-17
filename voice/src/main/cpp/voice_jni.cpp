@@ -41,10 +41,23 @@ jbyteArray bytes(JNIEnv * env, const std::string & value) {
     if (result) env->SetByteArrayRegion(result, 0, static_cast<jsize>(value.size()), reinterpret_cast<const jbyte *>(value.data()));
     return result;
 }
+
 struct RequestGuard {
     jlong id;
     ~RequestGuard() { std::lock_guard<std::mutex> lock(requests_mutex); requests.erase(id); }
 };
+}
+
+extern "C" JNIEXPORT jbyteArray JNICALL
+Java_dev_mtmux_voice_NativeVoice_probe(JNIEnv * env, jclass, jstring model_java) {
+    if (!model_java) { fail(env,"VOICE_INVALID_ARGUMENT");return nullptr; }
+    const std::string model=from_java(env,model_java);
+    whisper_context_params params=whisper_context_default_params();params.use_gpu=false;params.flash_attn=true;
+    whisper_context * context=whisper_init_from_file_with_params(model.c_str(),params);
+    if(!context){fail(env,"VOICE_MODEL_INIT");return nullptr;}
+    const char * type=whisper_model_type_readable(context);
+    const std::string result=type?type:"unknown";
+    whisper_free(context);return bytes(env,result);
 }
 
 extern "C" JNIEXPORT jbyteArray JNICALL

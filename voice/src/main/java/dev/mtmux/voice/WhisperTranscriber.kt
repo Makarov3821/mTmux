@@ -12,6 +12,7 @@ class WhisperTranscriber(private val context: Context) {
     @Volatile private var verifiedModel: File? = null
 
     fun prepareModel() { ensureModel() }
+    fun probeModel():String = NativeVoice.probe(ensureModel().absolutePath).toString(Charsets.UTF_8)
     fun newRequestId(): Long {
         val id=requestIds.incrementAndGet()
         check(states.putIfAbsent(id,AtomicInteger(ACTIVE))==null)
@@ -90,6 +91,7 @@ data class VoiceResult(val text: String, val language: String, val elapsedMs: Lo
 internal object NativeVoice {
     init { System.loadLibrary("mtmux_voice") }
     external fun transcribe(modelPath: String, pcm: FloatArray, language: String, threads: Int, requestId: Long): ByteArray
+    external fun probe(modelPath:String):ByteArray
     external fun cancel(requestId: Long): Boolean
     external fun forget(requestId: Long)
 }
