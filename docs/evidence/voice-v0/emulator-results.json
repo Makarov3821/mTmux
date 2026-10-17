@@ -1,0 +1,167 @@
+{
+  "schema": 1,
+  "environment": {
+    "device": "Android Emulator",
+    "androidApi": 35,
+    "abi": "x86_64",
+    "memoryKb": 3048052,
+    "threads": 4,
+    "audio": "jfk.wav",
+    "audioMs": 11000
+  },
+  "inputs": {
+    "whisperVersion": "1.9.5",
+    "whisperCommit": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+    "audioSha256": "59dfb9a4acb36fe2a2affc14bacbee2920ff435cb13cc314a08c13f66ba7860e",
+    "tinyModelSha256": "818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7",
+    "baseModelSha256": "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898"
+  },
+  "scenarios": {
+    "explicit-en": {
+      "language": "en",
+      "models": {
+        "tiny": {
+          "runs": [
+            {
+              "loadMs": 95,
+              "inferenceMs": 4707,
+              "realTimeFactor": 0.427909,
+              "peakRssAfterKb": 230664,
+              "languageDetected": "en",
+              "text": "And so my fellow Americans ask not what your country can do for you, ask what you can do for your country."
+            },
+            {
+              "loadMs": 95,
+              "inferenceMs": 4720,
+              "realTimeFactor": 0.429091,
+              "peakRssAfterKb": 230992,
+              "languageDetected": "en",
+              "text": "And so my fellow Americans ask not what your country can do for you, ask what you can do for your country."
+            },
+            {
+              "loadMs": 93,
+              "inferenceMs": 4664,
+              "realTimeFactor": 0.424,
+              "peakRssAfterKb": 231224,
+              "languageDetected": "en",
+              "text": "And so my fellow Americans ask not what your country can do for you, ask what you can do for your country."
+            }
+          ],
+          "median": {
+            "loadMs": 95,
+            "inferenceMs": 4707,
+            "realTimeFactor": 0.427909,
+            "peakRssAfterKb": 230992
+          }
+        },
+        "base": {
+          "runs": [
+            {
+              "loadMs": 131,
+              "inferenceMs": 11680,
+              "realTimeFactor": 1.06182,
+              "peakRssAfterKb": 281060,
+              "languageDetected": "en",
+              "text": "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country."
+            },
+            {
+              "loadMs": 138,
+              "inferenceMs": 11681,
+              "realTimeFactor": 1.06191,
+              "peakRssAfterKb": 280828,
+              "languageDetected": "en",
+              "text": "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country."
+            },
+            {
+              "loadMs": 134,
+              "inferenceMs": 11645,
+              "realTimeFactor": 1.05864,
+              "peakRssAfterKb": 280884,
+              "languageDetected": "en",
+              "text": "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country."
+            }
+          ],
+          "median": {
+            "loadMs": 134,
+            "inferenceMs": 11680,
+            "realTimeFactor": 1.06182,
+            "peakRssAfterKb": 280884
+          }
+        }
+      }
+    },
+    "auto-language": {
+      "language": "auto",
+      "models": {
+        "tiny": {
+          "runs": [
+            {
+              "loadMs": 95,
+              "inferenceMs": 9100,
+              "realTimeFactor": 0.827273,
+              "peakRssAfterKb": 231052,
+              "languageDetected": "en",
+              "text": "And so my fellow Americans ask not what your country can do for you, ask what you can do for your country."
+            },
+            {
+              "loadMs": 98,
+              "inferenceMs": 9045,
+              "realTimeFactor": 0.822273,
+              "peakRssAfterKb": 231144,
+              "languageDetected": "en",
+              "text": "And so my fellow Americans ask not what your country can do for you, ask what you can do for your country."
+            },
+            {
+              "loadMs": 96,
+              "inferenceMs": 9069,
+              "realTimeFactor": 0.824455,
+              "peakRssAfterKb": 230868,
+              "languageDetected": "en",
+              "text": "And so my fellow Americans ask not what your country can do for you, ask what you can do for your country."
+            }
+          ],
+          "median": {
+            "loadMs": 96,
+            "inferenceMs": 9069,
+            "realTimeFactor": 0.824455,
+            "peakRssAfterKb": 231052
+          }
+        },
+        "base": {
+          "runs": [
+            {
+              "loadMs": 135,
+              "inferenceMs": 22727,
+              "realTimeFactor": 2.06609,
+              "peakRssAfterKb": 281056,
+              "languageDetected": "en",
+              "text": "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country."
+            },
+            {
+              "loadMs": 135,
+              "inferenceMs": 22822,
+              "realTimeFactor": 2.07473,
+              "peakRssAfterKb": 281032,
+              "languageDetected": "en",
+              "text": "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country."
+            },
+            {
+              "loadMs": 133,
+              "inferenceMs": 22711,
+              "realTimeFactor": 2.06464,
+              "peakRssAfterKb": 281068,
+              "languageDetected": "en",
+              "text": "And so my fellow Americans, ask not what your country can do for you, ask what you can do for your country."
+            }
+          ],
+          "median": {
+            "loadMs": 135,
+            "inferenceMs": 22727,
+            "realTimeFactor": 2.06609,
+            "peakRssAfterKb": 281056
+          }
+        }
+      }
+    }
+  }
+}

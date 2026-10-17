@@ -1195,6 +1195,7 @@ class TerminalUiTest {
             compose.onNodeWithTag("editor-folder-${folder.id}").performClick()
             compose.onNodeWithTag("editor-folder").assertTextContains("工作",substring=true)
             compose.onNodeWithTag("jump-enabled").performScrollTo().performClick()
+            compose.waitUntil(10000){compose.onAllNodesWithTag("jump-from-saved").fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithTag("jump-from-saved").performScrollTo().performClick()
             compose.onNodeWithTag("jump-pick-${saved.id}").assertTextContains("已存跳板",substring=true).performClick()
             // Blank hop from the switch is replaced; imported hops are collapsed summaries.
@@ -1613,4 +1614,63 @@ class TerminalUiTest {
         }
     }
 
+
+    @Test fun flavorExposesOnlyItsVoiceCapability() {
+        val voice = BuildConfig.FLAVOR == "voice"
+        compose.activity.getSharedPreferences("voice-settings",0).edit().clear().commit()
+        compose.onNodeWithTag("settings").performClick()
+        if (voice) {
+            compose.onNodeWithTag("voice-auto-language").performScrollTo().assertIsOff().performClick().assertIsOn()
+            assertTrue(compose.activity.getSharedPreferences("voice-settings",0).getBoolean("automatic-language",false))
+        } else compose.onNodeWithTag("voice-auto-language").assertDoesNotExist()
+        compose.onNodeWithText("‹ 返回").performScrollTo().performClick()
+        showTerminalForFixture()
+        val control=compose.onNodeWithTag("voice-input")
+        if (voice) {
+            control.assertExists().assertIsNotEnabled()
+            val hide=compose.onNodeWithTag("hide-keyboard").fetchSemanticsNode().boundsInRoot
+            val microphone=control.fetchSemanticsNode().boundsInRoot
+            val replies=compose.onNodeWithTag("quick-replies").fetchSemanticsNode().boundsInRoot
+            assertTrue("voice button must be between keyboard and quick replies",hide.right <= microphone.left && microphone.right <= replies.left)
+        } else control.assertDoesNotExist()
+    }
+
+    @Test fun voiceFlavorRecordsAndTranscribesWithoutAutoSending() {
+        if(BuildConfig.FLAVOR!="voice") return
+        val instrumentation=InstrumentationRegistry.getInstrumentation()
+        instrumentation.uiAutomation.executeShellCommand("pm grant ${compose.activity.packageName} android.permission.RECORD_AUDIO").close()
+        compose.activity.getSharedPreferences("voice-settings",0).edit().putBoolean("automatic-language",false).commit()
+        showTerminalForFixture()
+        compose.runOnUiThread {
+            fun textState(name:String,value:String) {
+                val field=MainActivity::class.java.getDeclaredField("${name}\$delegate").apply {isAccessible=true}
+                @Suppress("UNCHECKED_CAST")
+                (field.get(compose.activity) as androidx.compose.runtime.MutableState<String>).value=value
+            }
+            textState("wireToken","voice-ui-test")
+            textState("draftScopeKey","voice-ui-pane")
+        }
+        compose.waitUntil(10000){runCatching{compose.onNodeWithTag("voice-input").assertIsEnabled()}.isSuccess}
+        compose.onNodeWithTag("voice-input").performClick()
+        compose.waitUntil(10000){compose.onAllNodesWithTag("voice-stop").fetchSemanticsNodes().isNotEmpty() ||
+            compose.onAllNodesWithTag("voice-error").fetchSemanticsNodes().isNotEmpty()}
+        if(compose.onAllNodesWithTag("voice-stop").fetchSemanticsNodes().isNotEmpty()) {
+            Thread.sleep(500)
+            compose.onNodeWithTag("voice-stop").performClick()
+            compose.waitUntil(10000){compose.onAllNodesWithTag("voice-transcribing").fetchSemanticsNodes().isNotEmpty() ||
+                compose.onAllNodesWithTag("voice-error").fetchSemanticsNodes().isNotEmpty()}
+            compose.waitUntil(60000){
+                compose.onAllNodesWithTag("voice-transcribing").fetchSemanticsNodes().isEmpty() &&
+                    (compose.onAllNodesWithTag("voice-error").fetchSemanticsNodes().isNotEmpty() ||
+                     compose.onAllNodesWithTag("voice-result").fetchSemanticsNodes().isNotEmpty() ||
+                     compose.onNodeWithTag("command-input").fetchSemanticsNode().config
+                        .getOrElse(androidx.compose.ui.semantics.SemanticsProperties.EditableText){androidx.compose.ui.text.AnnotatedString("")}.text.isNotEmpty())
+            }
+        }
+        compose.runOnUiThread {
+            val field=MainActivity::class.java.getDeclaredField("pastePending\$delegate").apply{isAccessible=true}
+            @Suppress("UNCHECKED_CAST")
+            assertFalse((field.get(compose.activity) as androidx.compose.runtime.MutableState<Boolean>).value)
+        }
+    }
 }

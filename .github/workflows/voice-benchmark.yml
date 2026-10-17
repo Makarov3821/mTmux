@@ -1,0 +1,104 @@
+name: Voice checks
+on:
+  push:
+    paths:
+      - 'voice/**'
+      - 'voice-benchmark/**'
+      - 'app/build.gradle.kts'
+      - 'app/src/voice/**'
+      - 'app/src/standard/**'
+      - 'app/src/androidTestVoice/**'
+      - 'app/src/main/java/dev/mtmux/MainActivity.kt'
+      - 'app/src/main/java/dev/mtmux/VoiceDraftOffer.kt'
+      - 'app/src/test/**'
+      - 'app/src/main/java/dev/mtmux/ServerHome.kt'
+      - 'app/src/main/res/values*/strings.xml'
+      - 'scripts/fetch_voice_benchmark.py'
+      - 'scripts/run_voice_benchmark.py'
+      - 'settings.gradle.kts'
+      - '.github/workflows/voice-benchmark.yml'
+  pull_request:
+    paths:
+      - 'voice/**'
+      - 'voice-benchmark/**'
+      - 'app/**'
+      - 'scripts/fetch_voice_benchmark.py'
+      - 'scripts/run_voice_benchmark.py'
+      - 'settings.gradle.kts'
+      - '.github/workflows/voice-benchmark.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-and-product:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: "platform-tools platforms;android-36 build-tools;35.0.0 ndk;28.2.13676358 cmake;3.22.1 emulator system-images;android-35;google_apis;x86_64"
+      - uses: gradle/actions/setup-gradle@v5
+      - name: Fetch and verify pinned source and base q5_1
+        run: |
+          python3 scripts/fetch_voice_benchmark.py deps
+          python3 scripts/fetch_voice_benchmark.py base
+          python3 scripts/fetch_voice_benchmark.py verify-source
+          python3 scripts/fetch_voice_benchmark.py verify-base
+          test ! -e .voice-benchmark/models/ggml-tiny-q5_1.bin
+      - name: Unit tests, native builds, product APKs, and lint
+        run: |
+          ./gradlew :voice:testDebugUnitTest :app:testVoiceDebugUnitTest \
+            :voice-benchmark:testReleaseUnitTest :voice-benchmark:assembleRelease :voice-benchmark:lintRelease \
+            :app:assembleStandardDebug :app:assembleVoiceDebug :app:assembleStandardRelease :app:assembleVoiceRelease \
+            :app:lintVoiceDebug --console=plain
+      - name: Verify product separation, model, size, and 16 KiB alignment
+        run: |
+          aapt="$ANDROID_HOME/build-tools/35.0.0/aapt2"
+          zipalign="$ANDROID_HOME/build-tools/35.0.0/zipalign"
+          standard=app/build/outputs/apk/standard/release/app-standard-release-unsigned.apk
+          voice=app/build/outputs/apk/voice/release/app-voice-release-unsigned.apk
+          benchmark=voice-benchmark/build/outputs/apk/release/voice-benchmark-release.apk
+          ! "$aapt" dump permissions "$standard" | grep RECORD_AUDIO
+          "$aapt" dump permissions "$voice" | grep RECORD_AUDIO
+          ! unzip -l "$standard" | grep -E 'libmtmux_voice|ggml-base-q5_1'
+          unzip -l "$voice" | grep 'assets/models/ggml-base-q5_1.bin'
+          [ "$(unzip -p "$voice" assets/models/ggml-base-q5_1.bin | sha256sum | cut -d' ' -f1)" = \
+            "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898" ]
+          unzip -l "$voice" | grep 'lib/arm64-v8a/libmtmux_voice.so'
+          unzip -l "$voice" | grep 'lib/x86_64/libmtmux_voice.so'
+          ! unzip -l "$benchmark" | grep -E 'ggml-(tiny|base).*\.bin'
+          test "$(stat -c %s "$voice")" -le $((100 * 1024 * 1024))
+          for elf in voice/build/intermediates/stripped_native_libs/release/stripReleaseDebugSymbols/out/lib/*/*.so \
+                     voice-benchmark/build/intermediates/stripped_native_libs/release/stripReleaseDebugSymbols/out/lib/*/*.so; do
+            readelf -lW "$elf" | awk '$1 == "LOAD" { seen=1; if ($NF != "0x4000") bad=1 } END { exit (!seen || bad) }'
+          done
+          "$zipalign" -c -P 16 -v 4 "$voice"
+          "$zipalign" -c -P 16 -v 4 "$benchmark"
+      - name: Run bundled-model and voice UI smoke tests on Android 15
+        run: |
+          echo no | avdmanager create avd --force --name voice-ci --package 'system-images;android-35;google_apis;x86_64' --device pixel_2
+          emulator -avd voice-ci -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 4096 >/tmp/voice-emulator.log 2>&1 &
+          emulator_pid=$!
+          trap 'kill $emulator_pid || true' EXIT
+          adb wait-for-device
+          timeout 300 bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\\r")" = 1 ]; do sleep 2; done'
+          ./gradlew :app:connectedVoiceDebugAndroidTest --console=plain \
+            -Pandroid.testInstrumentationRunnerArguments.class='dev.mtmux.VoiceProductTest,dev.mtmux.TerminalUiTest#flavorExposesOnlyItsVoiceCapability,dev.mtmux.TerminalUiTest#voiceFlavorRecordsAndTranscribesWithoutAutoSending'
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: voice-product-and-benchmark
+          path: |
+            app/build/outputs/apk/standard/debug/*.apk
+            app/build/outputs/apk/voice/debug/*.apk
+            app/build/outputs/apk/standard/release/*.apk
+            app/build/outputs/apk/voice/release/*.apk
+            app/build/reports/lint-results-voiceDebug.*
+            voice-benchmark/build/outputs/apk/release/*.apk
+            voice-benchmark/build/reports/lint-results-release.*
+            voice-benchmark/build/reports/tests/
+            voice/build/reports/tests/

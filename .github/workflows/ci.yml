@@ -26,7 +26,12 @@ jobs:
       - run: git diff --exit-code -- app/src/main/assets/terminal
       - run: npm run test:browser
         working-directory: web
-      - run: ./gradlew :core:test :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug --console=plain
+      - run: ./gradlew :core:test :voice:testDebugUnitTest :app:testStandardDebugUnitTest :app:assembleStandardDebug :app:assembleStandardDebugAndroidTest :app:lintStandardDebug :voice-benchmark:testReleaseUnitTest --console=plain
+      - name: Verify standard APK has no voice payload or permission
+        run: |
+          apk=app/build/outputs/apk/standard/debug/app-standard-debug.apk
+          ! "$ANDROID_HOME/build-tools/35.0.0/aapt2" dump permissions "$apk" | grep RECORD_AUDIO
+          ! unzip -l "$apk" | grep -E 'libmtmux_voice|ggml-base-q5_1'
       - run: sudo apt-get update && sudo apt-get install -y tmux openssh-server && sudo mkdir -p /run/sshd
       - run: python3 scripts/test_tmux.py
       - run: python3 scripts/test_ssh.py
@@ -35,7 +40,8 @@ jobs:
         with:
           name: android-apk-and-reports
           path: |
-            app/build/outputs/apk/debug/*.apk
-            app/build/outputs/apk/androidTest/debug/*.apk
-            app/build/reports/lint-results-debug.*
+            app/build/outputs/apk/standard/debug/*.apk
+            app/build/outputs/apk/androidTest/standard/debug/*.apk
+            app/build/reports/lint-results-standardDebug.*
             core/build/reports/tests/
+            voice-benchmark/build/reports/tests/

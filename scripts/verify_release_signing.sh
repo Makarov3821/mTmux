@@ -44,12 +44,21 @@ if ! "$keytool" -list -keystore "$MTMUX_KEYSTORE" -storepass:env MTMUX_KEYSTORE_
   exit 1
 fi
 
-# A wrong key password makes the signing task fail here.
-./gradlew :app:assembleRelease --console=plain -q
+# Fetch only pinned, checksum-verified product inputs.
+python3 scripts/fetch_voice_benchmark.py deps
+python3 scripts/fetch_voice_benchmark.py base
 
-apk=app/build/outputs/apk/release/app-release.apk
-fingerprint=$("$apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
-[ -n "$fingerprint" ] || { echo "FAIL: APK is not signed" >&2; exit 1; }
-echo "OK: signed release APK at $apk"
+# A wrong key password makes the signing task fail here.
+./gradlew :app:assembleStandardRelease :app:assembleVoiceRelease --console=plain -q
+
+fingerprint=""
+for apk in app/build/outputs/apk/standard/release/app-standard-release.apk \
+           app/build/outputs/apk/voice/release/app-voice-release.apk; do
+  current=$("$apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+  [ -n "$current" ] || { echo "FAIL: APK is not signed: $apk" >&2; exit 1; }
+  [ -z "$fingerprint" ] || [ "$current" = "$fingerprint" ] || { echo "FAIL: APK certificates differ" >&2; exit 1; }
+  fingerprint=$current
+  echo "OK: signed release APK at $apk"
+done
 echo "Certificate SHA-256: $fingerprint"
 echo "Register it for CI:  gh variable set MTMUX_CERT_SHA256 --body $fingerprint"

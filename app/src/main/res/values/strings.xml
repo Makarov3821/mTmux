@@ -308,4 +308,23 @@
     <string name="editor_jump_pick_help">Its address, username and credentials are copied into this route. Its own jump hosts are added before it. Later edits to that server are not synced.</string>
     <string name="editor_jump_pick_empty">No other saved servers</string>
     <string name="editor_jump_pick_failed">Cannot read that server\'s saved credentials. Edit it and save again.</string>
+    <string name="voice_settings_title">Voice input</string>
+    <string name="voice_auto_language">Detect language automatically</string>
+    <string name="voice_auto_language_help">On: Whisper detects the language. Off: use the current interface language (faster).</string>
+    <string name="voice_button">Voice input</string>
+    <string name="voice_title">Offline voice input</string>
+    <string name="voice_recording">Recording… %1$d s (maximum 60 s)</string>
+    <string name="voice_transcribing">Transcribing locally with Whisper base…</string>
+    <string name="voice_result_help">The text will only be added to the draft. It is never sent automatically.</string>
+    <string name="voice_stop">Stop</string>
+    <string name="voice_inserted">Voice text added to the draft; edit it before sending.</string>
+    <string name="voice_error_permission">Microphone permission was denied. You can continue typing.</string>
+    <string name="voice_error_audio">Cannot start or read the microphone. Check whether another app is using it.</string>
+    <string name="voice_error_too_short">Recording is too short. Speak for at least 0.1 seconds.</string>
+    <string name="voice_error_model">The bundled Whisper model is missing or damaged. Reinstall the voice APK.</string>
+    <string name="voice_error_target_changed">The connection or reply target changed. Voice text was not inserted.</string>
+    <string name="voice_error_no_speech">No speech was recognized. The draft was not changed.</string>
+    <string name="voice_error_cancelled">Voice transcription was cancelled.</string>
+    <string name="voice_error_generic">Voice transcription failed. Your draft was not changed.</string>
+    <string name="voice_starting">Preparing microphone…</string>
 </resources>

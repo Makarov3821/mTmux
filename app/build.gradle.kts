@@ -5,13 +5,14 @@ plugins {
 }
 android {
     namespace = "dev.mtmux"
+    ndkVersion = "28.2.13676358"
     compileSdk = 36
     defaultConfig {
         applicationId = "dev.mtmux"
         minSdk = 26
         targetSdk = 36
-        versionCode = 27
-        versionName = "0.7.2-dev"
+        versionCode = 28
+        versionName = "0.8.0-dev"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     // Release signing comes only from environment variables (CI secrets or
@@ -32,7 +33,15 @@ android {
             if (releaseKeystore != null) signingConfig = signingConfigs.getByName("release")
         }
     }
-    buildFeatures { compose = true }
+    flavorDimensions += "capability"
+    productFlavors {
+        create("standard") { dimension = "capability" }
+        create("voice") {
+            dimension = "capability"
+            ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
+        }
+    }
+    buildFeatures { compose = true; buildConfig = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -42,6 +51,7 @@ android {
 kotlin { jvmToolchain(17) }
 dependencies {
     implementation(project(":core"))
+    "voiceImplementation"(project(":voice"))
     implementation(platform("androidx.compose:compose-bom:2025.10.01"))
     implementation("androidx.activity:activity-compose:1.11.0")
     implementation("androidx.appcompat:appcompat:1.7.1")

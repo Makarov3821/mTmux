@@ -26,7 +26,7 @@ jobs:
       - uses: android-actions/setup-android@v4
         with:
           # Default list includes the removed 'tools' package, which makes sdkmanager fail.
-          packages: "platform-tools platforms;android-36 build-tools;35.0.0"
+          packages: "platform-tools platforms;android-36 build-tools;35.0.0 ndk;28.2.13676358 cmake;3.22.1"
       - uses: gradle/actions/setup-gradle@v5
       # gradle/actions v6 bundles a proprietary caching component with separate terms; stay on v5 (MIT).
 
@@ -73,34 +73,72 @@ jobs:
             || { echo "::error::MTMUX_KEY_PASSWORD cannot unlock the private key"; exit 1; }
           echo "Keystore opened with the configured password and alias."
 
-      - name: Test and build signed release
-        run: ./gradlew :core:test :app:assembleRelease --console=plain
+      - name: Fetch pinned whisper.cpp and base q5_1
+        run: |
+          python3 scripts/fetch_voice_benchmark.py deps
+          python3 scripts/fetch_voice_benchmark.py base
+          python3 scripts/fetch_voice_benchmark.py verify-source
+          python3 scripts/fetch_voice_benchmark.py verify-base
 
-      - name: Verify APK signature
+      - name: Test and build signed releases
+        run: ./gradlew :core:test :voice:testDebugUnitTest :app:testStandardDebugUnitTest :app:testVoiceDebugUnitTest :app:assembleStandardRelease :app:assembleVoiceRelease --console=plain
+
+      - name: Verify APK signatures, separation, model, and size
         run: |
           apksigner="$ANDROID_HOME/build-tools/35.0.0/apksigner"
-          apk=app/build/outputs/apk/release/app-release.apk
-          actual=$("$apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
-          [ -n "$actual" ] || { echo "::error::APK is not signed"; exit 1; }
-          echo "Certificate SHA-256: $actual"
-          if [ -z "$EXPECTED_CERT" ]; then
-            echo "::warning::Repository variable MTMUX_CERT_SHA256 is not set; cannot confirm this is your release key."
-          elif [ "$actual" != "$(echo "$EXPECTED_CERT" | tr 'A-F' 'a-f' | tr -d ': ')" ]; then
-            echo "::error::APK is signed with a different key than MTMUX_CERT_SHA256"; exit 1
-          else
-            echo "Signing key matches MTMUX_CERT_SHA256."
-          fi
-          name="mtmux-${GITHUB_REF_NAME//\//-}.apk"
-          cp "$apk" "$name"
-          sha256sum "$name" > "$name.sha256"
-          echo "APK_NAME=$name" >> "$GITHUB_ENV"
+          aapt="$ANDROID_HOME/build-tools/35.0.0/aapt2"
+          standard=app/build/outputs/apk/standard/release/app-standard-release.apk
+          voice=app/build/outputs/apk/voice/release/app-voice-release.apk
+          expected=$(echo "$EXPECTED_CERT" | tr 'A-F' 'a-f' | tr -d ': ')
+          [ -n "$expected" ] || { echo "::error::Repository variable MTMUX_CERT_SHA256 is required for tagged upgrades"; exit 1; }
+          certificate=""
+          for apk in "$standard" "$voice"; do
+            actual=$("$apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+            [ -n "$actual" ] || { echo "::error::$apk is not signed"; exit 1; }
+            [ -z "$certificate" ] || [ "$actual" = "$certificate" ] || { echo "::error::standard and voice use different certificates"; exit 1; }
+            certificate=$actual
+            if [ -n "$expected" ] && [ "$actual" != "$expected" ]; then echo "::error::$apk is signed with a different key"; exit 1; fi
+          done
+          echo "Certificate SHA-256: $certificate"
+          standard_size=$(stat -c %s "$standard"); voice_size=$(stat -c %s "$voice")
+          ! "$aapt" dump permissions "$standard" | grep RECORD_AUDIO
+          "$aapt" dump permissions "$voice" | grep RECORD_AUDIO
+          [ "$("$aapt" dump badging "$standard" | sed -n '1p')" = "$("$aapt" dump badging "$voice" | sed -n '1p')" ] \
+            || { echo "::error::package/version differ between flavors"; exit 1; }
+          ! unzip -l "$standard" | grep -E 'libmtmux_voice|ggml-base-q5_1'
+          unzip -l "$voice" | grep 'assets/models/ggml-base-q5_1.bin'
+          unzip -l "$voice" | grep 'lib/arm64-v8a/libmtmux_voice.so'
+          unzip -l "$voice" | grep 'lib/x86_64/libmtmux_voice.so'
+          [ "$(unzip -p "$voice" assets/models/ggml-base-q5_1.bin | sha256sum | cut -d' ' -f1)" = \
+            "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898" ]
+          test "$(stat -c %s "$voice")" -le $((100 * 1024 * 1024))
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -P 16 -v 4 "$standard" >/dev/null
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -P 16 -v 4 "$voice" >/dev/null
+          standard_name="mtmux-${GITHUB_REF_NAME//\//-}-standard.apk"
+          voice_name="mtmux-${GITHUB_REF_NAME//\//-}-voice.apk"
+          cp "$standard" "$standard_name"; cp "$voice" "$voice_name"
+          sha256sum "$standard_name" > "$standard_name.sha256"
+          sha256sum "$voice_name" > "$voice_name.sha256"
+          echo "STANDARD_APK_NAME=$standard_name" >> "$GITHUB_ENV"
+          echo "VOICE_APK_NAME=$voice_name" >> "$GITHUB_ENV"
+          cat > release-notes.md <<EOF
+          Two APKs use the same package, version, and release certificate; install one flavor at a time.
 
+          - **standard**: no microphone permission, Whisper model, or voice native library (${standard_size} bytes)
+          - **voice**: offline Whisper.cpp 1.9.5 multilingual base q5_1, arm64-v8a + x86_64 (${voice_size} bytes)
+          - Model SHA-256: \`422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898\`
+          - Certificate SHA-256: \`$certificate\`
+
+          Voice audio and transcription stay on device. Recognition only fills an editable draft and never sends automatically.
+          EOF
       - uses: actions/upload-artifact@v7
         with:
-          name: signed-release-apk
+          name: signed-release-apks
           path: |
-            ${{ env.APK_NAME }}
-            ${{ env.APK_NAME }}.sha256
+            ${{ env.STANDARD_APK_NAME }}
+            ${{ env.STANDARD_APK_NAME }}.sha256
+            ${{ env.VOICE_APK_NAME }}
+            ${{ env.VOICE_APK_NAME }}.sha256
 
       - name: Publish GitHub release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -110,7 +148,10 @@ jobs:
           # v0.7.1 -> normal release; v0.7.1-dev / v0.8.0-rc.1 (any "-" suffix) -> pre-release
           flag=""
           case "$GITHUB_REF_NAME" in *-*) flag="--prerelease" ;; esac
-          gh release create "$GITHUB_REF_NAME" "$APK_NAME" "$APK_NAME.sha256" $flag --generate-notes --title "mTmux $GITHUB_REF_NAME"
+          gh release create "$GITHUB_REF_NAME" \
+            "$STANDARD_APK_NAME" "$STANDARD_APK_NAME.sha256" \
+            "$VOICE_APK_NAME" "$VOICE_APK_NAME.sha256" \
+            $flag --notes-file release-notes.md --title "mTmux $GITHUB_REF_NAME"
 
       - name: Remove keystore
         if: always()

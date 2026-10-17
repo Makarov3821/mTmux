@@ -173,6 +173,7 @@ private data class HomeRow(val snapshot: ServerSnapshot? = null, val refreshing:
                         AppAppearance.entries.forEach { option -> FilterChip(selected=appearance==option,onClick={onAppearance(option)},label={Text(stringResource(option.label))},modifier=Modifier.testTag("theme-${option.name}")) }
                     }
                     LanguageSettings()
+                    VoiceSettings()
                     Text(stringResource(R.string.settings_privacy),color=MaterialTheme.colorScheme.primary)
                     Row(verticalAlignment=Alignment.CenterVertically) {
                         Text(stringResource(R.string.settings_privacy_display),Modifier.weight(1f))

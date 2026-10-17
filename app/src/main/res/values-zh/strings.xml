@@ -302,4 +302,23 @@
     <string name="editor_jump_pick_help">复制其地址、用户名和凭据到此链路；它自己的跳板会一并加在前面。之后修改该服务器不会同步到这里。</string>
     <string name="editor_jump_pick_empty">没有其他已保存的服务器</string>
     <string name="editor_jump_pick_failed">无法读取该服务器的已保存凭据，请编辑后重新保存</string>
+    <string name="voice_settings_title">语音输入</string>
+    <string name="voice_auto_language">自动检测语言</string>
+    <string name="voice_auto_language_help">开启：由 Whisper 检测语言。关闭：使用当前界面语言（更快）。</string>
+    <string name="voice_button">语音输入</string>
+    <string name="voice_title">离线语音输入</string>
+    <string name="voice_recording">正在录音… %1$d 秒（最长 60 秒）</string>
+    <string name="voice_transcribing">正在使用 Whisper base 在本机转写…</string>
+    <string name="voice_result_help">文字只会加入草稿，绝不会自动发送。</string>
+    <string name="voice_stop">停止</string>
+    <string name="voice_inserted">语音文字已加入草稿，请编辑后再发送。</string>
+    <string name="voice_error_permission">麦克风权限被拒绝，仍可继续键盘输入。</string>
+    <string name="voice_error_audio">无法启动或读取麦克风，请检查是否被其他应用占用。</string>
+    <string name="voice_error_too_short">录音太短，请至少说 0.1 秒。</string>
+    <string name="voice_error_model">内置 Whisper 模型缺失或损坏，请重新安装 voice APK。</string>
+    <string name="voice_error_target_changed">连接或回复目标已改变，语音文字未填入。</string>
+    <string name="voice_error_no_speech">未识别到语音，草稿没有改变。</string>
+    <string name="voice_error_cancelled">语音转写已取消。</string>
+    <string name="voice_error_generic">语音转写失败，原草稿没有改变。</string>
+    <string name="voice_starting">正在准备麦克风…</string>
 </resources>

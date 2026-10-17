@@ -2,6 +2,23 @@
 
 所有版本均为 Android debug 开发版（`-dev`），未经完整真机验收。每个版本的实现细节、验证结果、截图与 APK SHA-256 见对应的「详细记录」；测试证据在 [docs/evidence/](docs/evidence/)。文档目录说明见 [docs/README.md](docs/README.md)。
 
+## [0.8.0-dev] — 2026-10-17 · versionCode 28
+
+详细记录：[0.8.0](docs/releases/0.8.0.md)
+
+### 新增
+- `standard` / `voice` 双 flavor：同 `dev.mtmux`、版本和签名；standard 无录音权限/模型/native，voice 内置 whisper.cpp 1.9.5 multilingual base q5_1。
+- voice 终端底栏在“收起键盘”和“快捷回复”之间增加麦克风；16 kHz mono 录音最长 60 秒，完全本机转写。
+- 转写只填入可编辑草稿：空草稿直接填入，已有草稿明确追加/替换；连接/pane 变化时拒绝，绝不自动发送。
+- voice 设置“自动检测语言”默认关闭：关闭使用当前界面语言，开启由 Whisper 检测。
+- CI/Release 同时构建、签名、验证并上传 standard/voice APK 与 checksum；检查权限、模型 SHA、ABI、体积、证书和 16 KiB 对齐。
+- 独立 `:voice-benchmark`、固定供应链下载/校验及 ADB runner；模型和源码缓存不提交 Git。
+
+### 验证
+- Android 15 x86_64：standard 完整 36 项、voice 完整 40 项均通过（0 失败/跳过）；voice 另覆盖 bundled base 提取/校验/转写、native 前/推理中取消、AudioRecord 可用或干净失败、语音 UI/设置/不自动发送。
+- 本地 throwaway 签名：standard 12,114,355 bytes，voice 74,492,953 bytes；同证书/包名/0.8.0-dev code28，可相互覆盖并保留数据。
+- V0 JFK 11 秒显式 English 中位数：tiny 4.707s / RTF 0.428 / peak RSS 231MB；base 11.680s / RTF 1.062 / 281MB。仅为模拟器链路数据，不代表 ARM/中文体验。
+
 ## [0.7.2-dev] — 2026-09-29 · versionCode 27
 
 ### 新增

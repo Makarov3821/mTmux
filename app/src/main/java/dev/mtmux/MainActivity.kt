@@ -113,6 +113,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        initializeVoiceFlavor(applicationContext)
         enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT), navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT))
         privacyDisplay = privacySettings.enabled()
         if (android.os.Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(false)
@@ -503,6 +504,20 @@ class MainActivity : AppCompatActivity() {
                         Row(Modifier.fillMaxWidth().height(52.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
                             TextButton(onClick={showTools=true},contentPadding=PaddingValues(0.dp),modifier=Modifier.weight(0.7f)){Text(stringResource(R.string.terminal_tools),maxLines=1)}
                             TextButton(onClick={focusManager.clearFocus();keyboard?.hide()},enabled=imeVisible,contentPadding=PaddingValues(0.dp),modifier=Modifier.weight(1.1f).testTag("hide-keyboard")){Text(stringResource(R.string.terminal_hide_keyboard),maxLines=1)}
+                            VoiceInputControl(modifier=Modifier.weight(0.65f), enabled=wireToken.isNotEmpty() && !pastePending && !busy,
+                                connectionToken=wireToken, targetKey=draftScopeKey,
+                                onHideKeyboard={focusManager.clearFocus(force=true);keyboard?.hide()},
+                                onOfferDraft={expectedToken,expectedTarget,text ->
+                                    val decision=decideVoiceDraftOffer(expectedToken,expectedTarget,wireToken,draftScopeKey,draft,text)
+                                    if(decision==VoiceDraftOffer.INSERTED) draft=text
+                                    decision
+                                },
+                                onCommitDraft={expectedToken,expectedTarget,text,append ->
+                                    val commit=commitVoiceDraft(expectedToken,expectedTarget,wireToken,draftScopeKey,draft,text,append)
+                                    if(commit.accepted) draft=commit.draft
+                                    commit.accepted
+                                },
+                                onStatus={status=it})
                             TextButton(onClick={quickReplyToken=wireToken},enabled=wireToken.isNotEmpty() && !pastePending,contentPadding=PaddingValues(0.dp),modifier=Modifier.weight(1.1f).testTag("quick-replies")){Text(stringResource(R.string.terminal_quick_replies),maxLines=1)}
                             Button(onClick={requestDraft(true)},enabled=wireToken.isNotEmpty() && !pastePending && draft.isNotEmpty(),shape=RoundedCornerShape(10.dp),contentPadding=PaddingValues(horizontal=8.dp),modifier=Modifier.weight(1.2f).testTag("send-enter")){Text(stringResource(if(pastePending) R.string.terminal_sending else R.string.terminal_send_enter),maxLines=1)}
                         }

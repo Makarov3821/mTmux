@@ -18,6 +18,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--android", action="store_true", help="Run Android UI + shell tests on an attached test device/emulator")
     parser.add_argument("--test-class", help="Optional Android instrumentation class or class#method filter")
+    parser.add_argument("--android-variant", choices=("standard", "voice"), default="standard",
+                        help="Product flavor used for Android tests (default: standard)")
     options = parser.parse_args()
     sshd = shutil.which("sshd") or "/usr/sbin/sshd"
     if not Path(sshd).is_file():
@@ -102,7 +104,8 @@ bind -n WheelDownPane {
                     subprocess.run([adb, "reverse", f"tcp:{port}", f"tcp:{port}"], check=True)
                     try:
                         # All credentials here are generated, temporary fixture keys, never user keys.
-                        command = ["./gradlew", ":app:connectedDebugAndroidTest", "--console=plain",
+                        variant = options.android_variant.capitalize()
+                        command = ["./gradlew", f":app:connected{variant}DebugAndroidTest", "--console=plain",
                                    f"-Pandroid.testInstrumentationRunnerArguments.fixturePort={port}",
                                    f"-Pandroid.testInstrumentationRunnerArguments.fixtureTmux={wrapper}",
                                    "-Pandroid.testInstrumentationRunnerArguments.fixtureMouseCommand=" + shlex.join([sys.executable, str(Path(__file__).resolve().with_name("mouse_tui_fixture.py"))]),

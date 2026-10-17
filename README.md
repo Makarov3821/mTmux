@@ -2,9 +2,9 @@
 
 Android 上的 SSH + tmux Agent 控制端。目标是离开电脑后，打开手机查看远程 Agent 输出、回复并继续工作；不在服务器安装常驻服务。
 
-**当前为 0.7.2-dev（应用 ID `dev.mtmux`，名称 mTmux）：含中英文界面切换（默认英文资源）与签名发布流程，尚未完成整个 P1 或真机验收，非稳定发行版。** 完整产品范围见 [plan.md](plan.md)，验证结果和剩余门槛见 [P0 报告](docs/testing/p0-report.md)。
+**当前为 0.8.0-dev（应用 ID `dev.mtmux`，名称 mTmux）：新增 standard/voice 双版本；voice 内置离线 Whisper base q5_1，尚未完成 ARM 真机质量/性能验收，非稳定发行版。** 完整产品范围见 [plan.md](plan.md)，验证结果和剩余门槛见 [P0 报告](docs/testing/p0-report.md)。
 
-版本功能清单见 [CHANGELOG.md](CHANGELOG.md)；最近的源码标签为首个公开快照 `v0.6.7-dev`。
+版本功能清单见 [CHANGELOG.md](CHANGELOG.md)；本次发布标签为 `v0.8.0-dev`。
 
 ## 原型能做什么
 
@@ -12,7 +12,8 @@ Android 上的 SSH + tmux Agent 控制端。目标是离开电脑后，打开手
 - 保存多个服务器的名称、地址、端口、用户名、认证方式和 tmux 路径，支持编辑、删除；密码、私钥及其口令使用 Android Keystore + AES-GCM 加密保存在本机。在独立配置页点击“保存”后回到首页，下次点击服务器下的 tmux 任务或右侧 `>_` 即可连接。
 - 首页支持本机文件夹分组：新建、重命名、折叠及移动服务器，删除文件夹后服务器回到未分组。搜索覆盖别名、地址、用户名、文件夹和缓存 tmux 名称；支持添加顺序、名称、最近使用排序，排序偏好与分组持久保存。
 - 首页每个 tmux 名称前增加状态点：红色可能需要回答/处理，黄色有运行提示，绿色表示本轮结束或 Agent 已就绪；灰色表示未知、过期或刷新失败。颜色随既有首页刷新更新，不增加网络轮询；本机每分钟检查是否超过 30 分钟并将过期颜色置灰。颜色依据上次刷新时对应 pane 的终端标题与画面推测，并非实时状态；没有输出或仅有 shell 提示符不会判为完成。多 pane 窗口优先红、其次黄，全部结束/就绪才绿。
-- 终端底部依次为“工具 / 收起键盘 / 快捷回复 / 发送回车”；快捷回复先填入草稿，已有草稿时选择追加/替换/取消，发送仍需用户点击；支持本机添加、编辑、删除（最多 12 条，每条 1000 字）。
+- standard 终端底部依次为“工具 / 收起键盘 / 快捷回复 / 发送回车”；voice 版在“收起键盘”和“快捷回复”之间增加麦克风按钮，内置 whisper.cpp 1.9.5 multilingual base q5_1，音频和转写完全在本机处理。停止录音后只把结果填入可编辑草稿，已有草稿时选择追加/替换，绝不自动发送。
+- 终端底部快捷回复先填入草稿，已有草稿时选择追加/替换/取消，发送仍需用户点击；支持本机添加、编辑、删除（最多 12 条，每条 1000 字）。
 - 设置支持界面语言：跟随系统、简体中文、English；系统语言无对应资源时显示英文，Android 13+ 与系统“应用语言”设置联动。切换语言会重建页面并回到设置，不触发首页刷新；服务器别名、文件夹、已保存快捷回复、tmux 名称和终端内容不翻译。
 - 设置支持深色、浅色和跟随系统，跨重启保存，默认沿用深色。文字、图标、表单、终端 ANSI 调色板、光标、选区和复制页一同适配；切换主题不重建终端，跟随系统切换不重建 Activity。
 - 连接过程中显示目标服务器或跳板序号、连接认证及 tmux 检查进度；失败区分地址解析、端口拒绝、超时、认证、私钥及转发问题，不展示库异常原文或凭据。
@@ -36,10 +37,17 @@ Android 上的 SSH + tmux Agent 控制端。目标是离开电脑后，打开手
 ```bash
 # 指向你本机的 SDK；local.properties 不提交
 printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
-./gradlew :core:test :app:assembleDebug :app:lintDebug
+
+# standard：无需 NDK/模型
+./gradlew :core:test :app:assembleStandardDebug :app:lintStandardDebug
+
+# voice：先获取固定源码和 base q5_1（校验 SHA-256），需要 NDK 28.2/CMake 3.22.1
+python3 scripts/fetch_voice_benchmark.py deps
+python3 scripts/fetch_voice_benchmark.py base
+./gradlew :voice:testDebugUnitTest :app:assembleVoiceDebug :app:lintVoiceDebug
 ```
 
-APK 输出：`app/build/outputs/apk/debug/app-debug.apk`。
+APK 输出：`app/build/outputs/apk/standard/debug/app-standard-debug.apk` 与 `app/build/outputs/apk/voice/debug/app-voice-debug.apk`。release voice 当前约 74.5 MB，含 arm64-v8a/x86_64；standard 约 12.1 MB。两个 flavor 使用同一应用 ID/版本/签名，只能安装一个，可相互覆盖并保留数据。
 
 终端资产已经打包进源码，无需运行时联网下载。修改 `web/` 后使用 Node.js 22+ 重建并测试：
 
@@ -57,8 +65,21 @@ npm run bundle
 ```bash
 export JAVA_HOME="$PWD/.tools/jdk-17.0.20.1+1"
 export GRADLE_USER_HOME="$PWD/.tools/gradle-home"
-./gradlew :core:test :app:assembleDebug :app:lintDebug
+./gradlew :core:test :app:assembleStandardDebug :app:lintStandardDebug
 ```
+
+### 语音 V0 基准（不进入正式 APK）
+
+独立 `:voice-benchmark` 模块固定 whisper.cpp 1.9.5，比较 multilingual tiny/base q5_1。需要 Android NDK 28.2.13676358、CMake 3.22.1 和 arm64-v8a/x86_64 测试设备；源码、模型和 WAV 下载到被忽略的 `.voice-benchmark/`，不会提交或打进 mTmux APK：
+
+```bash
+python3 scripts/fetch_voice_benchmark.py all
+python3 scripts/fetch_voice_benchmark.py verify
+./gradlew :voice-benchmark:testReleaseUnitTest :voice-benchmark:assembleRelease :voice-benchmark:lintRelease
+python3 scripts/run_voice_benchmark.py --models tiny,base --language en --threads 4 --repeat 3
+```
+
+当前 x86_64 模拟器结果只证明 Android native 链路可用，不能替代 ARM 真机或中文质量判断；指标、固定 SHA-256 和限制见 [语音 V0 报告](docs/testing/voice-v0-report.md)。该 benchmark 无录音/网络权限，不修改产品终端。
 
 ## 手机上怎么试
 
@@ -68,6 +89,7 @@ export GRADLE_USER_HOME="$PWD/.tools/gradle-home"
 4. 首页先显示缓存，冷启动或从后台回到首页，展开文件夹和未分组中的服务器距离上次嗅探至少 30 分钟才自动刷新（每台独立记录，失败也计入，重启保留）；右侧圆形箭头可随时单独刷新。有别名时只显示别名，更新时间放在名称旁；无别名显示用户名和地址。首次连接各级主机会显示“需确认主机指纹”，点击该提示，通过可信管理渠道核对指纹后信任；逐级继续刷新。变化的主机密钥会被拦截，不静默信任，也不绕过跳板。
 5. 点击服务器下的“会话 / 窗口”连接 tmux；窗口有多个 pane 时先展开选择。右侧 `>_` 打开普通 SSH shell，无需先发现 tmux；`⋮` 提供编辑、删除。点服务器名称可折叠/展开子项。首页搜索框右侧“▱＋”新建文件夹，服务器 `⋮ → 移动到文件夹` 分组；文件夹 `⋮` 重命名/删除。新服务器默认未分组。排序在各文件夹内生效，文件夹保持创建顺序、未分组排最后。搜索不发起网络请求，匹配缓存任务时临时展开，清除后恢复折叠状态。
 6. 在终端的“输入命令或回复”中输入 `pwd`，点“发送回车”提交；成功写入后清空输入框，结果在终端显示。输入法回车只换行。“仅粘贴”不提交；有草稿时快捷 Enter 等同发送并回车。多行先预览，且仅在目标程序启用 bracketed paste 时允许。“已发送”不等于远端执行成功。
+voice 版点击底部麦克风后才申请权限；再次点击“停止”后本机转写。空草稿直接填入，有内容时选择追加/替换；结果可编辑且不会自动发送。设置“自动检测语言”默认关闭：关闭时使用当前界面语言，开启时由 Whisper 检测。
 7. 终端滑动对应鼠标滚轮，轻点左键，长按松开右键；tmux 沿用服务器的滚轮绑定与历史上限。顶部只显示返回、服务器与 tmux 名称和“回到底端”。“工具”提供复制、仅粘贴、回复目标/重新绑定、字号和滚动设置；首页右上角设置也可调整字号、滚动速度和触控方式，偏好保存在本机。
 键盘弹出和收起只改变可见区域，终端网格保持不变，不因此触发远端 resize 或重放输出。底部暂时被键盘遮挡的内容，可通过顶部“回到底端”显示；旋转屏幕或修改字号仍会正常调整终端尺寸。回复框固定高度，较长草稿在框内滚动。
 
@@ -103,11 +125,11 @@ python3 scripts/test_ssh.py
 
 SSH 集成用例在普通 `:core:test` 中会明确跳过，只有 fixture 启动后才执行。`scripts/test_ssh.py` 测试未加密和加密 OpenSSH Ed25519 私钥、未知/变化主机密钥、命令 stdout/stderr/退出码、PTY 尺寸、中文输入、普通 shell 执行，以及无 UTF-8 locale 的 tmux 中文/特殊字符名称、链接窗口所属会话和连接前历史；还覆盖两级跳板、每级主机身份、跳板失败清理和不直连回退；密码认证仍需真机测试。测试脚本结束时清理自己创建的服务和密钥，不连接你的生产服务器。
 
-CI 配置见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，包含测试、终端资产一致性、APK 编译、Android lint 及报告上传。本地测试结果不等于 CI 已实际运行，也不等于 Android 真机兼容性通过。
+CI 配置见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，默认验证不带语音的 standard；[voice workflow](.github/workflows/voice-benchmark.yml) 获取固定 base 模型，构建 standard/voice 与 benchmark、检查权限/模型/体积/16 KiB 对齐，并在 Android 15 模拟器执行模型与 UI smoke。本地测试结果不等于 CI 已实际运行，也不等于 Android 真机兼容性通过。
 
 ### 签名发布（GitHub Release）
 
-[.github/workflows/release.yml](.github/workflows/release.yml)：推送 `v*` 标签时用固定密钥签名 release APK，校验证书后发布：带 `-` 后缀的标签（如 `v0.7.1-dev`、`v1.0.0-rc.1`）为 pre-release，`v0.7.1` 这类为正式 release。标签须与 `versionName` 一致（`v` + versionName），否则 CI 报错；在 Actions 页手动运行则只检查并上传 artifact，不发布。签名只从环境变量读取，未配置时 release 包不签名。
+[.github/workflows/release.yml](.github/workflows/release.yml)：推送 `v*` 标签时获取固定 Whisper 源码/base 模型，用固定密钥签名并校验同证书/包名/版本，然后同时发布 `standard` 与 `voice` APK 及各自 checksum。带 `-` 后缀的标签（如 `v0.8.0-dev`、`v1.0.0-rc.1`）为 pre-release，`v0.8.0` 这类为正式 release。标签须与 `versionName` 一致，`MTMUX_CERT_SHA256` 必须存在且匹配；在 Actions 页手动运行只检查并上传 artifact，不发布。
 
 ```bash
 # 一次性：生成密钥（离线备份，切勿提交），本地验证并取得公开证书指纹
@@ -122,7 +144,7 @@ gh secret set MTMUX_KEY_PASSWORD
 gh variable set MTMUX_CERT_SHA256 --body <脚本输出的指纹>
 
 # 发版
-git tag v0.7.1-dev && git push origin v0.7.1-dev
+git tag v0.8.0-dev && git push origin v0.8.0-dev
 ```
 
 release 与 debug 签名不同，已装 debug 版需卸载后才能安装 release 版（本机配置和凭据会丢失）；每次发版需递增 versionCode。
@@ -132,14 +154,17 @@ Android 页面回归测试（连接测试设备或模拟器后）：
 
 ```bash
 # 实际屏幕、配置保存/删除、键盘与触摸历史；SSH/tmux 用例无 fixture 会跳过
-./gradlew :app:connectedDebugAndroidTest
+./gradlew :app:connectedStandardDebugAndroidTest
+
+# voice flavor（需要先获取固定源码/base 模型）
+./gradlew :app:connectedVoiceDebugAndroidTest
 
 # 加上真实 SSH 欢迎语的屏幕像素 → 输入命令 → 点击发送 → 输出与清空的流程
 # adb 需要在 PATH 中，或用 ADB 环境变量指定路径；只用临时 fixture 密钥
 python3 scripts/test_ssh.py --android
 ```
 
-0.7.0 的 32 项 Android 回归：原有 30 项固定中文界面运行，另有 2 项英文测试覆盖默认英文、窄屏底栏、英文错误提示、应用内切换到中文不触发刷新及无资源语言回退英文。原有用例覆盖隐私展示与截图策略、终端中文标点右边界、私钥粘贴与日志导出、首页任务灯、缓存/过期/多 pane 汇总、真实 tmux 只读采集、底部按键顺序、主题持久化与跟随系统、快捷回复不自动发送与草稿保护、原生手柄、选区与剪贴板、静态副本、目标/跳板分类错误、文件夹/搜索/排序持久化与凭据缓存保留、快捷键三页等宽/翻页和 F1–F12 实际字节、普通历史/全屏终端与真实 tmux 的键盘锚点、像素/键盘、断开行为、密码加密恢复、明文及加密私钥保存后直接认证、密文篡改/错目标拒绝、本地滚动、真实 tmux 滚动和点击、切换 pane 后草稿拦截及显式重新绑定、最近任务持久化/后台重连/旧任务拒绝和不重放、全屏鼠标 TUI、名称与历史，以及首页 30 分钟节流边界与持久化、自动/手动刷新、离线缓存、设置/编辑和两级跳板下的 SSH/tmux；没有 SSH fixture 时，依赖远端的用例明确跳过。测试 fixture 使用用户提供的 `mouse on`、`history-limit 500000` 和滚轮绑定，但仅写入临时 tmux 配置与独立 socket。从 0.6.7 起设备测试直接使用产品截图策略，不再临时取消窗口保护；普通终端像素测试使用默认开启的隐私展示。截图由 Gradle 收集到 `app/build/outputs/connected_android_test_additional_output/`。设备测试不注入产品后门；测试进程通过反射连接临时服务，测试结束清理端口映射和服务。
+0.8.0 的 Android 回归：standard 完整 36 项、voice 完整 40 项均通过；voice 额外覆盖内置模型提取/校验/转写、取消、AudioRecord 和语音 UI，且不自动发送。原有 30 项固定中文界面运行，另有 2 项英文测试覆盖默认英文、窄屏底栏、英文错误提示、应用内切换到中文不触发刷新及无资源语言回退英文。原有用例覆盖隐私展示与截图策略、终端中文标点右边界、私钥粘贴与日志导出、首页任务灯、缓存/过期/多 pane 汇总、真实 tmux 只读采集、底部按键顺序、主题持久化与跟随系统、快捷回复不自动发送与草稿保护、原生手柄、选区与剪贴板、静态副本、目标/跳板分类错误、文件夹/搜索/排序持久化与凭据缓存保留、快捷键三页等宽/翻页和 F1–F12 实际字节、普通历史/全屏终端与真实 tmux 的键盘锚点、像素/键盘、断开行为、密码加密恢复、明文及加密私钥保存后直接认证、密文篡改/错目标拒绝、本地滚动、真实 tmux 滚动和点击、切换 pane 后草稿拦截及显式重新绑定、最近任务持久化/后台重连/旧任务拒绝和不重放、全屏鼠标 TUI、名称与历史，以及首页 30 分钟节流边界与持久化、自动/手动刷新、离线缓存、设置/编辑和两级跳板下的 SSH/tmux；没有 SSH fixture 时，依赖远端的用例明确跳过。测试 fixture 使用用户提供的 `mouse on`、`history-limit 500000` 和滚轮绑定，但仅写入临时 tmux 配置与独立 socket。从 0.6.7 起设备测试直接使用产品截图策略，不再临时取消窗口保护；普通终端像素测试使用默认开启的隐私展示。截图由 Gradle 收集到 `app/build/outputs/connected_android_test_additional_output/`。设备测试不注入产品后门；测试进程通过反射连接临时服务，测试结束清理端口映射和服务。
 
 各版本的修复原因、验证结果与截图见 [CHANGELOG](CHANGELOG.md) 及 [docs/releases/](docs/releases/)。
 
@@ -149,16 +174,18 @@ python3 scripts/test_ssh.py --android
 app/       Compose 配置与输入界面、受限本地 WebView、显式主机信任
 core/      JVM 可测试的 SSH、tmux 命令/解析、连接代际与主机指纹校验
 web/       xterm.js 桥接与测试（不实现 SSH 或终端解析器）
-scripts/   隔离 tmux / OpenSSH 集成测试
-docs/      版本详细记录、设计计划、P0 报告与真机清单、测试证据（见 docs/README.md）
+scripts/   隔离 tmux / OpenSSH 集成测试、语音 V0 获取/运行脚本
+docs/      版本详细记录、设计计划、P0/V0 报告与真机清单、测试证据（见 docs/README.md）
+voice/     voice flavor 的离线模型、JNI、AudioRecord 与草稿决策（standard 不依赖）
+voice-benchmark/  独立 whisper.cpp Android 基准，不被正式 app 依赖
 ```
 
 - SSH 使用 JSch 维护分支；终端使用 xterm.js。终端页只加载本地资产，阻止外部资源和页面跳转；原始 SSH 字节经 Base64 传递给终端，不插入 HTML，不提前按字符串解码。
-- 密码、导入私钥文件和口令以 AES-GCM 密文保存在应用私有存储，包装密钥由 Android Keystore 管理；没有明文回退、云同步或额外生物识别弹窗。草稿与终端历史不落盘。服务器资料与主机信任记录也在应用私有存储。没有账号、分析 SDK、终端日志上传或 App 录音权限。截图采用下述分级隐私策略；禁用应用备份与设备迁移。卸载/清除数据会失去配置与凭据；系统密钥不可用时提示重新输入，不会自动忽略错误或覆盖旧密文。
+- 密码、导入私钥文件和口令以 AES-GCM 密文保存在应用私有存储，包装密钥由 Android Keystore 管理；没有明文回退、云同步或额外生物识别弹窗。草稿与终端历史不落盘。服务器资料与主机信任记录也在应用私有存储。没有账号、分析 SDK 或终端日志上传。standard 不声明录音权限；voice 只在用户主动点击后请求麦克风权限，音频和转写不落盘、不写日志、不上传。截图采用下述分级隐私策略；禁用应用备份与设备迁移。卸载/清除数据会失去配置与凭据；系统密钥不可用时提示重新输入，不会自动忽略错误或覆盖旧密文。
 - 界面文本在 `app/src/main/res/values/strings.xml`（英文，默认）与 `values-zh/strings.xml`；两份需同时修改。core 只输出错误代码与结构化进度，由界面层翻译；诊断日志字段保持英文且不随语言变化。
 - 主机密钥变化后没有“一键忽略”入口。先核对服务器变更，再通过 Android 设置清除本应用数据以重建信任；这会删除所有已信任主机记录。
 - 不支持设备专用 SSH 密钥生成、SSH config 导入、自定义 socket、后台保活、Agent 执行确认和自动重连。Agent 状态仅为首页刷新快照的启发式状态灯，不是实时事件。
-- 复制选区是用户显式操作；系统输入法、剪贴板、语音服务有各自的数据处理行为。P0 不承诺其离线运行。
+- 复制选区是用户显式操作；系统输入法、剪贴板有各自的数据处理行为。voice 内置 Whisper 路径离线运行，不调用系统/云语音服务；真实设备的速度、温升和识别质量仍待验证。
 - minSdk、tmux 最低版本、真实 Agent TUI、触摸选区与输入法体验仍需按设备清单验证。
 
 组件与许可证说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
@@ -176,7 +203,7 @@ docs/      版本详细记录、设计计划、P0 报告与真机清单、测试
 
 应用从进程启动起自动记录少量运行事件。复现问题后进入“设置 → 调试日志 → 生成日志”，选择保存位置，把生成的 `.txt` 文件连同操作步骤、发生时间、预期/实际表现一起反馈。点击生成时已截取快照，之后发生的操作需重新生成。没有自动上传。
 
-记录内容包括应用/Android/WebView 版本、启动时间、前后台切换、SSH 连接阶段与错误类别、首页探测批次、终端行列/可见高度、首次渲染、累计输出字节数、输入被阻止/失败、私钥导入方式，以及异常类型和有限代码调用位置。服务器仅用本地配置标识的数字摘要关联，不记录别名、地址、用户名、密码、私钥、私钥口令、剪切板、命令、终端正文或原始异常消息。
+记录内容包括应用/Android/WebView 版本、启动时间、前后台切换、SSH 连接阶段与错误类别、首页探测批次、终端行列/可见高度、首次渲染、累计输出字节数、输入被阻止/失败、私钥导入方式，以及 voice 权限结果、录音开始/停止、录音秒数、转写耗时和固定错误事件；另含异常类型和有限代码调用位置。服务器仅用本地配置标识的数字摘要关联，不记录别名、地址、用户名、密码、私钥、私钥口令、剪切板、命令、终端正文、语音音频、转写文字、识别语言或原始异常消息。
 
 内部日志是两个各最多 5 MiB 的滚动文件（总计不超过 10 MiB）；通常能覆盖本次启动以来的过程，但事件较多时会覆盖最早记录，不能保证无限期保留完整历史。队列也有上限，丢弃计数会写入导出文件。日志可跨重启保留，设置中的“清空日志”会删除历史，之后继续记录。用户主动导出到外部的文件由用户管理，不受内部轮转删除影响。
 
