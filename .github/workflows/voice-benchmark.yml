@@ -40,7 +40,7 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v4
         with:
-          packages: "platform-tools platforms;android-36 build-tools;35.0.0 ndk;28.2.13676358 cmake;3.22.1 emulator system-images;android-35;google_apis;x86_64"
+          packages: "platform-tools platforms;android-36 build-tools;35.0.0 ndk;28.2.13676358 cmake;3.22.1"
       - uses: gradle/actions/setup-gradle@v5
       - name: Fetch and verify pinned source and base q5_1
         run: |
@@ -78,9 +78,11 @@ jobs:
           done
           "$zipalign" -c -P 16 -v 4 "$voice"
           "$zipalign" -c -P 16 -v 4 "$benchmark"
-      - name: Run bundled-model probe and voice UI smoke tests on Android 15
+      - name: Run bundled-model probe and voice UI smoke tests on Android 15 (manual)
+        if: github.event_name == 'workflow_dispatch'
         run: |
-          echo no | avdmanager create avd --force --name voice-ci --package 'system-images;android-35;google_apis;x86_64' --device pixel_2
+          sdkmanager 'emulator' 'system-images;android-35;google_apis;x86_64'
+          echo no | timeout 60 avdmanager create avd --force --name voice-ci --package 'system-images;android-35;google_apis;x86_64' --device pixel_2
           emulator -avd voice-ci -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 4096 >/tmp/voice-emulator.log 2>&1 &
           emulator_pid=$!
           trap 'kill $emulator_pid || true' EXIT

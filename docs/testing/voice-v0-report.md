@@ -78,7 +78,7 @@ python3 scripts/run_voice_benchmark.py --models tiny,base --language auto --thre
 - NDK r28c 生成的 arm64/x86_64 ELF 所有 LOAD segment 对齐 `0x4000`；APK `zipalign -P 16` 通过。
 - 固定下载 `verify` 全通过；模型不在 Git 状态中。
 - 正式 App 回归：Web 4 单测 + browser smoke、core/真实 OpenSSH、隔离 tmux 4 项、APK/test APK/lint，以及 Android 15 emulator 34/34（0 skip/failure）全通过。
-- 主 CI 不下载模型/NDK，运行 `:voice-benchmark:testReleaseUnitTest` 及 standard 构建；0.8 起独立 `Voice checks` workflow 在 voice 相关改动时获取固定源码/base，编译 JNI、检查 16 KiB/权限/模型/体积，并在 Android 15 模拟器执行 bundled model、取消和 voice UI smoke。tiny 与完整语料 benchmark 仍为手动/真机门槛。
+- 主 CI 不下载模型/NDK，运行 `:voice-benchmark:testReleaseUnitTest` 及 standard 构建；0.8 起独立 `Voice checks` workflow 在 voice 相关改动时获取固定源码/base，编译 JNI、检查 16 KiB/权限/模型/体积，并可在手动 workflow 中执行 Android 15 模拟器 bundled model、取消和 voice UI smoke。tiny 与完整语料 benchmark 仍为手动/真机门槛。
 
 ## 下一步
 

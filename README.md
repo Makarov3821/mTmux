@@ -125,7 +125,7 @@ python3 scripts/test_ssh.py
 
 SSH 集成用例在普通 `:core:test` 中会明确跳过，只有 fixture 启动后才执行。`scripts/test_ssh.py` 测试未加密和加密 OpenSSH Ed25519 私钥、未知/变化主机密钥、命令 stdout/stderr/退出码、PTY 尺寸、中文输入、普通 shell 执行，以及无 UTF-8 locale 的 tmux 中文/特殊字符名称、链接窗口所属会话和连接前历史；还覆盖两级跳板、每级主机身份、跳板失败清理和不直连回退；密码认证仍需真机测试。测试脚本结束时清理自己创建的服务和密钥，不连接你的生产服务器。
 
-CI 配置见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，默认验证不带语音的 standard；[voice workflow](.github/workflows/voice-benchmark.yml) 获取固定 base 模型，构建 standard/voice 与 benchmark、检查权限/模型/体积/16 KiB 对齐，并在 Android 15 模拟器执行模型与 UI smoke。本地测试结果不等于 CI 已实际运行，也不等于 Android 真机兼容性通过。
+CI 配置见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，默认验证不带语音的 standard；[voice workflow](.github/workflows/voice-benchmark.yml) 获取固定 base 模型，构建 standard/voice 与 benchmark、检查权限/模型/体积/16 KiB 对齐；手动运行该 workflow 时另执行 Android 15 模型/UI smoke。本地测试结果不等于 CI 已实际运行，也不等于 Android 真机兼容性通过。
 
 ### 签名发布（GitHub Release）
 
