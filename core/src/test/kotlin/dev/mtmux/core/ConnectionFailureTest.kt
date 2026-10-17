@@ -17,6 +17,8 @@ class ConnectionFailureTest {
             Exception("PortForwardingL failed $secret") to FailureReason.FORWARDING,
             Exception("Algorithm negotiation fail $secret") to FailureReason.ALGORITHM,
             ConnectException(secret) to FailureReason.CONNECT,
+            Exception("connection is closed by foreign host $secret") to FailureReason.CONNECTION_CLOSED,
+            SocketException("Connection reset $secret") to FailureReason.CONNECTION_CLOSED,
             Exception(secret) to FailureReason.OTHER
         )
         cases.forEach { (cause,expected) ->

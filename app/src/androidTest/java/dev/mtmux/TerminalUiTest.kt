@@ -227,9 +227,13 @@ class TerminalUiTest {
         DebugLog.clear()
         DebugLog.event(DebugLog.Event.CONNECTION_FAILED,7,error=IllegalStateException("SECRET_MARKER password=abc key=PRIVATE command=echo-private"))
         DebugLog.stage(dev.mtmux.core.ConnectProgress(2,dev.mtmux.core.ConnectProgress.Stage.AUTHENTICATING),7)
+        DebugLog.connectionTrace(DebugLog.Owner.CONNECT, 7, dev.mtmux.core.ConnectionTrace(
+            3, dev.mtmux.core.ConnectionPhase.DNS, dev.mtmux.core.TraceResult.OK, 25, 0, parent=1))
         val snapshot=DebugLog.snapshot().toString(Charsets.UTF_8)
         // Stage codes are structural (hop*10+stage), independent of UI language.
         assertTrue(snapshot.contains("SSH_STAGE a=7 b=22"))
+        assertTrue(snapshot.contains("diagnostics v2"))
+        assertTrue(snapshot.contains("SSH_TRACE source=CONNECT a=7 attempt=7 op=3 parent=1 phase=DNS result=OK elapsedMs=25 hop=0"))
         assertTrue(snapshot.contains("CONNECTION_FAILED a=7 b=0 type=IllegalStateException reason=OTHER "))
         assertTrue(snapshot.contains("CONNECTION_FAILED"));assertTrue(snapshot.contains("processStartedAt="))
         assertFalse(snapshot.contains("SECRET_MARKER"));assertFalse(snapshot.contains("SECRET_PROGRESS"))
@@ -1279,6 +1283,70 @@ class TerminalUiTest {
             preferences.edit().putString("credential:${profile.id}", record.toString()).commit()
             assertTrue(runCatching { store.credentials(profile) }.isFailure)
             store.delete(profile.id)
+        }
+    }
+
+    @Test fun warmConnectionRevisionChangesWithCredentialsPinsAndTarget() {
+        val store = ServerProfiles(compose.activity)
+        val profile = ServerProfile(name="revision-fixture", host="${java.util.UUID.randomUUID()}.invalid", port=22,
+            user="test", path="tmux", keyAuthentication=false)
+        val pins = compose.activity.getSharedPreferences("host-pins", 0)
+        try {
+            store.save(profile, SavedCredentials("first-fixture-secret"))
+            val initial = store.connectionRevision(profile)
+            assertEquals(initial, store.connectionRevision(profile))
+            store.save(profile, SavedCredentials("second-fixture-secret"))
+            val credentials = store.connectionRevision(profile)
+            assertNotEquals(initial, credentials)
+            pins.edit().putString(profile.trustEndpoint(), "first-fixture-pin").commit()
+            val trusted = store.connectionRevision(profile)
+            assertNotEquals(credentials, trusted)
+            pins.edit().putString(profile.trustEndpoint(), "second-fixture-pin").commit()
+            assertNotEquals(trusted, store.connectionRevision(profile))
+            assertNotEquals(store.connectionRevision(profile), store.connectionRevision(profile.copy(user="other")))
+            val jump = JumpHost(host="jump.invalid", port=22, user="jump", keyAuthentication=false)
+            assertNotEquals(store.connectionRevision(profile), store.connectionRevision(profile.copy(jumps=listOf(jump))))
+        } finally { store.delete(profile.id) }
+    }
+
+    @Test fun reconnectRetriesFailedSelectionEvenWhenAnotherTaskWasLastSuccessful() {
+        val store = ServerProfiles(compose.activity)
+        val cache = ServerCache(compose.activity)
+        val preferences = compose.activity.getSharedPreferences("server-profiles", 0)
+        val previousHistory = preferences.getString("recent-tasks", null)
+        val successful = ServerProfile(name="previous-success", host="192.0.2.1", port=22, user="test", path="tmux", keyAuthentication=false)
+        val failed = successful.copy(id=java.util.UUID.randomUUID().toString(), name="current-failure", host="192.0.2.2")
+        fun task(profile: ServerProfile) = RecentTask(profile.id, profile.host, profile.port, profile.user, profile.path,
+            "fixture-pin", "123:456:\$1:@2:%3:789", "session", "window")
+        try {
+            preferences.edit().remove("recent-tasks").commit()
+            // Deliberately missing credentials: failure is immediate and requires no network.
+            store.save(successful); store.save(failed)
+            store.rememberTask(task(successful))
+            cache.write(failed, listOf(task(failed)))
+            cache.markAttempt(successful); cache.markAttempt(failed)
+            compose.activityRule.scenario.recreate()
+            compose.onNodeWithTag("task-${failed.id}-%3").performScrollTo().performClick()
+            compose.onNodeWithTag("connection-status").assertTextEquals(compose.activity.getString(R.string.status_credentials_unreadable))
+            compose.onNodeWithTag("reconnect-recent").assertExists()
+            compose.waitUntil(30000) { evaluate(terminal(), "typeof window.receive") == "\"function\"" }
+            repeat(2) {
+                compose.onNodeWithTag("reconnect-recent").assertIsEnabled().performClick()
+                compose.onNodeWithTag("connection-status").assertTextEquals(compose.activity.getString(R.string.status_credentials_unreadable))
+                assertEquals(successful.id, store.recent().first().profileId)
+            }
+            // A first-ever failed selection must also offer retry without any successful history.
+            store.delete(successful.id)
+            assertTrue(store.recent().isEmpty())
+            compose.onNodeWithTag("reconnect-recent").assertExists().performClick()
+            compose.onNodeWithTag("connection-status").assertTextEquals(compose.activity.getString(R.string.status_credentials_unreadable))
+            compose.onNodeWithText("重新选择任务").performClick()
+            compose.onNodeWithTag("ssh-${failed.id}").performScrollTo().performClick()
+            compose.onNodeWithTag("reconnect-recent").assertExists().performClick()
+            compose.onNodeWithTag("connection-status").assertTextEquals(compose.activity.getString(R.string.status_credentials_unreadable))
+        } finally {
+            store.delete(successful.id); store.delete(failed.id)
+            preferences.edit().putString("recent-tasks", previousHistory).commit()
         }
     }
 

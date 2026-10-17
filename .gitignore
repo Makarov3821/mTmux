@@ -52,6 +52,7 @@ id_ed25519
 *.hprof
 hs_err_pid*
 /logs/
+/debug-log/
 __pycache__/
 *.py[cod]
 .venv/

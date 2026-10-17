@@ -7,9 +7,11 @@ import kotlin.test.*
 class TaskProbeTest {
     private val pane = Pane("\$1", "@2", "%3", true)
     private val identity = "123:456:\$1:@2:%3:789:0"
-    private fun record(after: String = identity, ok: String = "1"): String {
+    private fun record(after: String = identity, ok: String = "1", metadataAvailable: Boolean = true): String {
         fun enc(s: String) = Base64.getEncoder().encodeToString(s.toByteArray())
-        return (listOf("MTMUX_PROBE_1", identity) + listOf("测试\n别名\n", "'\t\$(touch /tmp/no)\n", "0\n", "kiro-cli\n", "title\n", "› ask a question or describe a task ↵").map(::enc) + listOf(after, ok, "MTMUX_END")).joinToString("\n") + "\n"
+        val metadata = listOf("测试\n别名", "'\t\$(touch /tmp/no)", "0", "kiro-cli", "title")
+        val framed = metadata.joinToString("") { "${it.toByteArray(Charsets.UTF_8).size}:$it" } + "\n"
+        return listOf("MTMUX_PROBE_2", identity, if (metadataAvailable) enc(framed) else "", enc("› ask a question or describe a task ↵"), after, ok, "MTMUX_END").joinToString("\n") + "\n"
     }
     @Test fun `framing preserves names and verifies before and after identity`() {
         val result = TaskProbe.parse(record(), listOf(pane)).single()
@@ -18,6 +20,7 @@ class TaskProbeTest {
         assertEquals(TaskState.COMPLETED, result.state)
         assertEquals(TaskState.UNKNOWN, TaskProbe.parse(record(after="changed"), listOf(pane)).single().state)
         assertEquals(TaskState.UNKNOWN, TaskProbe.parse(record(ok="0"), listOf(pane)).single().state)
+        assertEquals(TaskState.UNKNOWN, TaskProbe.parse(record(metadataAvailable=false), listOf(pane)).single().state)
         assertFailsWith<IllegalArgumentException> { TaskProbe.parse("shell noise\n" + record(), listOf(pane)) }
         assertFailsWith<IllegalArgumentException> { TaskProbe.parse(record().dropLast(12), listOf(pane)) }
         assertFailsWith<IllegalArgumentException> { TaskProbe.parse(record(), listOf(pane.copy(id="%4"))) }

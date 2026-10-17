@@ -33,7 +33,7 @@ import kotlinx.coroutines.sync.withPermit
 private data class HomeRow(val snapshot: ServerSnapshot? = null, val refreshing: Boolean = false,
                            val progress: UiText = uiText(R.string.home_refreshing), val error: UiText? = null, val challenge: HostKeyChallenge? = null)
 
-@Composable fun ServerHome(openSettings: Boolean = false, privacyDisplay: Boolean, onPrivacyDisplay: (Boolean) -> Unit, refreshOnEntry: Boolean, onEntryHandled: () -> Unit, onOpen: (ServerProfile, RecentTask?) -> Unit,
+@Composable fun ServerHome(warmConnections: WarmConnectionPool<SshClient>, openSettings: Boolean = false, privacyDisplay: Boolean, onPrivacyDisplay: (Boolean) -> Unit, refreshOnEntry: Boolean, onEntryHandled: () -> Unit, onOpen: (ServerProfile, RecentTask?) -> Unit,
                           onPreferences: (Int,Float,Boolean) -> Unit,
                           appearance: AppAppearance, onAppearance: (AppAppearance) -> Unit) {
     val context = LocalContext.current
@@ -83,35 +83,50 @@ private data class HomeRow(val snapshot: ServerSnapshot? = null, val refreshing:
         rows[profile.id] = HomeRow(rows[profile.id]?.snapshot ?: cache.read(profile), refreshing = true)
         val revision = (revisions[profile.id] ?: 0) + 1
         revisions[profile.id] = revision
+        val traceAttempt = DebugLog.nextAttempt()
         jobs[profile.id] = scope.launch {
             limit.withPermit {
-                val connection = SshClient(object : PinStore { override fun get(endpoint: String) = pins.getString(endpoint,null) })
+                val connectionKey = store.connectionRevision(profile)
+                val pooled = warmConnections.take(connectionKey)
+                val connection = pooled ?: SshClient(object : PinStore { override fun get(endpoint: String) = pins.getString(endpoint,null) })
+                connection.observe { DebugLog.connectionTrace(DebugLog.Owner.REFRESH, profile.id.hashCode(), it, traceAttempt) }
+                var retain = false
                 clients.add(connection)
                 try {
                     DebugLog.event(DebugLog.Event.REFRESH,profile.id.hashCode(),if(automatic) 1 else 0)
                     cache.markAttempt(profile)
                     val discovered = withContext(Dispatchers.IO) {
-                        connection.connect(store.login(profile)) { progress ->
+                        if (pooled != null) connection.reportReuse()
+                        else connection.connect(store.login(profile)) { progress ->
                             DebugLog.stage(progress,profile.id.hashCode())
                             scope.launch { if (revisions[profile.id] == revision && rows[profile.id]?.refreshing == true) rows[profile.id] = rows[profile.id]!!.copy(progress=progressText(progress)) }
                         }
                         scope.launch { if (revisions[profile.id] == revision && rows[profile.id]?.refreshing == true) rows[profile.id] = rows[profile.id]!!.copy(progress=uiText(R.string.home_reading_tmux)) }
                         val hostKey = pins.getString(profile.trustEndpoint(),null) ?: throw AppError(R.string.home_verify_fingerprint)
-                        val collected = mutableListOf<TaskProbe.Snapshot>()
-                        val snapshots = connection.discoverTaskSnapshots(profile.path) { batch ->
-                            DebugLog.event(DebugLog.Event.REFRESH_BATCH,profile.id.hashCode(),batch.size)
-                            collected.addAll(batch)
-                            val tasks = collected.toList().recentTasks(profile, hostKey)
-                            val states = collected.associate { it.binding.identity to it.state }
+                        val collected = linkedMapOf<String, TaskProbe.Snapshot>()
+                        fun publish(progress: UiText) {
+                            val tasks = collected.values.toList().recentTasks(profile, hostKey)
+                            val states = collected.mapValues { it.value.state }
                             scope.launch {
                                 if (revisions[profile.id] == revision && rows[profile.id]?.refreshing == true &&
                                     store.all().firstOrNull { it.id == profile.id } == profile) {
-                                    val row = rows[profile.id]!!
-                                    val pending = row.snapshot?.tasks.orEmpty().filter { old -> tasks.none { it.identity == old.identity } }
-                                    rows[profile.id] = row.copy(snapshot = ServerSnapshot(tasks + pending, System.currentTimeMillis(), states),
-                                        progress = UiText.Plural(R.plurals.home_read_states, tasks.size))
+                                    rows[profile.id] = rows[profile.id]!!.copy(snapshot = ServerSnapshot(tasks, System.currentTimeMillis(), states), progress = progress)
                                 }
                             }
+                        }
+                        var completed = 0
+                        val snapshots = connection.discoverTaskSnapshots(profile.path, onListed = { listed ->
+                            DebugLog.event(DebugLog.Event.REFRESH_LIST, profile.id.hashCode(), listed.size)
+                            listed.forEach { collected[it.binding.identity] = it }
+                            publish(uiText(R.string.home_reading_tmux))
+                        }) { batch ->
+                            DebugLog.event(DebugLog.Event.REFRESH_BATCH,profile.id.hashCode(),batch.size)
+                            batch.forEach { snapshot ->
+                                collected.entries.removeAll { it.key != snapshot.binding.identity && it.value.binding.target == snapshot.binding.target }
+                                collected[snapshot.binding.identity] = snapshot
+                            }
+                            completed += batch.size
+                            publish(UiText.Plural(R.plurals.home_read_states, completed))
                         }
                         snapshots.recentTasks(profile, hostKey) to snapshots.associate { it.binding.identity to it.state }
                     }
@@ -120,9 +135,13 @@ private data class HomeRow(val snapshot: ServerSnapshot? = null, val refreshing:
                     if (store.all().firstOrNull { it.id == profile.id } == profile) {
                         DebugLog.event(DebugLog.Event.REFRESH_DONE,profile.id.hashCode(),discovered.first.size)
                         rows[profile.id] = HomeRow(cache.write(profile,discovered.first,discovered.second))
+                        retain = store.connectionRevision(profile) == connectionKey
                     } else { rows.remove(profile.id) }
                 } catch (error: Exception) {
-                    if (error is CancellationException) throw error
+                    if (error is CancellationException || (error is CodedError && error.code == ErrorCode.CANCELLED)) {
+                        DebugLog.event(DebugLog.Event.REFRESH_CANCELLED, profile.id.hashCode())
+                        throw CancellationException("refresh cancelled", error)
+                    }
                     if (revisions[profile.id] != revision) return@withPermit
                     DebugLog.event(DebugLog.Event.REFRESH_FAILED,profile.id.hashCode(),error=error)
                     val challenge = (error as? HostKeyRejected)?.challenge
@@ -130,11 +149,18 @@ private data class HomeRow(val snapshot: ServerSnapshot? = null, val refreshing:
                         challenge != null -> uiText(if (challenge.changed) R.string.home_host_key_changed else R.string.home_needs_fingerprint)
                         else -> errorText(error)
                     }, challenge = challenge)
-                } finally { clients.remove(connection); withContext(NonCancellable + Dispatchers.IO) { connection.close() } }
+                } finally {
+                    clients.remove(connection)
+                    val active = isActive && revisions[profile.id] == revision
+                    withContext(NonCancellable + Dispatchers.IO) {
+                        if (retain && active) warmConnections.put(connectionKey, connection)
+                        else connection.close()
+                    }
+                }
             }
         }
     }
-    DisposableEffect(Unit) { onDispose { clients.toList().forEach { it.close() } } }
+    DisposableEffect(Unit) { onDispose { clients.toList().forEach { it.cancel() } } }
     fun refreshVisibleFolders() { store.all().forEach { refresh(it, automatic = true) } }
     val refreshOnResume by rememberUpdatedState({ if (currentPage == "home") refreshVisibleFolders() })
     LaunchedEffect(Unit) {
@@ -150,7 +176,7 @@ private data class HomeRow(val snapshot: ServerSnapshot? = null, val refreshing:
     DisposableEffect(lifecycle) {
         var stopped = false
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) { stopped = true; jobs.values.toList().forEach { it.cancel() }; clients.toList().forEach { it.close() }; rows.keys.toList().forEach { id -> rows[id]?.let { rows[id] = it.copy(refreshing=false) } } }
+            if (event == Lifecycle.Event.ON_STOP) { stopped = true; jobs.values.toList().forEach { it.cancel() }; clients.toList().forEach { it.cancel() }; rows.keys.toList().forEach { id -> rows[id]?.let { rows[id] = it.copy(refreshing=false) } } }
             if (event == Lifecycle.Event.ON_RESUME && stopped) { stopped = false; refreshOnResume() }
         }
         lifecycle.addObserver(observer)

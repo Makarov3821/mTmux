@@ -62,6 +62,7 @@ fun progressText(progress: ConnectProgress): UiText = uiText(when (progress.stag
     FailureReason.FORWARDING -> R.string.reason_forwarding
     FailureReason.ALGORITHM -> R.string.reason_algorithm
     FailureReason.CONNECT -> R.string.reason_connect
+    FailureReason.CONNECTION_CLOSED -> R.string.reason_connection_closed
     FailureReason.OTHER -> R.string.reason_other
 }
 
@@ -73,6 +74,7 @@ fun progressText(progress: ConnectProgress): UiText = uiText(when (progress.stag
     ErrorCode.REMOTE_TIMEOUT -> R.string.err_remote_timeout
     ErrorCode.REMOTE_OUTPUT_LIMIT -> R.string.err_remote_output_limit
     ErrorCode.TMUX_UNAVAILABLE -> R.string.err_tmux_unavailable
+    ErrorCode.TMUX_MOUSE_FAILED -> R.string.err_enable_mouse
     ErrorCode.TMUX_DISCOVERY_FAILED -> R.string.err_tmux_discovery_failed
     ErrorCode.TOO_MANY_PANES -> R.string.err_too_many_panes
     ErrorCode.TMUX_TARGET_CHANGED -> R.string.err_tmux_target_changed

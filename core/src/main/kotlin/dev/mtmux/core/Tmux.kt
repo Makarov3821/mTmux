@@ -38,8 +38,12 @@ object Tmux {
 
     fun version(path: String = "tmux") = "${executable(path)} -V"
     // IDs only: user-controlled names/titles cannot break the record framing.
-    fun discover(path: String = "tmux") = "${executable(path)} list-panes -a -F " +
-        quote("#{session_id}\t#{window_id}\t#{pane_id}\t#{pane_active}")
+    fun discover(path: String = "tmux", session: String? = null): String {
+        require(session == null || Regex("\\$[0-9]+").matches(session))
+        val scope = if (session == null) "-a" else "-s -t ${quote(session)}"
+        return "${executable(path)} list-panes $scope -F " +
+            quote("#{session_id}\t#{window_id}\t#{pane_id}\t#{pane_active}")
+    }
 
     fun attach(session: String, path: String = "tmux"): String {
         require(Regex("\\$[0-9]+").matches(session)) { "Invalid session ID" }

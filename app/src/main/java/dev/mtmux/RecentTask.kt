@@ -3,6 +3,13 @@ package dev.mtmux
 import dev.mtmux.core.PaneBinding
 import org.json.JSONObject
 
+/** In-memory selection, including attempts that have not connected successfully yet. */
+data class TaskConnection(val profile: ServerProfile, val task: RecentTask?) {
+    fun matches(current: ServerProfile) = profile.id == current.id && profile.host == current.host &&
+        profile.port == current.port && profile.user == current.user && profile.path == current.path &&
+        profile.routeContext() == current.routeContext()
+}
+
 /** References an existing credential profile; never stores credentials or terminal text. */
 data class RecentTask(
     val profileId: String, val host: String, val port: Int, val user: String, val path: String,

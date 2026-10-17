@@ -26,6 +26,7 @@
     <string name="reason_forwarding">SSH 转发失败，请检查跳板的转发权限及到下一台服务器的网络</string>
     <string name="reason_algorithm">SSH 算法不兼容，请检查服务器支持的算法</string>
     <string name="reason_connect">无法建立连接，请检查服务器地址、SSH 端口及网络</string>
+    <string name="reason_connection_closed">SSH 连接意外关闭，请检查网络及服务器连接限制</string>
     <string name="reason_other">SSH 连接失败，请检查网络、认证及服务器配置；经跳板连接时也请检查转发权限</string>
     <string name="err_verification_failed">连接验证失败，请重新连接</string>
     <string name="err_invalid_login">请检查服务器、端口和用户名</string>

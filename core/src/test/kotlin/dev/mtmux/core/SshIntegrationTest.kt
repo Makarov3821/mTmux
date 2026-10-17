@@ -269,7 +269,7 @@ class SshIntegrationTest {
             val first = client.discoverPanes(path).single()
             assertEquals("测试会话", first.sessionName)
             assertEquals("工作窗口", first.windowName)
-            val unusual = "中文\t'\\\"\n" + '$' + "(echo MUST_NOT_EXECUTE)\n"
+            val unusual = "中文😀\t'\\\"\n" + '$' + "(echo MUST_NOT_EXECUTE) #{pane_id} :123\n\n"
             val renamed = client.exec("${Tmux.quote(path)} rename-window -t ${Tmux.quote(first.window)} ${Tmux.quote(unusual)}")
             assertEquals(0, renamed.status)
             try {
@@ -296,12 +296,77 @@ class SshIntegrationTest {
                     val linked = client.discoverPanes(path)
                     assertEquals(setOf("测试会话", "linked-test"), linked.map { it.sessionName }.toSet())
                     assertTrue(linked.all { it.id == first.id })
+                    val scoped = client.discoverPanes(path, first.session)
+                    assertEquals(listOf("测试会话"), scoped.map { it.sessionName })
+                    assertEquals(first.session, scoped.single().session)
                     val snapshots = client.discoverTaskSnapshots(path)
                     assertEquals(linked.map { it.sessionName }.toSet(), snapshots.map { it.sessionName }.toSet())
                     assertEquals(2, snapshots.map { it.binding.identity }.distinct().size)
                 } finally { client.exec("${Tmux.quote(path)} kill-session -t linked-test") }
                 assertFailsWith<IllegalArgumentException> { Tmux.history("%1;kill-server", path) }
             } finally { client.exec("${Tmux.quote(path)} rename-window -t ${Tmux.quote(first.window)} '工作窗口'") }
+        }
+    }
+
+    @Test fun `preparation uses one channel preserves focus and rejects rebuilt targets`() {
+        val login = login()
+        val path = System.getenv("MTMUX_TEST_TMUX")!!
+        val tmux = Tmux.quote(path)
+        trusted().use { client ->
+            client.connect(login)
+            val session = client.exec("$tmux new-session -d -P -F '#{session_id}' -s prepare-test -n original 'sleep 120'").output.trim()
+            try {
+                val original = client.bindPane(session, path)
+                client.exec("$tmux new-window -t ${Tmux.quote(session)} -n elsewhere 'sleep 120'")
+                val selected = client.bindPane(session, path)
+                assertNotEquals(original.pane, selected.pane)
+                val events = java.util.concurrent.CopyOnWriteArrayList<ConnectionTrace>()
+                client.observe { events += it }
+                val prepared = client.prepareTmux(session, original, true, path)
+                assertEquals(original, prepared.binding)
+                assertEquals("original", prepared.pane.windowName)
+                assertEquals(1, events.count { it.phase == ConnectionPhase.CHANNEL_OPEN && it.result == TraceResult.START })
+                assertEquals(selected, client.bindPane(session, path))
+                assertEquals("on", client.exec("$tmux show-options -v -t ${Tmux.quote(session)} mouse").output.trim())
+                client.exec("$tmux respawn-pane -k -t ${Tmux.quote(original.pane)} 'sleep 120'")
+                assertFailsWith<MtmuxException> { client.prepareTmux(session, original, false, path) }
+                val current = client.prepareTmux(session, null, false, path)
+                assertEquals(selected, current.binding)
+                println("PREPARE channels=1 phases=" + events.filter { it.result == TraceResult.OK }.map { it.phase })
+            } finally { client.exec("$tmux kill-session -t ${Tmux.quote(session)}") }
+        }
+    }
+
+    @Test fun `structured trace separates handshake phases and reports remote exit codes`() {
+        val events = java.util.concurrent.CopyOnWriteArrayList<ConnectionTrace>()
+        trusted().use { client ->
+            client.observe { events += it }
+            client.connect(login())
+            for (phase in listOf(ConnectionPhase.DNS, ConnectionPhase.TCP_CONNECT, ConnectionPhase.SERVER_BANNER,
+                ConnectionPhase.KEY_EXCHANGE, ConnectionPhase.AUTH, ConnectionPhase.SSH_CONNECT, ConnectionPhase.SSH_READY)) {
+                assertTrue(events.any { it.phase == phase && it.result == TraceResult.OK }, phase.name)
+            }
+            assertEquals(7, client.exec("printf SECRET_COMMAND_OUTPUT; exit 7").status)
+            assertTrue(events.any { it.phase == ConnectionPhase.REMOTE_EXEC && it.result == TraceResult.FAILED && it.exitStatus == 7 })
+            assertTrue(events.any { it.phase == ConnectionPhase.CHANNEL_OPEN && it.parent > 0 })
+            assertFalse(events.toString().contains("SECRET"))
+            println("TRACE_PHASES " + events.filter { it.result != TraceResult.START }.map { "${it.phase}:${it.result}:${it.elapsedMs}" })
+        }
+    }
+
+    @Test fun `two jump hosts expose independent phases and support prepared targets without PTY`() {
+        val first = login()
+        val relay = login(true)
+        val target = Login(first.host, first.port, first.user, "", first.privateKey, jumps = listOf(first, relay))
+        val events = java.util.concurrent.CopyOnWriteArrayList<ConnectionTrace>()
+        trusted().use { client ->
+            client.observe { events += it }
+            client.connect(target)
+            assertEquals("jump-ready", client.exec("printf jump-ready").output)
+            val entry = client.discoverTaskCatalog(System.getenv("MTMUX_TEST_TMUX")).first()
+            assertEquals(entry.binding, client.prepareTmux(entry.binding.session, entry.binding, false, System.getenv("MTMUX_TEST_TMUX")).binding)
+            for (hop in listOf(0, 1, 2)) assertTrue(events.any { it.hop == hop && it.phase == ConnectionPhase.AUTH && it.result == TraceResult.OK })
+            assertTrue(client.isReusable())
         }
     }
 
@@ -328,10 +393,27 @@ class SshIntegrationTest {
                 val focus = "$tmux display-message -p -t ${Tmux.quote(session)} '#{window_id}:#{pane_id}:#{pane_in_mode}'"
                 val before = client.exec(focus).output
                 val batches = mutableListOf<Int>()
+                val scoped = client.discoverPanes(path, session)
+                assertEquals(9, scoped.size)
+                assertTrue(scoped.all { it.session == session })
                 val start = System.nanoTime()
-                val snapshots = client.discoverTaskSnapshots(path) { batches.add(it.size) }
-                println("BATCH_PROBE panes=${snapshots.size} channels=${2+batches.size} elapsedMs=${(System.nanoTime()-start)/1_000_000}")
-                assertEquals(listOf(8,2), batches)
+                val active = java.util.concurrent.atomic.AtomicInteger()
+                val peak = java.util.concurrent.atomic.AtomicInteger()
+                client.observe { event -> if (event.phase == ConnectionPhase.TMUX_STATUS) {
+                    if (event.result == TraceResult.START) peak.accumulateAndGet(active.incrementAndGet(), ::maxOf)
+                    else active.decrementAndGet()
+                } }
+                var listed = false
+                val snapshots = client.discoverTaskSnapshots(path, onListed = { tasks ->
+                    assertEquals(10, tasks.size)
+                    assertTrue(tasks.all { it.state == TaskState.UNKNOWN })
+                    assertTrue(batches.isEmpty())
+                    listed = true
+                }) { assertTrue(listed); batches.add(it.size) }
+                println("BATCH_PROBE panes=${snapshots.size} channels=${1+batches.size} elapsedMs=${(System.nanoTime()-start)/1_000_000}")
+                assertEquals(listOf(2,8), batches.sorted())
+                assertEquals(2, peak.get())
+                assertEquals(0, active.get())
                 assertEquals(9, snapshots.count { it.binding.session == session })
                 assertTrue(snapshots.all { it.readable })
                 val states = snapshots.filter { it.binding.session == session }.map { it.state }

@@ -26,6 +26,18 @@ class ServerProfiles(context: Context) {
         }
     }
     fun last(): String? = preferences.getString("last", null)
+    /** Opaque revision for foreground SSH reuse; includes credentials and every scoped host pin. */
+    fun connectionRevision(profile: ServerProfile): String {
+        val fields = listOf(encode(listOf(profile)), preferences.getString("credential:${profile.id}", null).orEmpty()) +
+            profile.trustEndpoints().sorted().flatMap { listOf(it, pins.getString(it, null).orEmpty()) }
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        fields.forEach { field ->
+            val bytes = field.toByteArray(Charsets.UTF_8)
+            digest.update(java.nio.ByteBuffer.allocate(4).putInt(bytes.size).array())
+            digest.update(bytes)
+        }
+        return Base64.getEncoder().encodeToString(digest.digest())
+    }
     fun recent(): List<RecentTask> {
         val profiles = all()
         return runCatching {

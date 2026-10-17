@@ -34,17 +34,58 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
     private val epoch = ConnectionEpoch()
     private val writeLock = Any()
     private val chain = java.util.concurrent.CopyOnWriteArrayList<Session>()
-    @Volatile private var connectGeneration = 0L
+    private val stateLock = Any()
+    @Volatile private var cancelled = false
+    private var started = false
+    private val sockets = java.util.concurrent.CopyOnWriteArrayList<java.net.Socket>()
+    private val lookups = java.util.concurrent.CopyOnWriteArrayList<java.util.concurrent.Future<*>>()
+    private val commands = java.util.concurrent.CopyOnWriteArrayList<com.jcraft.jsch.Channel>()
+    private val trace = TraceSource()
+
+    fun observe(observer: (ConnectionTrace) -> Unit) { trace.observer = observer }
+    fun isReusable() = !cancelled && session?.isConnected == true && terminal == null && commands.isEmpty()
+    fun reportReuse() { checkActive(); trace.instant(ConnectionPhase.SSH_REUSED) }
+    private fun checkActive() = ensure(!cancelled, ErrorCode.CANCELLED)
+    private fun ownSocket(socket: java.net.Socket) = synchronized(stateLock) {
+        if (cancelled) { socket.close(); fail(ErrorCode.CANCELLED) }
+        sockets.add(socket)
+        Unit
+    }
+    private fun ownLookup(lookup: java.util.concurrent.Future<*>) = synchronized(stateLock) {
+        if (cancelled) { lookup.cancel(true); fail(ErrorCode.CANCELLED) }
+        lookups.add(lookup)
+        Unit
+    }
+    private fun ownChannel(channel: com.jcraft.jsch.Channel) = synchronized(stateLock) {
+        checkActive(); commands.add(channel); Unit
+    }
+    internal fun <T> measured(phase: ConnectionPhase, hop: Int = 0, block: () -> T): T {
+        val span = trace.span(phase, hop)
+        try { return trace.within(span) { block().also { value ->
+            if (value is ExecResult) span.end(if (value.status == 0) TraceResult.OK else TraceResult.FAILED,
+                bytes = value.output.toByteArray(Charsets.UTF_8).size + value.error.toByteArray(Charsets.UTF_8).size, exitStatus = value.status)
+            else span.end()
+        } } }
+        catch (error: Exception) {
+            span.end(if (cancelled || (error is CodedError && error.code == ErrorCode.CANCELLED)) TraceResult.CANCELLED else TraceResult.FAILED, error = error)
+            if (cancelled) throw MtmuxException(ErrorCode.CANCELLED, error)
+            throw error
+        }
+    }
 
     fun connect(login: Login, onProgress: (ConnectProgress) -> Unit = {}) {
-        close()
-        val generation = connectGeneration
+        synchronized(stateLock) {
+            checkActive()
+            ensure(!started, ErrorCode.CONNECTION_CHANGED)
+            started = true
+        }
         val hops = login.jumps + login
         requireValid(login.jumps.none { it.jumps.isNotEmpty() }, ErrorCode.INVALID_JUMP_CHAIN)
+        val total = trace.span(ConnectionPhase.SSH_CONNECT)
         var previous: Session? = null
         try {
             hops.forEachIndexed { index, hop ->
-                ensure(generation == connectGeneration, ErrorCode.CANCELLED)
+                checkActive()
                 val scoped = Login(hop.host, hop.port, hop.user, hop.password, hop.privateKey, hop.passphrase, hops.take(index))
                 val jsch = JSch()
                 val verifier = PinnedHostKeys(scoped.trustEndpoint, pins)
@@ -52,32 +93,53 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
                 val hopNumber = if (index < hops.lastIndex) index + 1 else 0
                 try {
                     onProgress(ConnectProgress(hopNumber, ConnectProgress.Stage.PREPARING))
-                    hop.privateKey?.let { jsch.addIdentity("memory-key", it, null, hop.passphrase.toByteArray()) }
-                    val forwarded = previous?.setPortForwardingL("127.0.0.1", 0, hop.host, hop.port)
+                    measured(ConnectionPhase.KEY_LOAD, hopNumber) {
+                        hop.privateKey?.let { jsch.addIdentity("memory-key", it, null, hop.passphrase.toByteArray()) }
+                    }
+                    val forwarded = previous?.let { relay -> measured(ConnectionPhase.JUMP_FORWARD, hopNumber) {
+                        relay.setPortForwardingL("127.0.0.1", 0, hop.host, hop.port)
+                    } }
                     val candidate = jsch.getSession(hop.user, if (forwarded == null) hop.host else "127.0.0.1", forwarded ?: hop.port)
-                    chain.add(candidate)
+                    synchronized(stateLock) { checkActive(); chain.add(candidate) }
+                    candidate.setSocketFactory(ConnectingSocketFactory(trace, hopNumber, ::checkActive, ::ownSocket,
+                        ::ownLookup, { lookups.remove(it) }))
+                    val handshake = HandshakeTrace(trace, hopNumber)
+                    candidate.setLogger(handshake)
                     candidate.setHostKeyAlias(scoped.trustEndpoint)
                     candidate.setConfig("StrictHostKeyChecking", "yes")
                     candidate.setConfig("PreferredAuthentications", if (hop.privateKey == null) "password" else "publickey")
                     candidate.setPassword(hop.password.toByteArray())
                     candidate.setServerAliveInterval(15_000)
                     candidate.setServerAliveCountMax(2)
-                    ensure(generation == connectGeneration, ErrorCode.CANCELLED)
+                    checkActive()
                     onProgress(ConnectProgress(hopNumber, ConnectProgress.Stage.AUTHENTICATING))
-                    candidate.connect(15_000)
-                    ensure(generation == connectGeneration, ErrorCode.CANCELLED)
+                    try {
+                        candidate.connect(15_000)
+                        checkActive()
+                        handshake.finish(TraceResult.OK)
+                    } catch (error: Exception) {
+                        handshake.finish(if (cancelled) TraceResult.CANCELLED else TraceResult.FAILED, error)
+                        throw error
+                    }
                     previous = candidate
                 } catch (error: Exception) {
+                    if (cancelled) throw MtmuxException(ErrorCode.CANCELLED, error)
                     verifier.challenge?.let { throw HostKeyRejected(it) }
                     if (error is MtmuxException && error.code == ErrorCode.CANCELLED) throw error
                     throw ConnectionFailure(hopNumber, connectionFailureReason(error), error)
                 } finally { jsch.removeAllIdentity() }
             }
-            session = previous
-        } catch (error: Exception) { close(); throw error }
+            synchronized(stateLock) { checkActive(); session = previous }
+            total.end()
+            trace.instant(ConnectionPhase.SSH_READY)
+        } catch (error: Exception) {
+            total.end(if (cancelled) TraceResult.CANCELLED else TraceResult.FAILED, error = error)
+            close(); throw error
+        }
     }
 
-    fun exec(command: String, stdin: ByteArray? = null): ExecResult {
+    fun exec(command: String, stdin: ByteArray? = null, phase: ConnectionPhase = ConnectionPhase.REMOTE_EXEC): ExecResult = measured(phase) {
+        checkActive()
         val connection = session ?: fail(ErrorCode.NOT_CONNECTED)
         val channel = connection.openChannel("exec") as ChannelExec
         val stdout = LimitedOutput(512 * 1024)
@@ -86,44 +148,65 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
         stdin?.let { channel.setInputStream(java.io.ByteArrayInputStream(it)) }
         channel.outputStream = stdout
         channel.setErrStream(stderr)
+        ownChannel(channel)
         try {
-            channel.connect(10_000)
-            val deadline = System.nanoTime() + 10_000_000_000L
-            while (!channel.isClosed) {
-                ensure(System.nanoTime() < deadline, ErrorCode.REMOTE_TIMEOUT)
-                Thread.sleep(10)
+            measured(ConnectionPhase.CHANNEL_OPEN) { channel.connect(10_000); checkActive() }
+            val wait = trace.span(ConnectionPhase.COMMAND_WAIT)
+            try {
+                val deadline = System.nanoTime() + 10_000_000_000L
+                while (!channel.isClosed) {
+                    checkActive()
+                    ensure(System.nanoTime() < deadline, ErrorCode.REMOTE_TIMEOUT)
+                    Thread.sleep(10)
+                }
+                checkActive()
+                ensure(!stdout.overflow && !stderr.overflow, ErrorCode.REMOTE_OUTPUT_LIMIT)
+                wait.end(bytes = stdout.size() + stderr.size(), exitStatus = channel.exitStatus)
+                ExecResult(channel.exitStatus, stdout.toString("UTF-8"), stderr.toString("UTF-8"))
+            } catch (error: Exception) {
+                wait.end(if (cancelled) TraceResult.CANCELLED else TraceResult.FAILED, error = error); throw error
             }
-            ensure(!stdout.overflow && !stderr.overflow, ErrorCode.REMOTE_OUTPUT_LIMIT)
-            return ExecResult(channel.exitStatus, stdout.toString("UTF-8"), stderr.toString("UTF-8"))
-        } finally { channel.disconnect() }
+        } finally { channel.disconnect(); commands.remove(channel) }
     }
 
-    /** Names travel as separate bounded responses, never as tab/newline-delimited records. */
-    fun discoverPanes(path: String): List<Pane> {
-        val version = exec(Tmux.version(path))
-        ensure(version.status == 0, ErrorCode.TMUX_UNAVAILABLE)
-        val result = exec(Tmux.discover(path))
+    /** Check availability and list IDs in one SSH round trip. */
+    internal fun listPanes(path: String, session: String? = null): List<Pane> {
+        val result = exec("${Tmux.version(path)} >/dev/null 2>&1 || exit 127; ${Tmux.discover(path, session)}")
+        ensure(result.status != 127, ErrorCode.TMUX_UNAVAILABLE)
         if (result.status != 0 && (result.error.contains("no server running on") || (result.error.contains("error connecting to") && result.error.contains("No such file or directory")))) return emptyList()
         ensure(result.status == 0, ErrorCode.TMUX_DISCOVERY_FAILED)
         val panes = Tmux.parse(result.output)
         ensure(panes.size <= 256, ErrorCode.TOO_MANY_PANES)
-        val sessions = mutableMapOf<String, String>()
-        val windows = mutableMapOf<String, Pair<String, String>>()
-        fun field(pane: Pane, name: String): String {
-            val value = exec(Tmux.field(pane, name, path))
-            ensure(value.status == 0, ErrorCode.TMUX_TARGET_CHANGED)
-            return value.output.removeSuffix("\n").take(512)
-        }
-        return panes.map { pane ->
-            val session = sessions.getOrPut(pane.session) { field(pane, "session_name") }
-            val window = windows.getOrPut("${pane.session}/${pane.window}") {
-                field(pane, "window_index") to field(pane, "window_name")
-            }
-            pane.copy(sessionName = session, windowIndex = window.first, windowName = window.second)
-        }
+        return panes
     }
 
-    fun openTerminal(command: String?, cols: Int, rows: Int): Long {
+    /** Names are length framed and batched; connecting only needs the selected session. */
+    fun discoverPanes(path: String, session: String? = null): List<Pane> =
+        listPanes(path, session).chunked(TmuxFields.BATCH_SIZE).flatMap { batch ->
+            val result = exec(TmuxFields.metadataCommand(batch, path))
+            ensure(result.status == 0, ErrorCode.TMUX_TARGET_CHANGED)
+            TmuxFields.parseMetadata(result.output, batch)
+        }
+
+    fun discoverTaskCatalog(path: String): List<TaskCatalog.Entry> {
+        val result = exec(TaskCatalog.command(path), phase = ConnectionPhase.TMUX_CATALOG)
+        ensure(result.status != 127, ErrorCode.TMUX_UNAVAILABLE)
+        if (result.status != 0 && (result.error.contains("no server running on") ||
+            (result.error.contains("error connecting to") && result.error.contains("No such file or directory")))) return emptyList()
+        ensure(result.status == 0, ErrorCode.TMUX_DISCOVERY_FAILED)
+        return TaskCatalog.parse(result.output)
+    }
+
+    fun prepareTmux(session: String, expected: PaneBinding?, mouse: Boolean, path: String): TmuxPreparation.Prepared {
+        val result = exec(TmuxPreparation.command(session, expected, mouse, path), phase = ConnectionPhase.TMUX_PREPARE)
+        ensure(result.status >= 0, ErrorCode.NOT_CONNECTED)
+        ensure(result.status != 127, ErrorCode.TMUX_UNAVAILABLE)
+        ensure(result.status == 0, if (result.status == 2) ErrorCode.TMUX_MOUSE_FAILED else ErrorCode.TASK_GONE)
+        return TmuxPreparation.parse(result.output, session, expected)
+    }
+
+    fun openTerminal(command: String?, cols: Int, rows: Int): Long = measured(ConnectionPhase.TERMINAL_OPEN) {
+        checkActive()
         val connection = session ?: fail(ErrorCode.NOT_CONNECTED)
         val channel: com.jcraft.jsch.Channel = if (command == null) {
             (connection.openChannel("shell") as ChannelShell).apply {
@@ -136,11 +219,12 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
                 setPtyType("xterm-256color", cols, rows, 0, 0)
             }
         }
-        terminal = channel
+        synchronized(stateLock) { checkActive(); terminal = channel }
         input = channel.inputStream
         output = channel.outputStream
+        checkActive()
         channel.connect(10_000)
-        return epoch.open()
+        synchronized(stateLock) { checkActive(); epoch.open() }
     }
 
     /** Runs on an IO thread. The consumer must apply bounded backpressure. */
@@ -153,11 +237,16 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
         try {
             val stream = input ?: fail(ErrorCode.TERMINAL_NOT_CONNECTED)
             val buffer = ByteArray(8192)
-            while (true) {
-                val count = stream.read(buffer)
-                if (count < 0) break
-                consume(buffer.copyOf(count))
-            }
+            val first = trace.span(ConnectionPhase.FIRST_BYTE)
+            var received = false
+            try {
+                while (true) {
+                    val count = stream.read(buffer)
+                    if (count < 0) break
+                    if (!received) { received = true; first.end(bytes = count) }
+                    consume(buffer.copyOf(count))
+                }
+            } finally { if (!received) first.end(if (cancelled) TraceResult.CANCELLED else TraceResult.FAILED) }
             // EOF can arrive slightly before the exit-status message; wait briefly for it.
             val deadline = System.nanoTime() + 1_500_000_000L
             while (channel.exitStatus == -1 && !channel.isClosed && System.nanoTime() < deadline) Thread.sleep(20)
@@ -173,7 +262,7 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
     }
 
     fun verifyResume(binding: PaneBinding, path: String) {
-        val result = exec(Tmux.exactBinding(binding, path))
+        val result = exec(Tmux.exactBinding(binding, path), phase = ConnectionPhase.TMUX_VERIFY)
         ensure(result.status == 0 && result.output.trim() == binding.identity + ":0", ErrorCode.TASK_GONE)
     }
 
@@ -209,17 +298,26 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
         }
     }
 
-    override fun close() {
-        connectGeneration++
+    /** Fast, idempotent cancellation; safe before connect() starts and from the UI thread. */
+    fun cancel() = stop(true)
+    private fun stop(report: Boolean) {
+        val first = synchronized(stateLock) { if (cancelled) false else { cancelled = true; true } }
         epoch.close()
-        terminal?.disconnect()
-        chain.reversed().forEach { it.disconnect() }
-        chain.clear()
-        session?.disconnect()
-        terminal = null
-        session = null
-        output = null
-        input = null
+        if (first && report) trace.instant(ConnectionPhase.CANCEL_REQUEST)
+        lookups.forEach { it.cancel(true) }
+        sockets.forEach { runCatching { it.close() } }
+    }
+
+    override fun close() {
+        stop(false)
+        val previous = synchronized(stateLock) {
+            val saved = (commands.toList() + listOfNotNull(terminal)) to chain.toList()
+            commands.clear(); chain.clear(); sockets.clear(); lookups.clear()
+            terminal = null; session = null; output = null; input = null
+            saved
+        }
+        previous.first.forEach { runCatching { it.disconnect() } }
+        previous.second.reversed().forEach { runCatching { it.disconnect() } }
     }
 }
 

@@ -29,6 +29,7 @@
     <string name="reason_forwarding">SSH forwarding failed. Check the jump host\'s forwarding permission and its network path to the next server.</string>
     <string name="reason_algorithm">SSH algorithms are incompatible. Check the algorithms the server supports.</string>
     <string name="reason_connect">Cannot connect. Check the server address, SSH port and network.</string>
+    <string name="reason_connection_closed">The SSH connection closed unexpectedly. Check the network and server connection limits.</string>
     <string name="reason_other">SSH connection failed. Check the network, authentication and server settings; for jump hosts also check forwarding permission.</string>
     <string name="err_verification_failed">Connection check failed. Please reconnect.</string>
     <string name="err_invalid_login">Check the server, port and username.</string>

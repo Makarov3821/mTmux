@@ -52,6 +52,7 @@ class MainActivity : AppCompatActivity() {
     private val closer = java.util.concurrent.Executors.newSingleThreadExecutor()
     private var terminalView: TerminalView? = null
     private var client: SshClient? = null
+    private val warmConnections = WarmConnectionPool<SshClient>(isReusable = { it.isReusable() })
     @Volatile private var generation = 0L
     private var wireToken by mutableStateOf("")
     private var busy by mutableStateOf(false)
@@ -74,6 +75,7 @@ class MainActivity : AppCompatActivity() {
     private var rows = 24
     private val profileRepository by lazy { ServerProfiles(this) }
     private var recentTasks by mutableStateOf(emptyList<RecentTask>())
+    private var reconnectTarget by mutableStateOf<TaskConnection?>(null)
     private var activeProfile: ServerProfile? = null
     private var showConfig by mutableStateOf(true)
     private var initialHomeRefresh = true
@@ -128,7 +130,7 @@ class MainActivity : AppCompatActivity() {
         if(client!=null) DebugLog.event(DebugLog.Event.OUTPUT_SUMMARY,generation.toInt(),renderedBytes.coerceAtMost(Int.MAX_VALUE.toLong()).toInt())
         generation++
         val previous = client
-        previous?.invalidateInput()
+        previous?.cancel()
         client = null
         if (previous != null) closer.execute { previous.close() }
         writer.queue.clear()
@@ -148,7 +150,7 @@ class MainActivity : AppCompatActivity() {
         status = message
     }
 
-    override fun onResume() { super.onResume(); capturePaused = false; updateCapturePolicy(); DebugLog.event(DebugLog.Event.RESUME) }
+    override fun onResume() { super.onResume(); warmConnections.setActive(true); capturePaused = false; updateCapturePolicy(); DebugLog.event(DebugLog.Event.RESUME) }
     override fun onPause() {
         capturePaused = true
         updateCapturePolicy()
@@ -159,6 +161,7 @@ class MainActivity : AppCompatActivity() {
         DebugLog.event(DebugLog.Event.STOP)
         super.onStop()
         disconnect(TerminalStatus(uiText(R.string.status_backgrounded)))
+        warmConnections.setActive(false)
     }
 
     override fun onDestroy() {
@@ -167,6 +170,7 @@ class MainActivity : AppCompatActivity() {
         scope.cancel()
         writer.shutdownNow()
         closer.shutdown()
+        warmConnections.close()
         terminalView?.dispose()
         terminalView = null
         super.onDestroy()
@@ -216,6 +220,7 @@ class MainActivity : AppCompatActivity() {
         val task = RecentTask(profile.id, profile.host, profile.port, profile.user, profile.path,
             pins.getString(profile.trustEndpoint(), null) ?: return false,
             binding?.identity, pane?.sessionName.orEmpty(), pane?.windowName.orEmpty(), route = profile.routeContext())
+        reconnectTarget = TaskConnection(profile, task)
         return runCatching {
             profileRepository.rememberTask(task)
             recentTasks = profileRepository.recent()
@@ -224,19 +229,26 @@ class MainActivity : AppCompatActivity() {
 
     private fun connectTask(login: Login, path: String, session: String?, discoverOnly: Boolean,
                             profile: ServerProfile?, recent: RecentTask?) {
-        if (!discoverOnly) showConfig = false
+        if (!discoverOnly) {
+            showConfig = false
+            reconnectTarget = profile?.let { TaskConnection(it, recent) }
+        }
         disconnect(TerminalStatus(uiText(R.string.status_connecting)), clear = true)
         renderedBytes = 0L
         panes = emptyList()
         challenge = null
         busy = true
         val attempt = generation
+        val traceAttempt = DebugLog.nextAttempt()
         DebugLog.event(DebugLog.Event.CONNECT,attempt.toInt(),login.jumps.size)
         activeProfile = profile
         val mouseForSession = profile?.enableTmuxMouse ?: enableTmuxMouse
-        val connection = SshClient(object : PinStore {
+        val pooled = profile?.let { warmConnections.take(profileRepository.connectionRevision(it)) }
+        fun freshConnection() = SshClient(object : PinStore {
             override fun get(endpoint: String) = pins.getString(endpoint, null)
-        })
+        }).also { fresh -> fresh.observe { DebugLog.connectionTrace(DebugLog.Owner.CONNECT, attempt.toInt(), it, traceAttempt) } }
+        var connection = pooled ?: freshConnection()
+        connection.observe { DebugLog.connectionTrace(DebugLog.Owner.CONNECT, attempt.toInt(), it, traceAttempt) }
         client = connection
         scope.launch {
             try {
@@ -246,23 +258,34 @@ class MainActivity : AppCompatActivity() {
                         if (profile == null || !recent.matches(profile)) throw AppError(R.string.err_profile_changed)
                         if (pins.getString(login.trustEndpoint, null) != recent.hostKey) throw AppError(R.string.err_trust_changed)
                     }
-                    connection.connect(login) { progress -> DebugLog.stage(progress,attempt.toInt()); scope.launch { if (attempt == generation && busy) status = TerminalStatus(progressText(progress)) } }
+                    if (pooled != null) connection.reportReuse()
+                    else connection.connect(login) { progress -> DebugLog.stage(progress,attempt.toInt()); scope.launch { if (attempt == generation && busy) status = TerminalStatus(progressText(progress)) } }
                     withContext(Dispatchers.Main) { if (attempt == generation) status = TerminalStatus(uiText(if (session != null || discoverOnly) R.string.status_ssh_checking_tmux else R.string.status_ssh_opening_terminal)) }
                     if (attempt != generation) { connection.close(); throw MtmuxException(ErrorCode.CANCELLED) }
                     if (discoverOnly) {
                         connection.discoverPanes(path)
                     } else {
                         val expected = recent?.binding
-                        expected?.let { connection.verifyResume(it, path) }
-                        val metadata = if (session != null) connection.discoverPanes(path).filter { it.session == session } else emptyList()
-                        if (session != null && metadata.isEmpty()) throw AppError(R.string.err_session_gone)
-                        if (session != null && mouseForSession) {
-                            if (connection.exec(Tmux.enableMouse(session, path)).status != 0) throw AppError(R.string.err_enable_mouse)
+                        val prepared = session?.let { selectedSession ->
+                            try { connection.prepareTmux(selectedSession, expected, mouseForSession, path) }
+                            catch (error: Exception) {
+                                // Preparation sends no input. A stale idle transport may be retried once before attach.
+                                val transportFailure = error !is CodedError || error.code in setOf(ErrorCode.NOT_CONNECTED, ErrorCode.REMOTE_TIMEOUT)
+                                if (pooled == null || !transportFailure || attempt != generation) throw error
+                                connection.close()
+                                connection = freshConnection()
+                                withContext(Dispatchers.Main) {
+                                    if (attempt != generation) { connection.close(); throw MtmuxException(ErrorCode.CANCELLED) }
+                                    client = connection
+                                }
+                                connection.connect(login) { progress -> DebugLog.stage(progress, attempt.toInt()) }
+                                connection.prepareTmux(selectedSession, expected, mouseForSession, path)
+                            }
                         }
-                        binding = expected ?: session?.let { connection.bindPane(it, path) }
-                        connection.openTerminal(expected?.let { Tmux.resume(it, path) } ?: session?.let { Tmux.attach(it, path) }, cols, rows)
-                        expected?.let { connection.verifyResume(it, path) }
-                        metadata
+                        binding = prepared?.binding
+                        connection.openTerminal(binding?.let { Tmux.resume(it, path) }, cols, rows)
+                        binding?.let { connection.verifyResume(it, path) }
+                        listOfNotNull(prepared?.pane)
                     }
                 }
                 if (attempt != generation) { connection.close(); return@launch }
@@ -299,7 +322,8 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             } catch (error: Exception) {
-                DebugLog.event(DebugLog.Event.CONNECTION_FAILED,attempt.toInt(),error=error)
+                val cancelled = attempt != generation || error is CancellationException || (error is CodedError && error.code == ErrorCode.CANCELLED)
+                DebugLog.event(if (cancelled) DebugLog.Event.CONNECTION_CANCELLED else DebugLog.Event.CONNECTION_FAILED,attempt.toInt(),error=error)
                 connection.close()
                 if (attempt == generation) {
                     busy = false
@@ -378,14 +402,19 @@ class MainActivity : AppCompatActivity() {
                 if (token == wireToken) result.fold({ terminalView?.latest(); reading = false }, { status = TerminalStatus(uiText(R.string.status_latest_failed), alert = true) })
             }
         }
-        fun resumeTask(task: RecentTask) {
-            if (busy || wireToken.isNotEmpty() || !terminalReady) return
-            val profile = profileStore.all().firstOrNull { task.matches(it) }
-            if (profile == null) { status = TerminalStatus(uiText(R.string.err_profile_changed), alert = true); recentTasks = profileStore.recent(); return }
+        fun openTask(profile: ServerProfile, task: RecentTask?) {
+            reconnectTarget = TaskConnection(profile, task)
+            showConfig = false
             try {
-                connectTask(profileStore.login(profile), profile.path, task.binding?.session, false, profile, task)
+                connectTask(profileStore.login(profile), profile.path, task?.binding?.session, false, profile, task)
                 focusManager.clearFocus(force = true); keyboard?.hide()
-            } catch (_: Exception) { status = TerminalStatus(uiText(R.string.status_recent_unreadable), alert = true) }
+            } catch (_: Exception) { status = TerminalStatus(uiText(R.string.status_credentials_unreadable)) }
+        }
+        fun resumeTask(selection: TaskConnection) {
+            if (busy || wireToken.isNotEmpty() || !terminalReady) return
+            val profile = profileStore.all().firstOrNull { selection.matches(it) }
+            if (profile == null) { status = TerminalStatus(uiText(R.string.err_profile_changed), alert = true); recentTasks = profileStore.recent(); return }
+            openTask(profile, selection.task)
         }
         fun home() {
             disconnect(TerminalStatus(uiText(R.string.status_returned_home)))
@@ -485,8 +514,11 @@ class MainActivity : AppCompatActivity() {
                             Column(Modifier.padding(8.dp)) {
                                 Text(status.text.string(), modifier=Modifier.testTag("connection-status"), style=MaterialTheme.typography.bodySmall)
                                 if(wireToken.isEmpty() && renderedBytes>0) Text(stringResource(R.string.terminal_disconnected_history),modifier=Modifier.testTag("disconnected-history"),color=MaterialTheme.colorScheme.error)
-                                if(wireToken.isEmpty() && !busy && recentTasks.isNotEmpty()) Row {
-                                    TextButton(onClick={resumeTask(recentTasks.first())},enabled=terminalReady,modifier=Modifier.testTag("reconnect-recent")){Text(stringResource(R.string.terminal_reconnect_recent))}
+                                if(wireToken.isEmpty() && !busy) Row {
+                                    val selection = reconnectTarget ?: recentTasks.firstOrNull()?.let { task ->
+                                        profileStore.all().firstOrNull { task.matches(it) }?.let { TaskConnection(it, task) }
+                                    }
+                                    if (selection != null) TextButton(onClick={resumeTask(selection)},enabled=terminalReady,modifier=Modifier.testTag("reconnect-recent")){Text(stringResource(R.string.terminal_reconnect_recent))}
                                     TextButton(onClick={home()}){Text(stringResource(R.string.terminal_reselect_task))}
                                 }
                             }
@@ -525,10 +557,8 @@ class MainActivity : AppCompatActivity() {
                 }
                 }
                 if (showConfig) {
-                    ServerHome(openSettings=reopenSettings, privacyDisplay=privacyDisplay, onPrivacyDisplay=::changePrivacyDisplay, refreshOnEntry = initialHomeRefresh, onEntryHandled = { initialHomeRefresh = false; reopenSettings = false }, onOpen = { profile, task ->
-                        try {
-                            connectTask(profileStore.login(profile),profile.path,task?.binding?.session,false,profile,task)
-                        } catch (_: Exception) { showConfig = false; status = TerminalStatus(uiText(R.string.status_credentials_unreadable)) }
+                    ServerHome(warmConnections=warmConnections, openSettings=reopenSettings, privacyDisplay=privacyDisplay, onPrivacyDisplay=::changePrivacyDisplay, refreshOnEntry = initialHomeRefresh, onEntryHandled = { initialHomeRefresh = false; reopenSettings = false }, onOpen = { profile, task ->
+                        openTask(profile, task)
                     }, appearance=appearance,onAppearance={appearance=it;terminalPreferences.edit {putString("appearance",it.name)}},
                         onPreferences = { font, speed, touch ->
                         fontSize=font;scrollSensitivity=speed;remoteTouch=touch
@@ -550,10 +580,12 @@ class MainActivity : AppCompatActivity() {
                                 val token = wireToken
                                 busy = true
                                 scope.launch {
-                                    val result = withContext(Dispatchers.IO) { runCatching { connection.bindPane(bound.session, connectedPath) } }
+                                    val result = withContext(Dispatchers.IO) { runCatching { connection.prepareTmux(bound.session, null, false, connectedPath) } }
                                     if (token == wireToken && client === connection) {
                                         busy = false
-                                        result.fold({ next ->
+                                        result.fold({ prepared ->
+                                            val next = prepared.binding
+                                            panes = listOf(prepared.pane)
                                             replyPane = next
                                             draftScopeKey = draftScopeKey.substringBeforeLast('/') + "/" + next.identity
                                             status = TerminalStatus(uiText(R.string.status_reply_target_confirmed, next.pane))
