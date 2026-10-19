@@ -52,7 +52,8 @@ class MainActivity : AppCompatActivity() {
     private val closer = java.util.concurrent.Executors.newSingleThreadExecutor()
     private var terminalView: TerminalView? = null
     private var client: SshClient? = null
-    private val warmConnections = WarmConnectionPool<SshClient>(isReusable = { it.isReusable() })
+    private val warmConnections = WarmConnectionPool<SshClient>(isReusable = { it.isReusable() },
+        onIdle = { it.setIdle(true) }, onTake = { it.setIdle(false) })
     @Volatile private var generation = 0L
     private var wireToken by mutableStateOf("")
     private var busy by mutableStateOf(false)
@@ -115,6 +116,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        warmConnections.setCapacity(savedSshRetention(this).capacity)
         initializeVoiceFlavor(applicationContext)
         enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT), navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT))
         privacyDisplay = privacySettings.enabled()
@@ -228,7 +230,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun connectTask(login: Login, path: String, session: String?, discoverOnly: Boolean,
-                            profile: ServerProfile?, recent: RecentTask?) {
+                            profile: ServerProfile?, recent: RecentTask?, handedOff: SshClient? = null) {
         if (!discoverOnly) {
             showConfig = false
             reconnectTarget = profile?.let { TaskConnection(it, recent) }
@@ -243,7 +245,7 @@ class MainActivity : AppCompatActivity() {
         DebugLog.event(DebugLog.Event.CONNECT,attempt.toInt(),login.jumps.size)
         activeProfile = profile
         val mouseForSession = profile?.enableTmuxMouse ?: enableTmuxMouse
-        val pooled = profile?.let { warmConnections.take(profileRepository.connectionRevision(it)) }
+        val pooled = handedOff ?: profile?.let { warmConnections.take(profileRepository.connectionRevision(it)) }
         fun freshConnection() = SshClient(object : PinStore {
             override fun get(endpoint: String) = pins.getString(endpoint, null)
         }).also { fresh -> fresh.observe { DebugLog.connectionTrace(DebugLog.Owner.CONNECT, attempt.toInt(), it, traceAttempt) } }
@@ -402,13 +404,13 @@ class MainActivity : AppCompatActivity() {
                 if (token == wireToken) result.fold({ terminalView?.latest(); reading = false }, { status = TerminalStatus(uiText(R.string.status_latest_failed), alert = true) })
             }
         }
-        fun openTask(profile: ServerProfile, task: RecentTask?) {
+        fun openTask(profile: ServerProfile, task: RecentTask?, handedOff: SshClient? = null) {
             reconnectTarget = TaskConnection(profile, task)
             showConfig = false
             try {
-                connectTask(profileStore.login(profile), profile.path, task?.binding?.session, false, profile, task)
+                connectTask(profileStore.login(profile), profile.path, task?.binding?.session, false, profile, task, handedOff)
                 focusManager.clearFocus(force = true); keyboard?.hide()
-            } catch (_: Exception) { status = TerminalStatus(uiText(R.string.status_credentials_unreadable)) }
+            } catch (_: Exception) { handedOff?.close(); status = TerminalStatus(uiText(R.string.status_credentials_unreadable)) }
         }
         fun resumeTask(selection: TaskConnection) {
             if (busy || wireToken.isNotEmpty() || !terminalReady) return
@@ -557,8 +559,8 @@ class MainActivity : AppCompatActivity() {
                 }
                 }
                 if (showConfig) {
-                    ServerHome(warmConnections=warmConnections, openSettings=reopenSettings, privacyDisplay=privacyDisplay, onPrivacyDisplay=::changePrivacyDisplay, refreshOnEntry = initialHomeRefresh, onEntryHandled = { initialHomeRefresh = false; reopenSettings = false }, onOpen = { profile, task ->
-                        openTask(profile, task)
+                    ServerHome(warmConnections=warmConnections, openSettings=reopenSettings, privacyDisplay=privacyDisplay, onPrivacyDisplay=::changePrivacyDisplay, refreshOnEntry = initialHomeRefresh, onEntryHandled = { initialHomeRefresh = false; reopenSettings = false }, onOpen = { profile, task, handedOff ->
+                        openTask(profile, task, handedOff)
                     }, appearance=appearance,onAppearance={appearance=it;terminalPreferences.edit {putString("appearance",it.name)}},
                         onPreferences = { font, speed, touch ->
                         fontSize=font;scrollSensitivity=speed;remoteTouch=touch

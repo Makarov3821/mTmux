@@ -34,4 +34,36 @@ class WarmConnectionPoolTest {
             assertNull(pool.take("a"))
         }
     }
+    @Test fun `retention levels shrink immediately and none rejects late completions`() {
+        assertEquals(listOf(0, 1, 2, 3, 5), SshRetention.entries.map { it.capacity })
+        assertEquals(SshRetention.MEDIUM, SshRetention.fromCapacity(-1))
+        WarmConnectionPool<Connection>(maxSize = 5, isReusable = { !it.closed }).use { pool ->
+            val connections = List(5) { Connection().also { value -> pool.put("$it", value) } }
+            pool.setCapacity(2)
+            assertTrue(connections.take(3).all { it.closed })
+            assertFalse(connections[3].closed)
+            pool.setCapacity(0)
+            assertTrue(connections.all { it.closed })
+            val late = Connection(); pool.put("late", late)
+            assertTrue(late.closed); assertNull(pool.take("late"))
+            pool.setCapacity(1)
+            val next = Connection(); pool.put("next", next)
+            assertSame(next, pool.take("next")); next.close()
+        }
+    }
+    @Test fun `default retention expires at one minute and borrowing restores active mode`() {
+        var now = 0L
+        val modes = mutableListOf<String>()
+        WarmConnectionPool<Connection>(isReusable = { !it.closed }, clock = { now },
+            onIdle = { modes += "idle" }, onTake = { modes += "active" }).use { pool ->
+            val connection = Connection(); pool.put("a", connection)
+            now = TimeUnit.SECONDS.toNanos(59)
+            assertSame(connection, pool.take("a"))
+            assertEquals(listOf("idle", "active"), modes)
+            pool.put("a", connection)
+            now += TimeUnit.SECONDS.toNanos(60)
+            assertNull(pool.take("a")); assertTrue(connection.closed)
+            assertEquals(listOf("idle", "active", "idle"), modes)
+        }
+    }
 }

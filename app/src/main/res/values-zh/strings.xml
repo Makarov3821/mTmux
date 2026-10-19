@@ -195,6 +195,16 @@
     <string name="task_state_completed">本轮结束或已就绪</string>
     <string name="settings_title">设置</string>
     <string name="settings_appearance">外观</string>
+    <string name="settings_ssh_retention">SSH 连接保留</string>
+    <string name="ssh_retention_none">无</string>
+    <string name="ssh_retention_few">少</string>
+    <string name="ssh_retention_medium">中等</string>
+    <string name="ssh_retention_many">多</string>
+    <string name="ssh_retention_very_many">很多</string>
+    <string name="ssh_retention_disabled">使用结束即关闭，不保留空闲连接。</string>
+    <string name="ssh_retention_enabled">使用后保留最多 %1$d 条空闲 SSH 链，一分钟后关闭。</string>
+    <string name="ssh_retention_help">默认中等（2 条）。跳板属于同一条链。空闲连接不轮询任务状态，退到后台即关闭；正在使用的连接另计。</string>
+    <string name="home_opening_task">准备进入：正在完成当前状态读取…</string>
     <string name="settings_language">语言</string>
     <string name="settings_privacy">隐私</string>
     <string name="settings_privacy_display">隐私展示</string>

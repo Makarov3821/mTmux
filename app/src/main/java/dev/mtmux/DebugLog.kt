@@ -22,7 +22,8 @@ object DebugLog {
         CONNECTION_FAILED, REFRESH, REFRESH_BATCH, REFRESH_DONE, REFRESH_FAILED, WEB_READY, WEB_RESIZE,
         VIEWPORT, FIRST_RENDER, OUTPUT_SUMMARY, WEB_LOAD_FAILED, WEB_SCRIPT_FAILED, INPUT_BLOCKED, INPUT_FAILED, KEY_FILE, KEY_PASTE,
         KEY_IMPORT_FAILED, EXPORT, CLEARED, CRASH, REMOTE_EXIT, VOICE_PERMISSION, VOICE_RECORD_START, VOICE_RECORD_STOP,
-        VOICE_TRANSCRIBE, VOICE_RESULT, VOICE_CANCEL, VOICE_ERROR, REFRESH_LIST, CONNECTION_CANCELLED, REFRESH_CANCELLED }
+        VOICE_TRANSCRIBE, VOICE_RESULT, VOICE_CANCEL, VOICE_ERROR, REFRESH_LIST, CONNECTION_CANCELLED, REFRESH_CANCELLED,
+        REFRESH_HANDOFF_REQUEST, REFRESH_HANDOFF }
     enum class Owner { CONNECT, REFRESH }
     private val worker = ThreadPoolExecutor(1,1,0,TimeUnit.MILLISECONDS,ArrayBlockingQueue(128))
     private val dropped = AtomicInteger()
@@ -33,7 +34,7 @@ object DebugLog {
     @Synchronized fun start(context: Context) {
         if (journal != null) return
         val version = context.packageManager.getPackageInfo(context.packageName,0).versionName
-        header = "mtmux diagnostics v2\nbuild=connection-perf-v2\napp=$version androidApi=${Build.VERSION.SDK_INT} webView=${runCatching { android.webkit.WebView.getCurrentWebViewPackage()?.versionName }.getOrNull() ?: "unknown"}\nprocessStartedAt=${java.time.Instant.now()}\nRetention: latest 10 MiB (older events may be overwritten). No terminal text or credentials.\n"
+        header = "mtmux diagnostics v2\nbuild=connection-perf-v3\napp=$version androidApi=${Build.VERSION.SDK_INT} webView=${runCatching { android.webkit.WebView.getCurrentWebViewPackage()?.versionName }.getOrNull() ?: "unknown"}\nprocessStartedAt=${java.time.Instant.now()}\nRetention: latest 10 MiB (older events may be overwritten). No terminal text or credentials.\n"
         journal = DiagnosticJournal(File(context.filesDir,"diagnostics"))
         event(Event.START)
         val previous = Thread.getDefaultUncaughtExceptionHandler()

@@ -131,6 +131,11 @@ jobs:
 
           Voice audio and transcription stay on device. Recognition only fills an editable draft and never sends automatically.
           EOF
+          version_notes="docs/releases/${GITHUB_REF_NAME#v}.md"
+          if [ -f "$version_notes" ]; then
+            printf '\n' >> release-notes.md
+            cat "$version_notes" >> release-notes.md
+          fi
       - uses: actions/upload-artifact@v7
         with:
           name: signed-release-apks

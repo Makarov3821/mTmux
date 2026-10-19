@@ -33,7 +33,14 @@ import kotlinx.coroutines.sync.withPermit
 private data class HomeRow(val snapshot: ServerSnapshot? = null, val refreshing: Boolean = false,
                            val progress: UiText = uiText(R.string.home_refreshing), val error: UiText? = null, val challenge: HostKeyChallenge? = null)
 
-@Composable fun ServerHome(warmConnections: WarmConnectionPool<SshClient>, openSettings: Boolean = false, privacyDisplay: Boolean, onPrivacyDisplay: (Boolean) -> Unit, refreshOnEntry: Boolean, onEntryHandled: () -> Unit, onOpen: (ServerProfile, RecentTask?) -> Unit,
+private class HomeRefresh {
+    val opening = java.util.concurrent.atomic.AtomicBoolean(false)
+    val finished = CompletableDeferred<Unit>()
+    var key: String? = null
+    var handedOff: SshClient? = null // Main-thread ownership after all probe workers have drained.
+}
+
+@Composable fun ServerHome(warmConnections: WarmConnectionPool<SshClient>, openSettings: Boolean = false, privacyDisplay: Boolean, onPrivacyDisplay: (Boolean) -> Unit, refreshOnEntry: Boolean, onEntryHandled: () -> Unit, onOpen: (ServerProfile, RecentTask?, SshClient?) -> Unit,
                           onPreferences: (Int,Float,Boolean) -> Unit,
                           appearance: AppAppearance, onAppearance: (AppAppearance) -> Unit) {
     val context = LocalContext.current
@@ -64,6 +71,9 @@ private data class HomeRow(val snapshot: ServerSnapshot? = null, val refreshing:
     val clients = remember { mutableSetOf<SshClient>() }
     val jobs = remember { mutableMapOf<String, Job>() }
     val revisions = remember { mutableMapOf<String, Int>() }
+    val refreshes = remember { mutableMapOf<String, HomeRefresh>() }
+    var opening by remember { mutableStateOf<String?>(null) }
+    var openingJob by remember { mutableStateOf<Job?>(null) }
     // Keep the settings page across an in-app language switch (Activity recreation).
     // After an in-app language switch the Activity is recreated; return to Settings.
     var page by remember { mutableStateOf(if (openSettings) "settings" else "home") }
@@ -84,83 +94,135 @@ private data class HomeRow(val snapshot: ServerSnapshot? = null, val refreshing:
         val revision = (revisions[profile.id] ?: 0) + 1
         revisions[profile.id] = revision
         val traceAttempt = DebugLog.nextAttempt()
+        val refresh = HomeRefresh()
+        refreshes[profile.id] = refresh
         jobs[profile.id] = scope.launch {
-            limit.withPermit {
-                val connectionKey = store.connectionRevision(profile)
-                val pooled = warmConnections.take(connectionKey)
-                val connection = pooled ?: SshClient(object : PinStore { override fun get(endpoint: String) = pins.getString(endpoint,null) })
-                connection.observe { DebugLog.connectionTrace(DebugLog.Owner.REFRESH, profile.id.hashCode(), it, traceAttempt) }
-                var retain = false
-                clients.add(connection)
-                try {
-                    DebugLog.event(DebugLog.Event.REFRESH,profile.id.hashCode(),if(automatic) 1 else 0)
-                    cache.markAttempt(profile)
-                    val discovered = withContext(Dispatchers.IO) {
-                        if (pooled != null) connection.reportReuse()
-                        else connection.connect(store.login(profile)) { progress ->
-                            DebugLog.stage(progress,profile.id.hashCode())
-                            scope.launch { if (revisions[profile.id] == revision && rows[profile.id]?.refreshing == true) rows[profile.id] = rows[profile.id]!!.copy(progress=progressText(progress)) }
-                        }
-                        scope.launch { if (revisions[profile.id] == revision && rows[profile.id]?.refreshing == true) rows[profile.id] = rows[profile.id]!!.copy(progress=uiText(R.string.home_reading_tmux)) }
-                        val hostKey = pins.getString(profile.trustEndpoint(),null) ?: throw AppError(R.string.home_verify_fingerprint)
-                        val collected = linkedMapOf<String, TaskProbe.Snapshot>()
-                        fun publish(progress: UiText) {
-                            val tasks = collected.values.toList().recentTasks(profile, hostKey)
-                            val states = collected.mapValues { it.value.state }
-                            scope.launch {
-                                if (revisions[profile.id] == revision && rows[profile.id]?.refreshing == true &&
-                                    store.all().firstOrNull { it.id == profile.id } == profile) {
-                                    rows[profile.id] = rows[profile.id]!!.copy(snapshot = ServerSnapshot(tasks, System.currentTimeMillis(), states), progress = progress)
+            try {
+                limit.withPermit {
+                    val connectionKey = store.connectionRevision(profile)
+                    refresh.key = connectionKey
+                    val pooled = warmConnections.take(connectionKey)
+                    val connection = pooled ?: SshClient(object : PinStore { override fun get(endpoint: String) = pins.getString(endpoint,null) })
+                    connection.observe { DebugLog.connectionTrace(DebugLog.Owner.REFRESH, profile.id.hashCode(), it, traceAttempt) }
+                    var retain = false
+                    var partial: ServerSnapshot? = rows[profile.id]?.snapshot
+                    clients.add(connection)
+                    try {
+                        DebugLog.event(DebugLog.Event.REFRESH,profile.id.hashCode(),if(automatic) 1 else 0)
+                        cache.markAttempt(profile)
+                        val discovered = withContext(Dispatchers.IO) {
+                            if (pooled != null) connection.reportReuse()
+                            else connection.connect(store.login(profile)) { progress ->
+                                DebugLog.stage(progress,profile.id.hashCode())
+                                scope.launch { if (revisions[profile.id] == revision && rows[profile.id]?.refreshing == true) rows[profile.id] = rows[profile.id]!!.copy(progress=progressText(progress)) }
+                            }
+                            scope.launch { if (revisions[profile.id] == revision && rows[profile.id]?.refreshing == true) rows[profile.id] = rows[profile.id]!!.copy(progress=uiText(R.string.home_reading_tmux)) }
+                            val hostKey = pins.getString(profile.trustEndpoint(),null) ?: throw AppError(R.string.home_verify_fingerprint)
+                            val collected = linkedMapOf<String, TaskProbe.Snapshot>()
+                            fun publish(progress: UiText) {
+                                val tasks = collected.values.toList().recentTasks(profile, hostKey)
+                                // Only completed reads replace colors; listing never renews their age.
+                                val snapshot = mergeTaskSnapshot(partial, tasks, emptyMap())
+                                partial = snapshot
+                                scope.launch {
+                                    if (revisions[profile.id] == revision && rows[profile.id]?.refreshing == true &&
+                                        store.all().firstOrNull { it.id == profile.id } == profile) {
+                                        rows[profile.id] = rows[profile.id]!!.copy(snapshot = snapshot, progress = progress)
+                                    }
                                 }
                             }
-                        }
-                        var completed = 0
-                        val snapshots = connection.discoverTaskSnapshots(profile.path, onListed = { listed ->
-                            DebugLog.event(DebugLog.Event.REFRESH_LIST, profile.id.hashCode(), listed.size)
-                            listed.forEach { collected[it.binding.identity] = it }
-                            publish(uiText(R.string.home_reading_tmux))
-                        }) { batch ->
-                            DebugLog.event(DebugLog.Event.REFRESH_BATCH,profile.id.hashCode(),batch.size)
-                            batch.forEach { snapshot ->
-                                collected.entries.removeAll { it.key != snapshot.binding.identity && it.value.binding.target == snapshot.binding.target }
-                                collected[snapshot.binding.identity] = snapshot
+                            var completed = 0
+                            val snapshots = connection.discoverTaskSnapshots(profile.path, stopRequested = { refresh.opening.get() }, onListed = { listed ->
+                                DebugLog.event(DebugLog.Event.REFRESH_LIST, profile.id.hashCode(), listed.size)
+                                listed.forEach { collected[it.binding.identity] = it }
+                                publish(uiText(R.string.home_reading_tmux))
+                            }) { batch ->
+                                DebugLog.event(DebugLog.Event.REFRESH_BATCH,profile.id.hashCode(),batch.size)
+                                batch.forEach { snapshot ->
+                                    collected.entries.removeAll { it.key != snapshot.binding.identity && it.value.binding.target == snapshot.binding.target }
+                                    collected[snapshot.binding.identity] = snapshot
+                                }
+                                partial = mergeTaskSnapshot(partial, collected.values.toList().recentTasks(profile, hostKey),
+                                    batch.associate { it.binding.identity to it.state })
+                                completed += batch.size
+                                publish(UiText.Plural(R.plurals.home_read_states, completed))
                             }
-                            completed += batch.size
-                            publish(UiText.Plural(R.plurals.home_read_states, completed))
+                            mergeTaskSnapshot(partial, snapshots.recentTasks(profile, hostKey), emptyMap())
                         }
-                        snapshots.recentTasks(profile, hostKey) to snapshots.associate { it.binding.identity to it.state }
-                    }
-                    ensureActive()
-                    if (revisions[profile.id] != revision) return@withPermit
-                    if (store.all().firstOrNull { it.id == profile.id } == profile) {
-                        DebugLog.event(DebugLog.Event.REFRESH_DONE,profile.id.hashCode(),discovered.first.size)
-                        rows[profile.id] = HomeRow(cache.write(profile,discovered.first,discovered.second))
-                        retain = store.connectionRevision(profile) == connectionKey
-                    } else { rows.remove(profile.id) }
-                } catch (error: Exception) {
-                    if (error is CancellationException || (error is CodedError && error.code == ErrorCode.CANCELLED)) {
-                        DebugLog.event(DebugLog.Event.REFRESH_CANCELLED, profile.id.hashCode())
-                        throw CancellationException("refresh cancelled", error)
-                    }
-                    if (revisions[profile.id] != revision) return@withPermit
-                    DebugLog.event(DebugLog.Event.REFRESH_FAILED,profile.id.hashCode(),error=error)
-                    val challenge = (error as? HostKeyRejected)?.challenge
-                    rows[profile.id] = HomeRow(runCatching {cache.clearTaskStates(profile)}.getOrNull() ?: rows[profile.id]?.snapshot, error = when {
-                        challenge != null -> uiText(if (challenge.changed) R.string.home_host_key_changed else R.string.home_needs_fingerprint)
-                        else -> errorText(error)
-                    }, challenge = challenge)
-                } finally {
-                    clients.remove(connection)
-                    val active = isActive && revisions[profile.id] == revision
-                    withContext(NonCancellable + Dispatchers.IO) {
-                        if (retain && active) warmConnections.put(connectionKey, connection)
-                        else connection.close()
+                        ensureActive()
+                        if (revisions[profile.id] != revision) return@withPermit
+                        if (store.all().firstOrNull { it.id == profile.id } == profile) {
+                            DebugLog.event(DebugLog.Event.REFRESH_DONE,profile.id.hashCode(),discovered.tasks.size)
+                            rows[profile.id] = HomeRow(cache.write(profile,discovered))
+                            retain = store.connectionRevision(profile) == connectionKey
+                        } else { rows.remove(profile.id) }
+                    } catch (error: Exception) {
+                        if (error is CancellationException || (error is CodedError && error.code == ErrorCode.CANCELLED)) {
+                            DebugLog.event(DebugLog.Event.REFRESH_CANCELLED, profile.id.hashCode())
+                            throw CancellationException("refresh cancelled", error)
+                        }
+                        if (revisions[profile.id] != revision) return@withPermit
+                        DebugLog.event(DebugLog.Event.REFRESH_FAILED,profile.id.hashCode(),error=error)
+                        val challenge = (error as? HostKeyRejected)?.challenge
+                        rows[profile.id] = HomeRow(runCatching {cache.clearTaskStates(profile)}.getOrNull() ?: rows[profile.id]?.snapshot, error = when {
+                            challenge != null -> uiText(if (challenge.changed) R.string.home_host_key_changed else R.string.home_needs_fingerprint)
+                            else -> errorText(error)
+                        }, challenge = challenge)
+                    } finally {
+                        val active = isActive && revisions[profile.id] == revision
+                        withContext(NonCancellable) {
+                            val transfer = retain && active && refresh.opening.get() && connection.isReusable()
+                            if (transfer) {
+                                // No suspension between deciding ownership and publishing the handoff.
+                                refresh.handedOff = connection
+                            } else {
+                                withContext(Dispatchers.IO) {
+                                    if (retain && active) warmConnections.put(connectionKey, connection)
+                                    else connection.close()
+                                }
+                            }
+                            clients.remove(connection)
+                        }
                     }
                 }
+            } finally {
+                refresh.finished.complete(Unit)
+                if (!refresh.opening.get() && refreshes[profile.id] === refresh) refreshes.remove(profile.id)
             }
         }
     }
-    DisposableEffect(Unit) { onDispose { clients.toList().forEach { it.cancel() } } }
+    fun open(profile: ServerProfile, task: RecentTask?) {
+        if (opening != null) return
+        val refresh = refreshes[profile.id]
+        if (refresh == null) { onOpen(profile, task, null); return }
+        opening = profile.id
+        refresh.opening.set(true)
+        DebugLog.event(DebugLog.Event.REFRESH_HANDOFF_REQUEST, profile.id.hashCode())
+        openingJob = scope.launch {
+            try {
+                refresh.finished.await()
+                val connection = refresh.handedOff
+                if (store.all().firstOrNull { it.id == profile.id } != profile ||
+                    store.connectionRevision(profile) != refresh.key) {
+                    message = uiText(R.string.err_profile_changed)
+                    return@launch
+                }
+                DebugLog.event(DebugLog.Event.REFRESH_HANDOFF, profile.id.hashCode(), if (connection == null) 0 else 1)
+                refresh.handedOff = null
+                onOpen(profile, task, connection)
+            } finally {
+                refresh.opening.set(false)
+                refresh.handedOff?.close(); refresh.handedOff = null
+                if (refresh.finished.isCompleted && refreshes[profile.id] === refresh) refreshes.remove(profile.id)
+                opening = null
+            }
+        }
+    }
+    BackHandler(enabled = opening != null) { openingJob?.cancel() }
+    DisposableEffect(Unit) { onDispose {
+        clients.toList().forEach { it.cancel() }
+        refreshes.values.forEach { it.handedOff?.close(); it.handedOff = null }
+    } }
     fun refreshVisibleFolders() { store.all().forEach { refresh(it, automatic = true) } }
     val refreshOnResume by rememberUpdatedState({ if (currentPage == "home") refreshVisibleFolders() })
     LaunchedEffect(Unit) {
@@ -176,7 +238,7 @@ private data class HomeRow(val snapshot: ServerSnapshot? = null, val refreshing:
     DisposableEffect(lifecycle) {
         var stopped = false
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) { stopped = true; jobs.values.toList().forEach { it.cancel() }; clients.toList().forEach { it.cancel() }; rows.keys.toList().forEach { id -> rows[id]?.let { rows[id] = it.copy(refreshing=false) } } }
+            if (event == Lifecycle.Event.ON_STOP) { stopped = true; openingJob?.cancel(); jobs.values.toList().forEach { it.cancel() }; clients.toList().forEach { it.cancel() }; refreshes.values.forEach { it.handedOff?.close(); it.handedOff = null }; rows.keys.toList().forEach { id -> rows[id]?.let { rows[id] = it.copy(refreshing=false) } } }
             if (event == Lifecycle.Event.ON_RESUME && stopped) { stopped = false; refreshOnResume() }
         }
         lifecycle.addObserver(observer)
@@ -184,6 +246,7 @@ private data class HomeRow(val snapshot: ServerSnapshot? = null, val refreshing:
     }
     LaunchedEffect(page) {
         if (page == "home") { profiles = store.all(); profiles.forEach { collapsed.putIfAbsent(it.id,cache.collapsed(it.id)) } }
+        else openingJob?.cancel()
     }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (page) {
@@ -199,6 +262,7 @@ private data class HomeRow(val snapshot: ServerSnapshot? = null, val refreshing:
                         AppAppearance.entries.forEach { option -> FilterChip(selected=appearance==option,onClick={onAppearance(option)},label={Text(stringResource(option.label))},modifier=Modifier.testTag("theme-${option.name}")) }
                     }
                     LanguageSettings()
+                    SshRetentionSettings(warmConnections)
                     VoiceSettings()
                     Text(stringResource(R.string.settings_privacy),color=MaterialTheme.colorScheme.primary)
                     Row(verticalAlignment=Alignment.CenterVertically) {
@@ -302,7 +366,7 @@ private data class HomeRow(val snapshot: ServerSnapshot? = null, val refreshing:
                                         Text(time,Modifier.padding(start=6.dp).semantics { contentDescription=updatedLabel }.testTag("server-updated-${profile.id}"),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1)
                                     }
                                 }
-                                TextButton(onClick={onOpen(profile,null)},contentPadding=PaddingValues(0.dp),modifier=Modifier.sizeIn(minWidth=44.dp,minHeight=48.dp).semantics{contentDescription=openSshLabel}.testTag("ssh-${profile.id}")){Text(">_")}
+                                TextButton(onClick={open(profile,null)},contentPadding=PaddingValues(0.dp),modifier=Modifier.sizeIn(minWidth=44.dp,minHeight=48.dp).semantics{contentDescription=openSshLabel}.testTag("ssh-${profile.id}")){Text(">_")}
                                 TextButton(onClick={refresh(profile)},enabled=!state.refreshing,contentPadding=PaddingValues(0.dp),modifier=Modifier.sizeIn(minWidth=44.dp,minHeight=48.dp).semantics{contentDescription=refreshServerLabel}.testTag("refresh-${profile.id}")){
                                     if(state.refreshing) CircularProgressIndicator(Modifier.size(16.dp),strokeWidth=2.dp) else Text("⟳",style=MaterialTheme.typography.titleLarge)
                                 }
@@ -315,7 +379,8 @@ private data class HomeRow(val snapshot: ServerSnapshot? = null, val refreshing:
                                     }
                                 }
                             }
-                            val note = when { state.refreshing -> state.progress.string(); state.error != null -> state.error.string() + if(state.snapshot!=null) stringResource(R.string.home_showing_cache) else "";state.snapshot==null -> stringResource(R.string.home_no_cache);else -> null }
+                            val note = when { opening == profile.id -> stringResource(R.string.home_opening_task); state.refreshing -> state.progress.string(); state.error != null -> state.error.string() + if(state.snapshot!=null) stringResource(R.string.home_showing_cache) else "";state.snapshot==null -> stringResource(R.string.home_no_cache);else -> null }
+                            if (opening == profile.id) TextButton(onClick = { openingJob?.cancel() }) { Text(stringResource(R.string.common_cancel)) }
                             if (note != null) Text(note,Modifier.padding(start=16.dp).clickable(enabled=state.challenge!=null){trust=profile to state.challenge!!},style=MaterialTheme.typography.labelSmall,color=if(state.error!=null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
                             if(!folded) {
                                 val tasks = state.snapshot?.tasks.orEmpty().filter { search.isEmpty() || folderMatch || profile.matchesSearch(search) || it.matchesSearch(search) }
@@ -324,13 +389,13 @@ private data class HomeRow(val snapshot: ServerSnapshot? = null, val refreshing:
                                 tasks.groupBy { it.binding!!.identity.split(':').slice(2..3).joinToString(":") }.forEach { (id, group) ->
                                     val title="${group.first().sessionName} / ${group.first().windowName}"
                                     val expanded=search.isNotEmpty() || expandedWindows[profile.id+id]==true
-                                    TextButton(onClick={if(group.size==1) onOpen(profile,group.first()) else expandedWindows[profile.id+id]=!expanded},modifier=Modifier.fillMaxWidth().testTag("task-${profile.id}-${group.first().binding!!.pane}"),contentPadding=PaddingValues(start=24.dp,end=8.dp,top=12.dp,bottom=12.dp)) {
+                                    TextButton(onClick={if(group.size==1) open(profile,group.first()) else expandedWindows[profile.id+id]=!expanded},modifier=Modifier.fillMaxWidth().testTag("task-${profile.id}-${group.first().binding!!.pane}"),contentPadding=PaddingValues(start=24.dp,end=8.dp,top=12.dp,bottom=12.dp)) {
                                         TaskStatusDot(TaskStates.aggregate(group.map { if(state.error==null) state.snapshot?.taskState(it,stateNow) ?: TaskState.UNKNOWN else TaskState.UNKNOWN }),"task-status-${profile.id}-${group.first().binding!!.pane}")
                                         Text(title,Modifier.weight(1f),color=MaterialTheme.colorScheme.onSurface)
                                         if(group.any { it.identity==last?.identity }) Text(stringResource(R.string.home_last_used),style=MaterialTheme.typography.labelSmall)
                                         Text(if(group.size==1) "  ›" else if(expanded) "  ⌄" else "  › ${group.size}")
                                     }
-                                    if(group.size>1 && expanded) group.forEach { task -> TextButton(onClick={onOpen(profile,task)},modifier=Modifier.fillMaxWidth().padding(start=36.dp).testTag("pane-${profile.id}-${task.binding!!.pane}")){TaskStatusDot(if(state.error==null) state.snapshot?.taskState(task,stateNow) ?: TaskState.UNKNOWN else TaskState.UNKNOWN,"pane-status-${profile.id}-${task.binding!!.pane}");Text(stringResource(R.string.home_pane, task.binding!!.pane),Modifier.weight(1f));Text("›")} }
+                                    if(group.size>1 && expanded) group.forEach { task -> TextButton(onClick={open(profile,task)},modifier=Modifier.fillMaxWidth().padding(start=36.dp).testTag("pane-${profile.id}-${task.binding!!.pane}")){TaskStatusDot(if(state.error==null) state.snapshot?.taskState(task,stateNow) ?: TaskState.UNKNOWN else TaskState.UNKNOWN,"pane-status-${profile.id}-${task.binding!!.pane}");Text(stringResource(R.string.home_pane, task.binding!!.pane),Modifier.weight(1f));Text("›")} }
                                 }
                             }
                         }

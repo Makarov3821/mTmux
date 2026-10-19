@@ -198,6 +198,16 @@
     <string name="task_state_completed">turn finished or ready</string>
     <string name="settings_title">Settings</string>
     <string name="settings_appearance">Appearance</string>
+    <string name="settings_ssh_retention">SSH connection retention</string>
+    <string name="ssh_retention_none">None</string>
+    <string name="ssh_retention_few">Few</string>
+    <string name="ssh_retention_medium">Medium</string>
+    <string name="ssh_retention_many">Many</string>
+    <string name="ssh_retention_very_many">Very many</string>
+    <string name="ssh_retention_disabled">Close connections after use; retain no idle connections.</string>
+    <string name="ssh_retention_enabled">Keep up to %1$d idle SSH chains for one minute after use.</string>
+    <string name="ssh_retention_help">Medium is the default (2 chains). Jump hosts count as part of a chain. Idle connections do not poll task status and are closed when the app enters the background. Active connections are separate.</string>
+    <string name="home_opening_task">Preparing to open: finishing current status reads…</string>
     <string name="settings_language">Language</string>
     <string name="settings_privacy">Privacy</string>
     <string name="settings_privacy_display">Privacy display</string>

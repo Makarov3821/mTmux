@@ -56,30 +56,41 @@ object TaskProbe {
 /** Publish names first; at most two screen batches run concurrently on this SSH session. */
 fun SshClient.discoverTaskSnapshots(path: String,
     onListed: (List<TaskProbe.Snapshot>) -> Unit = {},
+    stopRequested: () -> Boolean = { false },
     onBatch: (List<TaskProbe.Snapshot>) -> Unit = {}
 ): List<TaskProbe.Snapshot> {
     val catalog = discoverTaskCatalog(path)
     onListed(catalog.map { it.snapshot() })
     val batches = catalog.map { it.pane }.chunked(TaskProbe.BATCH_SIZE)
-    if (batches.isEmpty()) return emptyList()
+    if (batches.isEmpty() || stopRequested()) return catalog.map { it.snapshot() }
     val worker = java.util.concurrent.Executors.newFixedThreadPool(minOf(2, batches.size)) { task ->
         Thread(task, "mtmux-status").apply { isDaemon = true }
     }
     val completion = java.util.concurrent.ExecutorCompletionService<Pair<Int, List<TaskProbe.Snapshot>>>(worker)
-    val futures = batches.mapIndexed { index, batch -> completion.submit(java.util.concurrent.Callable {
+    val futures = mutableListOf<java.util.concurrent.Future<Pair<Int, List<TaskProbe.Snapshot>>>>()
+    fun submit(index: Int) { futures += completion.submit(java.util.concurrent.Callable {
+        val batch = batches[index]
         val result = exec(TaskProbe.command(batch, path), phase = ConnectionPhase.TMUX_STATUS)
         ensure(result.status == 0, ErrorCode.STATUS_READ_FAILED)
         index to TaskProbe.parse(result.output, batch)
     }) }
     try {
         val results = arrayOfNulls<List<TaskProbe.Snapshot>>(batches.size)
-        repeat(batches.size) {
+        var next = 0
+        var running = 0
+        while (next < minOf(2, batches.size) && !stopRequested()) { submit(next++); running++ }
+        while (running > 0) {
             val (index, snapshots) = try { completion.take().get() }
             catch (error: java.util.concurrent.ExecutionException) { throw (error.cause ?: error) }
+            running--
             results[index] = snapshots
             onBatch(snapshots)
+            if (next < batches.size && !stopRequested()) { submit(next++); running++ }
         }
-        return results.flatMap { it.orEmpty() }
+        // A handoff drains every submitted command before returning exclusive ownership.
+        return results.flatMapIndexed { index, snapshots ->
+            snapshots ?: catalog.drop(index * TaskProbe.BATCH_SIZE).take(TaskProbe.BATCH_SIZE).map { it.snapshot() }
+        }
     } finally {
         futures.forEach { it.cancel(true) }
         worker.shutdownNow()

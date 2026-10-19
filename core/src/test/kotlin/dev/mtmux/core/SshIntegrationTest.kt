@@ -370,6 +370,44 @@ class SshIntegrationTest {
         }
     }
 
+    @Test fun `refresh handoff skips queued batches drains channels and reuses the authenticated chain`() {
+        val path = System.getenv("MTMUX_TEST_TMUX")
+        val events = java.util.concurrent.CopyOnWriteArrayList<ConnectionTrace>()
+        trusted().use { client ->
+            client.observe { events += it }
+            client.connect(login())
+            val tmux = Tmux.quote(path)
+            val session = client.exec("$tmux new-session -d -P -F '#{session_id}' -s handoff-test 'sleep 120'").output.trim()
+            try {
+                assertEquals(0, client.exec(buildString {
+                    repeat(17) { append("$tmux new-window -d -t ${Tmux.quote(session)} 'sleep 120' || exit 1; ") }
+                }).status)
+                var stop = false
+                val listed = client.discoverTaskSnapshots(path, onListed = { stop = true }, stopRequested = { stop })
+                assertTrue(listed.size > 16)
+                assertTrue(listed.none { it.readable })
+                assertEquals(0, events.count { it.phase == ConnectionPhase.TMUX_STATUS })
+                stop = false
+                val partial = client.discoverTaskSnapshots(path, stopRequested = { stop }) { stop = true }
+                assertEquals(2, events.count { it.phase == ConnectionPhase.TMUX_STATUS && it.result == TraceResult.START })
+                assertTrue(partial.count { it.readable } <= 16)
+                assertTrue(partial.any { !it.readable })
+                assertTrue(client.isReusable()) // No probe command may still own this transport.
+                WarmConnectionPool<SshClient>(maxSize = 0, isReusable = { it.isReusable() }).use { disabled ->
+                    disabled.setCapacity(2)
+                    client.setIdle(true)
+                    disabled.put("chain", client)
+                    assertSame(client, disabled.take("chain"))
+                    client.setIdle(false)
+                    client.reportReuse()
+                    val task = partial.first { it.binding.session == session }
+                    assertEquals(task.binding, client.prepareTmux(session, task.binding, false, path).binding)
+                    assertEquals(1, events.count { it.phase == ConnectionPhase.SSH_CONNECT && it.result == TraceResult.START })
+                }
+            } finally { client.exec("$tmux kill-session -t ${Tmux.quote(session)}") }
+        }
+    }
+
     @Test fun `batch snapshots arrive incrementally and preserve copy mode`() {
         val login = login()
         val path = System.getenv("MTMUX_TEST_TMUX")!!

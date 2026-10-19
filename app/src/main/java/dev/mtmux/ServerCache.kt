@@ -5,7 +5,6 @@ import dev.mtmux.core.*
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class ServerSnapshot(val tasks: List<RecentTask>, val updatedAt: Long, val states: Map<String,TaskState> = emptyMap())
 class ServerCache(context: Context) {
     private val prefs = context.getSharedPreferences("server-profiles", Context.MODE_PRIVATE)
     private fun context(profile: ServerProfile) = "${profile.host}:${profile.port}/${profile.user}/${profile.path}/${profile.routeContext()}"
@@ -15,19 +14,25 @@ class ServerCache(context: Context) {
         val a = j.getJSONArray("tasks")
         val tasks=(0 until a.length()).map { RecentTask.decode(a.getString(it)) }
         val states=j.optJSONObject("states")
+        val times=j.optJSONObject("stateTimes")
         ServerSnapshot(tasks,j.getLong("time"),tasks.mapNotNull { task -> task.identity?.let { id ->
             id to (TaskState.entries.firstOrNull {it.name==states?.optString(id)} ?: TaskState.UNKNOWN)
-        } }.toMap())
+        } }.toMap(), tasks.mapNotNull { task -> task.identity?.let { it to (times?.optLong(it, j.getLong("time")) ?: j.getLong("time")) } }.toMap())
     }.getOrNull()
     fun write(profile: ServerProfile, tasks: List<RecentTask>, states: Map<String,TaskState> = emptyMap()): ServerSnapshot {
+        val time = System.currentTimeMillis()
+        return write(profile, ServerSnapshot(tasks, time, states, states.keys.associateWith { time }))
+    }
+    fun write(profile: ServerProfile, snapshot: ServerSnapshot): ServerSnapshot {
+        val (tasks, time, states, times) = snapshot
         require(tasks.all { it.matches(profile) })
         require(states.keys.all { id -> tasks.any { it.identity==id } })
-        val time = System.currentTimeMillis()
         val data = JSONObject().put("context", context(profile)).put("time", time)
             .put("tasks", JSONArray().also { a -> tasks.forEach { a.put(it.encode()) } })
             .put("states",JSONObject().also { j -> states.forEach { (id,state) -> j.put(id,state.name) } })
+            .put("stateTimes",JSONObject().also { j -> times.forEach { (id,time) -> j.put(id,time) } })
         check(prefs.edit().putString("cache:${profile.id}", data.toString()).commit()) { "cache commit failed" }
-        return ServerSnapshot(tasks, time, states)
+        return snapshot
     }
     fun clearTaskStates(profile: ServerProfile): ServerSnapshot? {
         val snapshot=read(profile) ?: return null
@@ -74,9 +79,6 @@ fun SshClient.discoverTaskStates(tasks: List<RecentTask>, path: String): Map<Str
         binding.identity to state
     }
 }.toMap()
-
-fun ServerSnapshot.taskState(task: RecentTask, now: Long = System.currentTimeMillis()): TaskState =
-    if(now<updatedAt || now-updatedAt>=30*60*1000L) TaskState.UNKNOWN else states[task.identity] ?: TaskState.UNKNOWN
 
 fun List<TaskProbe.Snapshot>.recentTasks(profile: ServerProfile, hostKey: String): List<RecentTask> = map { pane ->
     RecentTask(profile.id, profile.host, profile.port, profile.user, profile.path, hostKey, pane.binding.identity,

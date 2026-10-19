@@ -45,6 +45,11 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
     fun observe(observer: (ConnectionTrace) -> Unit) { trace.observer = observer }
     fun isReusable() = !cancelled && session?.isConnected == true && terminal == null && commands.isEmpty()
     fun reportReuse() { checkActive(); trace.instant(ConnectionPhase.SSH_REUSED) }
+    /** No periodic application heartbeat while a bounded idle chain is parked. */
+    fun setIdle(idle: Boolean) {
+        checkActive()
+        chain.forEach { it.setServerAliveInterval(if (idle) 0 else 15_000) }
+    }
     private fun checkActive() = ensure(!cancelled, ErrorCode.CANCELLED)
     private fun ownSocket(socket: java.net.Socket) = synchronized(stateLock) {
         if (cancelled) { socket.close(); fail(ErrorCode.CANCELLED) }
