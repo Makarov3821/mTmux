@@ -2,9 +2,11 @@
 
 Android 上的 SSH + tmux Agent 控制端。目标是离开电脑后，打开手机查看远程 Agent 输出、回复并继续工作；不在服务器安装常驻服务。
 
-**当前为 0.8.2（应用 ID `dev.mtmux`，名称 mTmux）：增加一分钟 SSH 空闲连接保留设置，优化刷新到终端的连接交接和状态圆点更新；保留 standard/voice 双版本。voice 内置离线 Whisper base q5_1，尚未完成 ARM 真机质量/性能验收。** 完整产品范围见 [plan.md](plan.md)，验证结果和剩余门槛见 [P0 报告](docs/testing/p0-report.md)。
+**当前为 0.8.3（应用 ID `dev.mtmux`，名称 mTmux）：统一首页、设置、编辑与终端 UI，提供六套浅深主题及 1×～10× 远端滚动倍率；保留 standard/voice 双版本。voice 内置离线 Whisper base q5_1，尚未完成 ARM 真机质量/性能验收。** 完整产品范围见 [plan.md](plan.md)，验证结果和剩余门槛见 [P0 报告](docs/testing/p0-report.md)。
 
-版本功能清单见 [CHANGELOG.md](CHANGELOG.md)；本轮详细记录见 [0.8.2](docs/releases/0.8.2.md)。
+版本功能清单见 [CHANGELOG.md](CHANGELOG.md)；本轮详细记录见 [0.8.3](docs/releases/0.8.3.md)。
+
+0.8.3 UI 改版：服务器卡片与多 pane 层级、六套浅深主题、分组设置和统一终端工具/弹窗；远端滚动倍率提供 1×～10× 十档。默认 1×，设置与工具抽屉同步保存；通过增加真实滚轮事件加速，无需修改 tmux 配置。详见 [实现与验证](docs/testing/ui-refresh-report.md)。
 
 ## 原型能做什么
 
@@ -145,7 +147,7 @@ gh secret set MTMUX_KEY_PASSWORD
 gh variable set MTMUX_CERT_SHA256 --body <脚本输出的指纹>
 
 # 发版
-git tag v0.8.2 && git push origin v0.8.2
+git tag v0.8.3 && git push origin v0.8.3
 ```
 
 release 与 debug 签名不同，已装 debug 版需卸载后才能安装 release 版（本机配置和凭据会丢失）；每次发版需递增 versionCode。

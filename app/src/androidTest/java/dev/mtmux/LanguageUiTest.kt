@@ -81,7 +81,7 @@ class LanguageUiTest {
             assertTrue(visibleText().filter { cjk.containsMatchIn(it) }.all { it == "简体中文" })
             compose.onNodeWithTag("export-debug-log").performScrollTo().assertTextEquals("Generate log")
             saveScreenshot("english-settings")
-            compose.onNodeWithText("‹ Back").performScrollTo().performClick()
+            compose.onNodeWithText("‹ Back").performClick()
 
             compose.onNodeWithTag("more-${profile.id}").performClick()
             compose.onNodeWithText("Edit server").performClick()
@@ -99,7 +99,7 @@ class LanguageUiTest {
                         .any { it.text.startsWith("Target server: ") }
                 }
             }
-            listOf("Tools", "Hide ⌨", "Replies", "Send ⏎").forEach { compose.onNodeWithText(it).assertIsDisplayed() }
+            listOf("Tools", "Hide", "Replies", "Send ⏎").forEach { compose.onNodeWithText(it).assertIsDisplayed() }
             assertNoChinese("Terminal")
             saveScreenshot("english-terminal-error")
         } finally { store.delete(profile.id) }
@@ -125,7 +125,7 @@ class LanguageUiTest {
             assertEquals(AppLanguage.CHINESE, AppLanguage.current())
             saveScreenshot("language-switched-chinese")
 
-            compose.onNodeWithText("‹ 返回").performScrollTo().performClick()
+            compose.onNodeWithText("‹ 返回").performClick()
             compose.onNodeWithText("服务器").assertExists()
             Thread.sleep(1500)
             assertEquals("Language switch must not refresh servers", before, prefs.getString("probe:${profile.id}", null))

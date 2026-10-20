@@ -2,6 +2,15 @@
 
 版本号不代表完整真机验收。每个版本的实现细节、验证结果、截图与 APK SHA-256 见对应的「详细记录」；测试证据在 [docs/evidence/](docs/evidence/)。文档目录说明见 [docs/README.md](docs/README.md)。
 
+## [0.8.3] — 2026-10-20 · versionCode 31
+
+详细记录：[0.8.3](docs/releases/0.8.3.md)
+
+- 按 UI 模板统一服务器卡片、多 pane 层级、空状态、分组设置、服务器编辑、终端顶栏/键帽/草稿区、工具和快捷回复抽屉、复制及敏感确认弹窗；voice 使用分阶段录音/转写面板。
+- 六套主题 Tokyo Night / Catppuccin / Emerald / Zinc / Nord / Paper 均支持浅色、深色和跟随系统；原生界面和终端颜色同步，切换不重建终端或连接。
+- 远端滚动倍率由 0.5×～2× 调整为 1×～10× 整数档，旧值归一化并保存；同距离发送更多标准鼠标滚轮事件，限制每帧发送量及队列，停止手势/切换目标时清空。
+- 构建、自动化验证和设备验证范围见 [UI 改版报告](docs/testing/ui-refresh-report.md)。
+
 ## [0.8.2] — 2026-10-20 · versionCode 30
 
 详细记录：[0.8.2](docs/releases/0.8.2.md)

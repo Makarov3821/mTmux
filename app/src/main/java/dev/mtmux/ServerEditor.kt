@@ -42,7 +42,7 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
     fun secret() = SavedCredentials(password, privateKey, passphrase)
 }
 
-@Composable private fun AuthEditor(fields: AuthFields, changed: () -> Unit, prefix: String) {
+@Composable private fun AuthEditor(fields: AuthFields, changed: () -> Unit, prefix: String, alias: @Composable () -> Unit = {}) {
     var visible by remember { mutableStateOf(false) }
     var pasteKey by remember { mutableStateOf(false) }
     if(pasteKey) PrivateKeyPasteDialog(onDismiss={pasteKey=false},onImport={
@@ -60,12 +60,15 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
             require(bytes.isNotEmpty()); DebugLog.event(DebugLog.Event.KEY_FILE); fields.privateKey = bytes; fields.key = true; fields.error = null; changed()
         }.onFailure { DebugLog.event(DebugLog.Event.KEY_IMPORT_FAILED); fields.error = R.string.editor_err_key_file }
     }
-    OutlinedTextField(fields.host, { fields.host = it; changed() }, label = { Text(stringResource(R.string.editor_host)) }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("$prefix-host"))
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        OutlinedTextField(fields.port, { fields.port = it; changed() }, label = { Text(stringResource(R.string.editor_port)) }, singleLine = true, modifier = Modifier.weight(1f).testTag("$prefix-port"))
-        OutlinedTextField(fields.user, { fields.user = it; changed() }, label = { Text(stringResource(R.string.editor_user)) }, singleLine = true, modifier = Modifier.weight(2f).testTag("$prefix-user"))
+    BentoCard(title=stringResource(R.string.editor_target)) {
+        alias()
+        Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+            OutlinedTextField(fields.host,{fields.host=it;changed()},label={Text(stringResource(R.string.editor_host))},singleLine=true,shape=MaterialTheme.shapes.medium,modifier=Modifier.weight(2.2f).testTag("$prefix-host"))
+            OutlinedTextField(fields.port,{fields.port=it;changed()},label={Text(stringResource(R.string.editor_port))},singleLine=true,shape=MaterialTheme.shapes.medium,modifier=Modifier.weight(1f).testTag("$prefix-port"))
+        }
+        OutlinedTextField(fields.user,{fields.user=it;changed()},label={Text(stringResource(R.string.editor_user))},singleLine=true,shape=MaterialTheme.shapes.medium,modifier=Modifier.fillMaxWidth().testTag("$prefix-user"))
     }
-    Text(stringResource(R.string.editor_auth), style = MaterialTheme.typography.labelMedium)
+    BentoCard(title=stringResource(R.string.editor_auth)) {
     Row {
         FilterChip(selected = fields.key, onClick = { fields.key = true; changed() }, label = { Text(stringResource(R.string.editor_auth_key)) })
         Spacer(Modifier.width(12.dp))
@@ -89,8 +92,10 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
         trailingIcon = { TextButton(onClick = { visible = !visible }) { Text(stringResource(if (visible) R.string.common_hide else R.string.common_show)) } },
         modifier = Modifier.fillMaxWidth().testTag("$prefix-secret"))
     fields.error?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
+    }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable fun ServerEditor(store: ServerProfiles, initial: ServerProfile?, onClose: () -> Unit, onSaved: () -> Unit) {
     ProtectSensitiveContent()
     val loaded = remember { runCatching { initial?.let { store.credentials(it) } } }
@@ -123,11 +128,11 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
     var error by remember { mutableStateOf(if (loaded.isFailure) R.string.editor_err_credentials_unreadable else null) }
     fun close() { if (dirty) abandon = true else onClose() }
     BackHandler { close() }
-    Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(horizontal = 20.dp)) {
-        Row(Modifier.fillMaxWidth().height(64.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+    Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(horizontal = 16.dp)) {
+        Row(Modifier.fillMaxWidth().height(56.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             TextButton(onClick = { close() }) { Text(stringResource(R.string.common_cancel)) }
             Text(stringResource(if (initial == null) R.string.home_add_server else R.string.home_edit_server), style = MaterialTheme.typography.titleMedium)
-            TextButton(onClick = {
+            Button(onClick = {
                 val targetOk = target.validate()
                 val hopsOk = if (jumpsEnabled) hops.map { it.validate() }.all { it } && hops.isNotEmpty() else true
                 if (!hopsOk) { advanced = true; error = R.string.editor_err_jumps }
@@ -145,9 +150,10 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             error?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
-            OutlinedTextField(name, { name = it; dirty = true }, label = { Text(stringResource(R.string.editor_alias)) }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("profile-name"))
-            AuthEditor(target, { dirty = true }, "server")
-            HorizontalDivider(Modifier.padding(top = 12.dp))
+            AuthEditor(target, {dirty=true}, "server", alias={
+                OutlinedTextField(name,{name=it;dirty=true},label={Text(stringResource(R.string.editor_alias))},singleLine=true,shape=MaterialTheme.shapes.medium,modifier=Modifier.fillMaxWidth().testTag("profile-name"))
+            })
+            BentoCard {
             TextButton(onClick = { advanced = !advanced }, modifier = Modifier.fillMaxWidth().testTag("advanced")) {
                 Text("${if (advanced) "⌄" else "›"} " + stringResource(R.string.editor_advanced) + if (jumpsEnabled) " · " + pluralStringResource(R.plurals.editor_jump_count, hops.size, hops.size) else "")
             }
@@ -175,17 +181,20 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
                 if (jumpsEnabled) {
                     Text((listOf(stringResource(R.string.editor_route_phone)) + hops.indices.map { stringResource(R.string.hop_jump, it+1) } + stringResource(R.string.hop_target)).joinToString(" → "), style = MaterialTheme.typography.bodySmall)
                     hops.toList().forEachIndexed { index, hop -> key(hop.id) {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                TextButton(onClick = { hop.expanded = !hop.expanded }) { Text("${if(hop.expanded) "⌄" else "›"} " + stringResource(R.string.hop_jump, index+1)) }
-                                Spacer(Modifier.weight(1f))
+                        InsetPanel {
+                            TextButton(onClick = { hop.expanded = !hop.expanded },modifier=Modifier.fillMaxWidth()) {
+                                AppIcon(if(hop.expanded) UiSymbol.DOWN else UiSymbol.NEXT)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.hop_jump,index+1),Modifier.weight(1f))
+                            }
+                            FlowRow(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End) {
                                 if (index > 0) TextButton(onClick = { hops.removeAt(index); hops.add(index-1,hop); dirty = true }) { Text(stringResource(R.string.editor_move_up)) }
                                 if (index < hops.lastIndex) TextButton(onClick = { hops.removeAt(index); hops.add(index+1,hop); dirty = true }) { Text(stringResource(R.string.editor_move_down)) }
                                 TextButton(onClick = { hops.remove(hop); dirty = true }) { Text(stringResource(R.string.common_delete)) }
                             }
                             if (hop.expanded) AuthEditor(hop, { dirty = true }, "jump-${index+1}")
-                            else Text("${hop.user}@${hop.host}:${hop.port}", style = MaterialTheme.typography.bodySmall)
-                            HorizontalDivider()
+                            else Text("${hop.user}@${hop.host}:${hop.port}", style = MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+
                         }
                     } }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -195,6 +204,7 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
                 }
                 OutlinedTextField(path, { path = it; dirty = true }, label = { Text(stringResource(R.string.editor_tmux_path)) }, modifier = Modifier.fillMaxWidth())
                 Row(verticalAlignment = Alignment.CenterVertically) { Switch(mouse, { mouse = it; dirty = true }); Text(stringResource(R.string.editor_tmux_mouse), style = MaterialTheme.typography.bodyMedium) }
+            }
             }
             Spacer(Modifier.height(24.dp))
         }

@@ -332,4 +332,17 @@
     <string name="voice_error_cancelled">语音转写已取消。</string>
     <string name="voice_error_generic">语音转写失败，原草稿没有改变。</string>
     <string name="voice_starting">正在准备麦克风…</string>
+    <string name="settings_palette">主题配色</string>
+    <string name="settings_appearance_language">外观与语言</string>
+    <string name="editor_target">目标服务器</string>
+    <string name="scroll_speed_title">远端滚动倍率</string>
+    <string name="scroll_speed_help">1×～10×：同样距离的滑动发送更多滚轮事件，实际滚动行数由远端应用决定。</string>
+    <string name="home_empty_detail">添加服务器后，即可发现 tmux 任务或打开 SSH 终端。</string>
+    <string name="terminal_hide_compact">收起</string>
+    <string name="terminal_send_compact">发送回车</string>
+    <string name="terminal_replies_compact">快捷回复</string>
+    <string name="terminal_tools_compact">工具</string>
+    <string name="voice_local_badge">离线 · 本机处理</string>
+    <string name="terminal_replies_short">回复</string>
+    <string name="terminal_send_short">发送 ↵</string>
 </resources>

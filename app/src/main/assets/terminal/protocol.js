@@ -1,6 +1,10 @@
 /* Shared by the bundled terminal and Node regression tests. */
 (function (root) {
   const api = {
+    normalizeScrollSpeed(value) {
+      const speed = Number(value);
+      return Number.isFinite(speed) ? Math.max(1, Math.min(10, Math.floor(speed + 0.5))) : 1;
+    },
     decode(base64) { return Uint8Array.from(atob(base64), c => c.charCodeAt(0)); },
     /** Returns a stable code (localized by the Android host) or null when the paste is allowed. */
     validatePaste(text, bracketed) {

@@ -53,6 +53,7 @@ private enum class VoicePhase { IDLE, STARTING, RECORDING, TRANSCRIBING, RESULT,
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable internal fun VoiceInputControl(
     modifier: Modifier, enabled: Boolean, connectionToken: String, targetKey: String,
     onHideKeyboard: () -> Unit, onOfferDraft: (String,String,String) -> VoiceDraftOffer,
@@ -197,38 +198,49 @@ private enum class VoicePhase { IDLE, STARTING, RECORDING, TRANSCRIBING, RESULT,
     val description = stringResource(R.string.voice_button)
     TextButton(onClick = ::requestStart, enabled = enabled && phase == VoicePhase.IDLE,
         contentPadding = PaddingValues(0.dp), modifier = modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp).testTag("voice-input")) {
-        Text(if (phase == VoicePhase.RECORDING) "■" else "🎤", maxLines = 1,
-            modifier = Modifier.semantics { contentDescription = description })
+        AppIcon(if(phase==VoicePhase.RECORDING) UiSymbol.STOP else UiSymbol.MIC,label=description,tint=MaterialTheme.colorScheme.primary)
     }
 
-    if (dialog) AlertDialog(onDismissRequest = { cancelAll() }, title = { Text(stringResource(R.string.voice_title)) }, text = {
-        Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    if (dialog) ModalBottomSheet(onDismissRequest={cancelAll()},containerColor=MaterialTheme.colorScheme.surface,
+        shape=MaterialTheme.shapes.extraLarge,sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true)) {
+        Column(Modifier.fillMaxWidth().heightIn(max=540.dp).verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
+            Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                AppIcon(UiSymbol.MIC,tint=MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.voice_title),style=MaterialTheme.typography.titleLarge)
+            }
+            Text(stringResource(R.string.voice_local_badge),style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.primary)
+            InsetPanel {
+                when (phase) {
+                    VoicePhase.STARTING -> {Text(stringResource(R.string.voice_starting));LinearProgressIndicator(Modifier.fillMaxWidth())}
+                    VoicePhase.RECORDING -> {
+                        Text(stringResource(R.string.voice_recording,seconds),style=MaterialTheme.typography.titleMedium)
+                        LinearProgressIndicator(progress={seconds.coerceIn(0,60)/60f},modifier=Modifier.fillMaxWidth())
+                    }
+                    VoicePhase.TRANSCRIBING -> {Text(stringResource(R.string.voice_transcribing),Modifier.testTag("voice-transcribing"));LinearProgressIndicator(Modifier.fillMaxWidth())}
+                    VoicePhase.RESULT -> {Text(stringResource(R.string.voice_result_help),Modifier.testTag("voice-result"));SelectionContainer{Text(resultText,style=MaterialTheme.typography.bodyLarge)}}
+                    VoicePhase.ERROR -> Text(stringResource(errorText),Modifier.testTag("voice-error"),color=MaterialTheme.colorScheme.error)
+                    VoicePhase.IDLE -> Unit
+                }
+            }
             when (phase) {
-                VoicePhase.STARTING -> {Text(stringResource(R.string.voice_starting));LinearProgressIndicator(Modifier.fillMaxWidth())}
-                VoicePhase.RECORDING -> { Text(stringResource(R.string.voice_recording, seconds)); LinearProgressIndicator(Modifier.fillMaxWidth()) }
-                VoicePhase.TRANSCRIBING -> { Text(stringResource(R.string.voice_transcribing),Modifier.testTag("voice-transcribing")); LinearProgressIndicator(Modifier.fillMaxWidth()) }
-                VoicePhase.RESULT -> { Text(stringResource(R.string.voice_result_help),Modifier.testTag("voice-result")); SelectionContainer { Text(resultText) } }
-                VoicePhase.ERROR -> Text(stringResource(errorText),Modifier.testTag("voice-error"),color = MaterialTheme.colorScheme.error)
-                VoicePhase.IDLE -> Unit
+                VoicePhase.RECORDING -> Button(onClick=stopRecording,modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).testTag("voice-stop")) {
+                    AppIcon(UiSymbol.STOP);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.voice_stop))
+                }
+                VoicePhase.RESULT -> {
+                    Button(onClick={
+                        if(onCommitDraft(capturedToken,capturedTarget,resultText,true)){dialog=false;phase=VoicePhase.IDLE}
+                        else {errorText=R.string.voice_error_target_changed;phase=VoicePhase.ERROR}
+                    },modifier=Modifier.fillMaxWidth().testTag("voice-append")){Text(stringResource(R.string.quick_reply_append))}
+                    OutlinedButton(onClick={
+                        if(onCommitDraft(capturedToken,capturedTarget,resultText,false)){dialog=false;phase=VoicePhase.IDLE}
+                        else {errorText=R.string.voice_error_target_changed;phase=VoicePhase.ERROR}
+                    },modifier=Modifier.fillMaxWidth().testTag("voice-replace")){Text(stringResource(R.string.quick_reply_replace))}
+                }
+                else -> Unit
+            }
+            TextButton(onClick={cancelAll()},modifier=Modifier.fillMaxWidth()) {
+                Text(stringResource(if(phase==VoicePhase.ERROR) R.string.common_close else R.string.common_cancel))
             }
         }
-    }, confirmButton = {
-        when (phase) {
-            VoicePhase.RECORDING -> TextButton(onClick = stopRecording, modifier = Modifier.testTag("voice-stop")) { Text(stringResource(R.string.voice_stop)) }
-            VoicePhase.RESULT -> TextButton(onClick = {
-                if(onCommitDraft(capturedToken,capturedTarget,resultText,true)){dialog=false;phase=VoicePhase.IDLE}
-                else {errorText=R.string.voice_error_target_changed;phase=VoicePhase.ERROR}
-            }, modifier = Modifier.testTag("voice-append")) { Text(stringResource(R.string.quick_reply_append)) }
-            VoicePhase.ERROR -> TextButton(onClick = { dialog = false; phase = VoicePhase.IDLE }) { Text(stringResource(R.string.common_close)) }
-            else -> TextButton(onClick = { cancelAll() }) { Text(stringResource(R.string.common_cancel)) }
-        }
-    }, dismissButton = {
-        if (phase == VoicePhase.RESULT) Row {
-            TextButton(onClick = {
-                if(onCommitDraft(capturedToken,capturedTarget,resultText,false)){dialog=false;phase=VoicePhase.IDLE}
-                else {errorText=R.string.voice_error_target_changed;phase=VoicePhase.ERROR}
-            }, modifier = Modifier.testTag("voice-replace")) { Text(stringResource(R.string.quick_reply_replace)) }
-            TextButton(onClick = { cancelAll() }) { Text(stringResource(R.string.common_cancel)) }
-        }
-    })
+    }
 }

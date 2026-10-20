@@ -27,7 +27,7 @@ import dev.mtmux.core.PrivateKeyText
         else {draft=value;error=null}
     }
     ProtectSensitiveContent()
-    AlertDialog(properties=protectedDialogProperties,containerColor=MaterialTheme.colorScheme.surfaceVariant,onDismissRequest=onDismiss,title={Text(stringResource(R.string.editor_key_paste))},text={
+    AlertDialog(properties=protectedDialogProperties,containerColor=MaterialTheme.colorScheme.surface,icon={AppIcon(UiSymbol.KEY,modifier=Modifier.size(28.dp),tint=MaterialTheme.colorScheme.primary)},onDismissRequest=onDismiss,title={Text(stringResource(R.string.editor_key_paste))},text={
         Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
             Text(stringResource(R.string.key_paste_help),style=MaterialTheme.typography.bodySmall)
             OutlinedTextField(draft,::update,modifier=Modifier.fillMaxWidth().testTag("private-key-text"),minLines=4,maxLines=6,

@@ -10,6 +10,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.core.view.WindowCompat
@@ -345,27 +347,29 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @OptIn(ExperimentalMaterial3Api::class)
+    @OptIn(ExperimentalMaterial3Api::class,ExperimentalLayoutApi::class)
     @Composable private fun App() {
         val profileStore = remember { ServerProfiles(this) }
         val terminalPreferences = remember { getSharedPreferences("terminal-settings", MODE_PRIVATE) }
         var appearance by remember { mutableStateOf(AppAppearance.read(terminalPreferences.getString("appearance",null))) }
+        var palette by remember { mutableStateOf(AppPalette.saved(this)) }
         val dark=appearance.dark(isSystemInDarkTheme())
         val currentDark by rememberUpdatedState(dark)
+        val currentPalette by rememberUpdatedState(palette)
         var quickReplyToken by remember { mutableStateOf<String?>(null) }
         var pendingReply by remember { mutableStateOf<Pair<String,String>?>(null) }
-        LaunchedEffect(dark) {
-            val background=if(dark) 0xFF111916.toInt() else 0xFFF7FAF8.toInt()
+        LaunchedEffect(dark,palette) {
+            val background=appColors(dark,palette).background.toArgb()
             window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(background))
             val bars=if(dark) SystemBarStyle.dark(background) else SystemBarStyle.light(background,background)
             enableEdgeToEdge(statusBarStyle=bars,navigationBarStyle=bars)
             WindowCompat.getInsetsController(window,window.decorView).apply {
                 isAppearanceLightStatusBars=!dark;isAppearanceLightNavigationBars=!dark
             }
-            terminalView?.appearance(dark)
+            terminalView?.appearance(dark,palette=palette)
         }
         var remoteTouch by remember { mutableStateOf(terminalPreferences.getBoolean("remoteTouch", true)) }
-        var scrollSensitivity by remember { mutableFloatStateOf(terminalPreferences.getFloat("scrollSensitivity",1f)) }
+        var scrollSensitivity by remember { mutableFloatStateOf(savedScrollSpeed(terminalPreferences)) }
         var draft by remember { mutableStateOf("") }
         var draftTarget by remember { mutableStateOf("") }
         val drafts = remember { mutableMapOf<String, String>() }
@@ -441,7 +445,7 @@ class MainActivity : AppCompatActivity() {
                 preview = true
             } else sendDraft(draft, enter)
         }
-        MaterialTheme(colorScheme = appColors(dark)) {
+        MaterialTheme(colorScheme = appColors(dark,palette),typography=appTypography,shapes=appShapes) {
             Surface(Modifier.fillMaxSize()) {
                 BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))) {
                 // IME only clips the visible lower part. The WebView/grid keeps its full
@@ -451,17 +455,22 @@ class MainActivity : AppCompatActivity() {
                     val backHomeLabel = stringResource(R.string.terminal_back_home)
                     val latestLabel = stringResource(R.string.terminal_latest)
                     Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { home() }, contentPadding = PaddingValues(0.dp), modifier = Modifier.width(40.dp).semantics { contentDescription = backHomeLabel }.testTag("terminal-home")) { Text("‹", style = MaterialTheme.typography.headlineMedium) }
+                        AppIconButton(UiSymbol.BACK,backHomeLabel,{home()},Modifier.testTag("terminal-home"))
                         val server = activeProfile?.let { privacySettings.label(it, privacyDisplay) } ?: target?.let { if (privacyDisplay) stringResource(R.string.terminal_current_server) else it } ?: stringResource(R.string.terminal_not_connected)
                         val pane = panes.firstOrNull { it.id == replyPane?.pane }
                         val taskName = pane?.let { "${it.sessionName} / ${it.windowName}" } ?: if (connectedSession != null) "tmux" else "SSH"
-                        Text("$server · $taskName", Modifier.weight(1f).clickable { showDetails = true }.testTag("terminal-title"), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        TextButton(onClick = { latest() }, contentPadding = PaddingValues(0.dp), modifier = Modifier.width(44.dp).semantics { contentDescription = latestLabel }.testTag("terminal-latest")) { Text("⇣", style = MaterialTheme.typography.headlineSmall) }
+                        Surface(Modifier.weight(1f).clickable {showDetails=true}.testTag("terminal-title"),shape=RoundedCornerShape(20.dp),color=MaterialTheme.colorScheme.surface) {
+                            Row(Modifier.padding(horizontal=10.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                                AppIcon(if(wireToken.isNotEmpty()) UiSymbol.TERMINAL else UiSymbol.CLOSE,modifier=Modifier.size(14.dp),tint=if(wireToken.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("$server · $taskName", Modifier.weight(1f),style=MaterialTheme.typography.titleSmall,maxLines=1,overflow=TextOverflow.Ellipsis)
+                            }
+                        }
+                        AppIconButton(UiSymbol.LATEST,latestLabel,{latest()},Modifier.testTag("terminal-latest"))
                     }
                     Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().onSizeChanged { visibleTerminalHeight = it.height; terminalView?.viewport(it.height / density.density) }.testTag("terminal-panel")) {
                     AndroidView(factory = { context ->
                         TerminalView(context,
-                            onReady = { c, r -> cols = c; rows = r; terminalReady = true; terminalView?.appearance(currentDark,force=true); terminalView?.scrollSensitivity(scrollSensitivity); terminalView?.font(fontSize); terminalView?.remoteTouch(remoteTouch); terminalView?.viewport(visibleTerminalHeight / density.density) },
+                            onReady = { c, r -> cols = c; rows = r; terminalReady = true; terminalView?.appearance(currentDark,force=true,palette=currentPalette); terminalView?.scrollSensitivity(scrollSensitivity); terminalView?.font(fontSize); terminalView?.remoteTouch(remoteTouch); terminalView?.viewport(visibleTerminalHeight / density.density) },
                             onResize = { c, r ->
                                 cols = c; rows = r
                                 val current = client
@@ -497,7 +506,7 @@ class MainActivity : AppCompatActivity() {
                             onReading = { reading = it },
                             onBinaryInput = { token, bytes -> submitBytes(token, bytes) }
                         ).also { terminalView = it }
-                    }, update = { it.appearance(dark); it.viewport(visibleTerminalHeight / density.density) }, modifier = Modifier.fillMaxWidth().wrapContentHeight(Alignment.Top, unbounded = true).requiredHeight(gridHeight).align(Alignment.TopStart).testTag("terminal-webview"))
+                    }, update = { it.appearance(dark,palette=palette); it.viewport(visibleTerminalHeight / density.density) }, modifier = Modifier.fillMaxWidth().wrapContentHeight(Alignment.Top, unbounded = true).requiredHeight(gridHeight).align(Alignment.TopStart).testTag("terminal-webview"))
                     if (renderedBytes == 0L) {
                         Text(
                             stringResource(when {
@@ -512,8 +521,9 @@ class MainActivity : AppCompatActivity() {
                     }
                     // Status overlays do not change terminal size or move its reading anchor.
                     if (!status.isEmpty && (wireToken.isEmpty() || status.alert)) {
-                        Surface(Modifier.align(Alignment.TopCenter).fillMaxWidth(), color=MaterialTheme.colorScheme.surfaceVariant) {
-                            Column(Modifier.padding(8.dp)) {
+                        Surface(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(top=8.dp),shape=MaterialTheme.shapes.large,
+                            border=BorderStroke(1.dp,if(status.alert || renderedBytes>0) MaterialTheme.colorScheme.error.copy(alpha=.5f) else MaterialTheme.colorScheme.outlineVariant),color=MaterialTheme.colorScheme.surface) {
+                            Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
                                 Text(status.text.string(), modifier=Modifier.testTag("connection-status"), style=MaterialTheme.typography.bodySmall)
                                 if(wireToken.isEmpty() && renderedBytes>0) Text(stringResource(R.string.terminal_disconnected_history),modifier=Modifier.testTag("disconnected-history"),color=MaterialTheme.colorScheme.error)
                                 if(wireToken.isEmpty() && !busy) Row {
@@ -527,18 +537,18 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     }
-                    Column(Modifier.fillMaxWidth().height(156.dp)) {
+                    Surface(Modifier.fillMaxWidth().height(156.dp),shape=RoundedCornerShape(topStart=18.dp,topEnd=18.dp),color=MaterialTheme.colorScheme.surface) {
+                    Column {
+                        val compactCaptions = LocalDensity.current.fontScale > 1.15f || androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 360
                         TerminalKeys(enabled = wireToken.isNotEmpty() && !pastePending) { label, data ->
                             if (label == "Enter") requestDraft(true)
                             else submitBytes(wireToken, data.toByteArray(), bound = replyPane)
                         }
-                        TextField(draft,{draft=it},placeholder={Text(stringResource(R.string.terminal_input_placeholder))},maxLines=2,shape=RoundedCornerShape(10.dp),
-                            colors=TextFieldDefaults.colors(focusedContainerColor=MaterialTheme.colorScheme.surfaceVariant,unfocusedContainerColor=MaterialTheme.colorScheme.surfaceVariant,focusedIndicatorColor=Color.Transparent,unfocusedIndicatorColor=Color.Transparent),
-                            modifier=Modifier.fillMaxWidth().height(64.dp).focusRequester(draftFocus).testTag("command-input"))
-                        Row(Modifier.fillMaxWidth().height(52.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
-                            TextButton(onClick={showTools=true},contentPadding=PaddingValues(0.dp),modifier=Modifier.weight(0.7f)){Text(stringResource(R.string.terminal_tools),maxLines=1)}
-                            TextButton(onClick={focusManager.clearFocus();keyboard?.hide()},enabled=imeVisible,contentPadding=PaddingValues(0.dp),modifier=Modifier.weight(1.1f).testTag("hide-keyboard")){Text(stringResource(R.string.terminal_hide_keyboard),maxLines=1)}
-                            VoiceInputControl(modifier=Modifier.weight(0.65f), enabled=wireToken.isNotEmpty() && !pastePending && !busy,
+                        DraftInput(draft,{draft=it},Modifier.focusRequester(draftFocus).testTag("command-input"))
+                        Row(Modifier.fillMaxWidth().height(52.dp),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically) {
+                            TextButton(onClick={showTools=true},contentPadding=PaddingValues(0.dp),shape=MaterialTheme.shapes.small,colors=ButtonDefaults.textButtonColors(containerColor=MaterialTheme.colorScheme.surfaceVariant),modifier=Modifier.weight(.85f).height(48.dp).testTag("terminal-tools")){Text(stringResource(R.string.terminal_tools_compact),maxLines=1,style=MaterialTheme.typography.labelLarge)}
+                            TextButton(onClick={focusManager.clearFocus();keyboard?.hide()},enabled=imeVisible,contentPadding=PaddingValues(0.dp),shape=MaterialTheme.shapes.small,colors=ButtonDefaults.textButtonColors(containerColor=MaterialTheme.colorScheme.surfaceVariant),modifier=Modifier.weight(1.1f).height(48.dp).semantics { contentDescription=getString(R.string.terminal_hide_keyboard) }.testTag("hide-keyboard")){Text(stringResource(R.string.terminal_hide_compact),maxLines=1,style=MaterialTheme.typography.labelLarge)}
+                            VoiceInputControl(modifier=Modifier.width(48.dp), enabled=wireToken.isNotEmpty() && !pastePending && !busy,
                                 connectionToken=wireToken, targetKey=draftScopeKey,
                                 onHideKeyboard={focusManager.clearFocus(force=true);keyboard?.hide()},
                                 onOfferDraft={expectedToken,expectedTarget,text ->
@@ -552,9 +562,10 @@ class MainActivity : AppCompatActivity() {
                                     commit.accepted
                                 },
                                 onStatus={status=it})
-                            TextButton(onClick={quickReplyToken=wireToken},enabled=wireToken.isNotEmpty() && !pastePending,contentPadding=PaddingValues(0.dp),modifier=Modifier.weight(1.1f).testTag("quick-replies")){Text(stringResource(R.string.terminal_quick_replies),maxLines=1)}
-                            Button(onClick={requestDraft(true)},enabled=wireToken.isNotEmpty() && !pastePending && draft.isNotEmpty(),shape=RoundedCornerShape(10.dp),contentPadding=PaddingValues(horizontal=8.dp),modifier=Modifier.weight(1.2f).testTag("send-enter")){Text(stringResource(if(pastePending) R.string.terminal_sending else R.string.terminal_send_enter),maxLines=1)}
+                            TextButton(onClick={quickReplyToken=wireToken},enabled=wireToken.isNotEmpty() && !pastePending,contentPadding=PaddingValues(0.dp),shape=MaterialTheme.shapes.small,colors=ButtonDefaults.textButtonColors(containerColor=MaterialTheme.colorScheme.surfaceVariant),modifier=Modifier.weight(1.1f).height(48.dp).semantics { contentDescription=getString(R.string.terminal_quick_replies) }.testTag("quick-replies")){Text(stringResource(if(compactCaptions) R.string.terminal_replies_short else R.string.terminal_replies_compact),maxLines=1,style=MaterialTheme.typography.labelLarge)}
+                            Button(onClick={requestDraft(true)},enabled=wireToken.isNotEmpty() && !pastePending && draft.isNotEmpty(),shape=RoundedCornerShape(10.dp),contentPadding=PaddingValues(horizontal=8.dp),modifier=Modifier.weight(1.3f).height(48.dp).semantics { contentDescription=getString(R.string.terminal_send_enter) }.testTag("send-enter")){Text(stringResource(if(pastePending) R.string.terminal_sending else if(compactCaptions) R.string.terminal_send_short else R.string.terminal_send_compact),maxLines=1,style=MaterialTheme.typography.labelLarge)}
                         }
+                    }
                     }
                 }
                 }
@@ -562,6 +573,7 @@ class MainActivity : AppCompatActivity() {
                     ServerHome(warmConnections=warmConnections, openSettings=reopenSettings, privacyDisplay=privacyDisplay, onPrivacyDisplay=::changePrivacyDisplay, refreshOnEntry = initialHomeRefresh, onEntryHandled = { initialHomeRefresh = false; reopenSettings = false }, onOpen = { profile, task, handedOff ->
                         openTask(profile, task, handedOff)
                     }, appearance=appearance,onAppearance={appearance=it;terminalPreferences.edit {putString("appearance",it.name)}},
+                        palette=palette,onPalette={palette=it;terminalPreferences.edit {putString("palette",it.name)}},
                         onPreferences = { font, speed, touch ->
                         fontSize=font;scrollSensitivity=speed;remoteTouch=touch
                         terminalView?.font(font);terminalView?.scrollSensitivity(speed);terminalView?.remoteTouch(touch)
@@ -570,13 +582,13 @@ class MainActivity : AppCompatActivity() {
                 if (showDetails) ProtectSensitiveContent()
                 if (showDetails) AlertDialog(properties=protectedDialogProperties,onDismissRequest={showDetails=false},title={Text(stringResource(R.string.terminal_details_title))},text={Text("${activeProfile?.name.orEmpty()}\n${target ?: stringResource(R.string.terminal_not_connected)} · ${targetSession ?: stringResource(R.string.terminal_plain_shell)}\n${panes.firstOrNull { it.id == replyPane?.pane }?.let { "${it.sessionName} / ${it.windowName}" }.orEmpty()}\n${status.text.string()}")},confirmButton={TextButton(onClick={showDetails=false}){Text(stringResource(R.string.common_close))}})
                 if (showTools) {
-                    ModalBottomSheet(onDismissRequest = { showTools = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+                    ModalBottomSheet(onDismissRequest = { showTools = false }, containerColor=MaterialTheme.colorScheme.surface,shape=MaterialTheme.shapes.extraLarge,sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
                         Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).padding(horizontal=16.dp)) {
-                        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                             Text(stringResource(R.string.tools_title),style=MaterialTheme.typography.titleLarge)
                     replyPane?.let { bound ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.tools_reply_target, bound.pane), modifier = Modifier.weight(1f).testTag("reply-target"))
+                        InsetPanel {
+                            Text(stringResource(R.string.tools_reply_target, bound.pane), modifier = Modifier.testTag("reply-target"),style=MaterialTheme.typography.titleSmall,color=MaterialTheme.colorScheme.primary)
                             TextButton(enabled = draft.isEmpty() && !pastePending && !busy, onClick = {
                                 val connection = client ?: return@TextButton
                                 val token = wireToken
@@ -599,29 +611,29 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
 
-                            TextButton(onClick={showTools=false;requestDraft(false)},enabled=wireToken.isNotEmpty() && draft.isNotEmpty()){Text(stringResource(R.string.tools_paste_only))}
+                            OutlinedButton(onClick={showTools=false;requestDraft(false)},enabled=wireToken.isNotEmpty() && draft.isNotEmpty(),modifier=Modifier.fillMaxWidth()){AppIcon(UiSymbol.SEND);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.tools_paste_only))}
+                            InsetPanel {
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Switch(checked = remoteTouch, onCheckedChange = { remoteTouch = it; terminalView?.remoteTouch(it); terminalPreferences.edit { putBoolean("remoteTouch", it) } })
                                 Text(stringResource(if (remoteTouch) R.string.tools_touch_remote else R.string.tools_touch_local))
                             }
                             Text(stringResource(R.string.tools_touch_help), style = MaterialTheme.typography.bodySmall)
-                            Text(stringResource(R.string.scroll_speed, "%.1f".format(java.util.Locale.ROOT, scrollSensitivity)))
-                            Slider(value = scrollSensitivity, onValueChange = {
-                                scrollSensitivity = it; terminalView?.scrollSensitivity(it)
-                            }, onValueChangeFinished = { terminalPreferences.edit { putFloat("scrollSensitivity", scrollSensitivity) } },
-                                valueRange = 0.5f..2f, steps = 2, modifier = Modifier.testTag("scroll-speed"))
-                            Text(stringResource(R.string.tools_scroll_help), style = MaterialTheme.typography.bodySmall)
+                            ScrollSpeedControl(scrollSensitivity, { value ->
+                                scrollSensitivity=value; terminalView?.scrollSensitivity(value)
+                                terminalPreferences.edit { putFloat("scrollSensitivity",value) }
+                            },"scroll-speed")
                             Row {
                                 TextButton(onClick = { fontSize = (fontSize - 1).coerceAtLeast(8); terminalView?.font(fontSize); terminalPreferences.edit { putInt("fontSize", fontSize) } }) { Text(stringResource(R.string.tools_font_smaller)) }
                                 TextButton(onClick = { fontSize = (fontSize + 1).coerceAtMost(28); terminalView?.font(fontSize); terminalPreferences.edit { putInt("fontSize", fontSize) } }) { Text(stringResource(R.string.tools_font_larger)) }
                             }
-                            TextButton(onClick = {
+                            }
+                            OutlinedButton(onClick = {
                                 showTools = false; keyboard?.hide()
                                 terminalView?.snapshot { snapshot -> copySnapshot = snapshot }
-                            }, modifier=Modifier.testTag("select-terminal-text")) { Text(stringResource(R.string.tools_select_copy)) }
+                            }, modifier=Modifier.fillMaxWidth().testTag("select-terminal-text")) { AppIcon(UiSymbol.COPY);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.tools_select_copy)) }
                             
-                            TextButton(onClick = { draft = ""; showTools = false }) { Text(stringResource(R.string.tools_clear_draft)) }
+                            TextButton(onClick = { draft = ""; showTools = false }) { Text(stringResource(R.string.tools_clear_draft),color=MaterialTheme.colorScheme.error) }
                             Text(stringResource(R.string.tools_terminal_info, cols, rows, renderedBytes), style = MaterialTheme.typography.bodySmall)
                         }
                             TextButton(onClick = { showTools = false }) { Text(stringResource(R.string.common_close)) }
@@ -636,7 +648,7 @@ class MainActivity : AppCompatActivity() {
                 }) }
                 pendingReply?.let { (token,text) -> AlertDialog(onDismissRequest={pendingReply=null},title={Text(stringResource(R.string.quick_reply_keep_title))},text={Text(stringResource(R.string.quick_reply_keep_body))},confirmButton={
                     TextButton(onClick={if(token==wireToken && token.isNotEmpty() && !pastePending) {draft=if(draft.isEmpty()) text else draft+"\n"+text} else status=TerminalStatus(uiText(R.string.status_quick_reply_stale), alert = true);pendingReply=null},modifier=Modifier.testTag("append-quick-reply")){Text(stringResource(R.string.quick_reply_append))}
-                },dismissButton={Row {
+                },dismissButton={FlowRow {
                     TextButton(onClick={if(token==wireToken && token.isNotEmpty() && !pastePending) {draft=text} else status=TerminalStatus(uiText(R.string.status_quick_reply_stale), alert = true);pendingReply=null},modifier=Modifier.testTag("replace-quick-reply")){Text(stringResource(R.string.quick_reply_replace))}
                     TextButton(onClick={pendingReply=null}){Text(stringResource(R.string.common_cancel))}
                 }}) }
@@ -649,7 +661,7 @@ class MainActivity : AppCompatActivity() {
                     AlertDialog(onDismissRequest = { preview = false }, title = { Text(stringResource(if (submitWithEnter) R.string.preview_send_to else R.string.preview_paste_to, previewTarget)) },
                         text = { Column(Modifier.heightIn(max = 260.dp).verticalScroll(rememberScrollState())) {
                             Text(stringResource(R.string.preview_body))
-                            Text(previewText)
+                            InsetPanel { SelectionContainer { Text(previewText,style=MaterialTheme.typography.bodyMedium.copy(fontFamily=androidx.compose.ui.text.font.FontFamily.Monospace)) } }
                         } },
                         confirmButton = { TextButton(onClick = {
                             if (previewToken == wireToken && wireToken.isNotEmpty()) {
@@ -663,6 +675,7 @@ class MainActivity : AppCompatActivity() {
                 challenge?.let { item ->
                     ProtectSensitiveContent()
                     AlertDialog(properties=protectedDialogProperties,onDismissRequest = { challenge = null },
+                        icon={AppIcon(UiSymbol.SHIELD,modifier=Modifier.size(28.dp),tint=if(item.changed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)},
                         title = { Text(stringResource(if (item.changed) R.string.host_key_changed_title else R.string.host_key_first_title)) },
                         text = { Text("${item.endpoint}\n${item.fingerprint}\n" + stringResource(R.string.host_key_verify_hint) + "\n" + stringResource(if (item.changed) R.string.host_key_changed_hint else R.string.host_key_first_hint)) },
                         confirmButton = {

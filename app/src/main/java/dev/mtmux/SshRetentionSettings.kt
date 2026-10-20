@@ -17,11 +17,13 @@ private const val RETENTION_KEY = "sshIdleCapacity"
 fun savedSshRetention(context: android.content.Context) = SshRetention.fromCapacity(
     context.getSharedPreferences("terminal-settings", 0).getInt(RETENTION_KEY, SshRetention.MEDIUM.capacity))
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable fun SshRetentionSettings(pool: WarmConnectionPool<SshClient>) {
     val context = LocalContext.current
     var selected by remember { mutableStateOf(savedSshRetention(context)) }
     Text(stringResource(R.string.settings_ssh_retention), color = MaterialTheme.colorScheme.primary)
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    val large = androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.2f
+    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp),maxItemsInEachRow=if(large) 3 else 5) {
         SshRetention.entries.forEach { option ->
             val label = when (option) {
                 SshRetention.NONE -> R.string.ssh_retention_none
@@ -36,7 +38,7 @@ fun savedSshRetention(context: android.content.Context) = SshRetention.fromCapac
                 pool.setCapacity(option.capacity)
             }, label = { Text(stringResource(label), textAlign = TextAlign.Center, maxLines = 2,
                 style = MaterialTheme.typography.labelSmall) },
-                modifier = Modifier.weight(1f).testTag("ssh-retention-${option.name}"))
+                modifier = (if(large) Modifier.widthIn(min=80.dp) else Modifier.weight(1f)).testTag("ssh-retention-${option.name}"))
         }
     }
     Text(stringResource(if (selected == SshRetention.NONE) R.string.ssh_retention_disabled else R.string.ssh_retention_enabled,

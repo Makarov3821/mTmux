@@ -24,13 +24,13 @@ private val keyPages = listOf(
 @Composable fun TerminalKeys(enabled: Boolean, onKey: (String, String) -> Unit) {
     val pager = rememberPagerState(pageCount = { keyPages.size })
     val pageLabel = stringResource(R.string.keys_page, pager.currentPage + 1, keyPages.size)
-    Box(Modifier.fillMaxWidth().height(40.dp)) {
+    Box(Modifier.fillMaxWidth().height(48.dp)) {
         HorizontalPager(pager, modifier = Modifier.fillMaxSize().testTag("terminal-key-pages")) { page ->
-            Row(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxSize().padding(top=4.dp,bottom=6.dp),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
                 keyPages[page].forEach { (label, data) ->
                     TextButton(onClick = { onKey(label, data) }, enabled = enabled,
-                        contentPadding = PaddingValues(0.dp), modifier = Modifier.weight(1f).fillMaxHeight().testTag("terminal-key-$label")) {
-                        Text(label, maxLines = 1)
+                        shape=MaterialTheme.shapes.small, colors=ButtonDefaults.textButtonColors(containerColor=MaterialTheme.colorScheme.surfaceVariant),contentPadding = PaddingValues(0.dp), modifier = Modifier.weight(1f).fillMaxHeight().testTag("terminal-key-$label")) {
+                        Text(label, maxLines = 1,style=MaterialTheme.typography.labelMedium,color=if(enabled && label=="Ctrl-C") MaterialTheme.colorScheme.error else LocalContentColor.current)
                     }
                 }
             }

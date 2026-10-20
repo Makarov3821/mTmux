@@ -29,7 +29,6 @@ import kotlinx.coroutines.*
             finally { busy = false }
         } else result = if(uri==null) R.string.log_save_cancelled else R.string.log_snapshot_stale
     }
-    HorizontalDivider()
     Text(stringResource(R.string.log_title),color=MaterialTheme.colorScheme.primary)
     Text(stringResource(R.string.log_help),style=MaterialTheme.typography.bodySmall)
     Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {

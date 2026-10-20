@@ -102,7 +102,7 @@ Object.assign(touchSurface.style, {position: 'absolute', inset: '0', zIndex: '5'
 terminal.element.appendChild(touchSurface);
 window.setRemoteTouch = enabled => { remoteTouch = enabled; cancelGesture(); };
 window.setScrollSensitivity = value => {
-  scrollSensitivity = Math.max(0.5, Math.min(2, Number(value) || 1));
+  scrollSensitivity = TerminalProtocol.normalizeScrollSpeed(value);
   cancelGesture();
 };
 function hasRemoteMouse() { return connected && remoteTouch && terminal.modes.mouseTrackingMode !== 'none'; }
@@ -113,7 +113,7 @@ function mouse(type, x, y, button = 0) {
 // Keep fractional movement, and pace wheel notches over frames rather than
 // sending a burst for every coalesced move. No momentum after release.
 function scrollThreshold(g) {
-  return g.remote ? g.cell * (g.firstWheel ? 1 : 3) / scrollSensitivity : g.cell;
+  return g.remote ? g.cell * (g.firstWheel ? 1 : 3) : g.cell;
 }
 function queueScroll() {
   if (!scrollFrame) scrollFrame = requestAnimationFrame(drainScroll);
@@ -122,29 +122,35 @@ function drainScroll() {
   scrollFrame = 0;
   const g = gesture;
   if (!g || g.token !== connectionToken || !g.moved) return;
-  const threshold = scrollThreshold(g);
-  if (Math.abs(g.pending) < threshold) return;
   if (g.remote) {
-    // A redraw may briefly switch protocols. Retain distance until the next
-    // move, but never substitute local scrolling or arrow keys for that input.
+    // Convert each baseline notch to N mouse events. A bounded per-frame budget
+    // prevents a 10x setting from flooding the native writer in one callback.
     if (!hasRemoteMouse()) return;
-    screen.dispatchEvent(new WheelEvent('wheel', {bubbles: true, cancelable: true,
-      clientX: g.x, clientY: g.y, deltaY: Math.sign(g.pending), deltaMode: 1}));
-    g.pending -= Math.sign(g.pending) * threshold;
-    g.firstWheel = false;
+    while (Math.abs(g.pending) >= scrollThreshold(g)) {
+      const direction = Math.sign(g.pending);
+      g.pending -= direction * scrollThreshold(g);
+      g.wheelCredits = Math.max(-80, Math.min(80, g.wheelCredits + direction * scrollSensitivity));
+      g.firstWheel = false;
+    }
+    for (let count = 0; count < Math.min(8, scrollSensitivity) && g.wheelCredits; count++) {
+      const direction = Math.sign(g.wheelCredits);
+      screen.dispatchEvent(new WheelEvent('wheel', {bubbles: true, cancelable: true,
+        clientX: g.x, clientY: g.y, deltaY: direction, deltaMode: 1}));
+      g.wheelCredits -= direction;
+    }
   } else {
     const lines = Math.max(-2, Math.min(2, Math.trunc(g.pending / g.cell)));
     terminal.scrollLines(lines);
     g.pending -= lines * g.cell;
   }
-  if (Math.abs(g.pending) >= scrollThreshold(g)) queueScroll();
+  if (Math.abs(g.pending) >= scrollThreshold(g) || (g.remote && g.wheelCredits)) queueScroll();
 }
 container.addEventListener('touchstart', event => {
   cancelGesture();
   gesture = event.touches.length === 1 ? {x: event.touches[0].clientX,
     y: event.touches[0].clientY, lastY: event.touches[0].clientY, pending: 0, direction: 0,
     cell: Math.max(1, screen.getBoundingClientRect().height / terminal.rows),
-    remote: hasRemoteMouse(), firstWheel: true,
+    remote: hasRemoteMouse(), firstWheel: true, wheelCredits: 0,
     started: performance.now(), moved: false, token: connectionToken} : null;
   event.preventDefault();
   event.stopImmediatePropagation();
@@ -158,7 +164,7 @@ container.addEventListener('touchmove', event => {
       gesture.lastY = current.clientY;
       if (delta) {
         if (gesture.direction && Math.sign(delta) !== gesture.direction) {
-          gesture.pending = 0; // reversing must not fight an old backlog
+          gesture.pending = 0; gesture.wheelCredits = 0; // reversing must not fight an old backlog
           gesture.firstWheel = true;
         }
         gesture.direction = Math.sign(delta);
@@ -174,7 +180,7 @@ container.addEventListener('touchmove', event => {
 }, {capture: true, passive: false});
 container.addEventListener('touchend', event => {
   // A quick stroke can finish before the browser's next animation frame.
-  // Commit one pending notch now, then discard any backlog on release.
+  // Commit at most one bounded frame now, then discard all backlog on release.
   if (gesture?.moved) {
     if (scrollFrame) cancelAnimationFrame(scrollFrame);
     scrollFrame = 0;
@@ -220,12 +226,12 @@ window.terminalSnapshot = () => {
   return {text, clipped, viewportOffset: Math.min(viewportOffset, text.length)};
 };
 
-window.setTerminalAppearance = dark => {
-  const background = dark ? '#111916' : '#f7faf8';
+window.setTerminalAppearance = (dark, palette) => {
+  const background = palette?.background || (dark ? '#111916' : '#f7faf8');
   document.documentElement.style.background = background;
   document.body.style.background = background;
   terminal.options.minimumContrastRatio = 4.5;
-  terminal.options.theme = dark ? {
+  terminal.options.theme = palette || (dark ? {
     background, foreground:'#e2eee8',cursor:'#79d5b0',cursorAccent:background,selectionBackground:'#426b59',
     black:'#26352c',red:'#ed7777',green:'#79d5a0',yellow:'#e6ce75',blue:'#83adf2',magenta:'#ce9aed',cyan:'#75cdd5',white:'#dce8e0',
     brightBlack:'#8b9e90',brightRed:'#ff9b9b',brightGreen:'#a0efb6',brightYellow:'#f4e09b',brightBlue:'#aecaff',brightMagenta:'#e2b7f7',brightCyan:'#9ae6ee',brightWhite:'#ffffff'
@@ -233,5 +239,5 @@ window.setTerminalAppearance = dark => {
     background, foreground:'#18251e',cursor:'#176b4d',cursorAccent:background,selectionBackground:'#badbca',
     black:'#18251e',red:'#af2525',green:'#176b39',yellow:'#795900',blue:'#245caf',magenta:'#823f9b',cyan:'#086b76',white:'#586b60',
     brightBlack:'#63766a',brightRed:'#a82d35',brightGreen:'#206d37',brightYellow:'#806000',brightBlue:'#355eb0',brightMagenta:'#8c459a',brightCyan:'#176875',brightWhite:'#374c40'
-  };
+  });
 };

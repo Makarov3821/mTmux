@@ -3,6 +3,7 @@ import { chromium } from 'playwright-core';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve, extname } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import assert from 'node:assert/strict';
 const root = resolve('../app/src/main/assets/terminal');
 const server = createServer(async (request, response) => {
@@ -24,7 +25,7 @@ try {
     window.events = [];
     window.NativeTerminal = Object.fromEntries(['ready','resize','input','draftInput','notice','ack','copy','pasteFinished','binaryInput'].map(name => [name, (...args) => events.push([name, ...args])]));
   });
-  await page.goto(`http://127.0.0.1:${server.address().port}/`);
+  await page.goto(process.env.TERMINAL_TEST_FILE ? pathToFileURL(resolve(root,'index.html')).href : `http://127.0.0.1:${server.address().port}/`);
   await page.waitForFunction(() => events.some(e => e[0] === 'ready'));
   async function feed(text, id) {
     await page.evaluate(([data, id]) => receive(data, id), [Buffer.from(text).toString('base64'), id]);
@@ -146,6 +147,36 @@ try {
   await page.waitForTimeout(200);
   assert.equal(await page.evaluate(()=>events.filter(e=>e[0]==='input').length),afterUp+1,
     'a fast stroke leaves no queued momentum after release');
+  // Actual SGR wheel events must scale with speed, and release must clear all backlog.
+  const speedCounts = [];
+  for (const speed of [1,5,10]) {
+    await page.evaluate(speed=>setScrollSensitivity(speed),speed);
+    const start=await page.evaluate(()=>events.filter(e=>e[0]==='input').length);
+    await touch('touchstart',100,70);
+    for(let i=1;i<=12;i++) await touch('touchmove',100,70+i*10);
+    await touch('touchend',100,190);
+    const inputs=await page.evaluate(n=>events.filter(e=>e[0]==='input').slice(n).map(e=>e[2]),start);
+    assert.ok(inputs.every(e=>/^\x1b\[<64;[0-9]+;[0-9]+M$/.test(e)));
+    speedCounts.push(inputs.length);
+    await page.waitForTimeout(100);
+    assert.equal(await page.evaluate(()=>events.filter(e=>e[0]==='input').length),start+inputs.length);
+  }
+  assert.ok(speedCounts[1]>=speedCounts[0]*3,JSON.stringify(speedCounts));
+  assert.ok(speedCounts[2]>=speedCounts[0]*7,JSON.stringify(speedCounts));
+  console.log('SCROLL_SPEED events at 1x/5x/10x:',speedCounts);
+  await page.evaluate(()=>setScrollSensitivity(10));
+  const queuedStart=await page.evaluate(()=>events.filter(e=>e[0]==='input').length);
+  await page.evaluate(()=>{
+    const target=document.querySelector('.terminal-touch-surface');
+    for (const [type,y] of [['touchstart',80],['touchmove',480]]) {
+      const t=new Touch({identifier:1,target,clientX:100,clientY:y});
+      target.dispatchEvent(new TouchEvent(type,{bubbles:true,cancelable:true,touches:[t],changedTouches:[t]}));
+    }
+    setConnection('speed-replacement');
+  });
+  await page.waitForTimeout(100);
+  assert.equal(await page.evaluate(()=>events.filter(e=>e[0]==='input').length),queuedStart);
+  await page.evaluate(()=>setScrollSensitivity(1));
   await page.setViewportSize({width:1200,height:500});
   await page.waitForFunction(()=>terminal.cols > 110);
   await feed('\x1b[?1006l', 'mouse-legacy');
@@ -199,6 +230,9 @@ try {
   assert.equal(await page.evaluate(()=>terminal.options.minimumContrastRatio),4.5);
   await page.evaluate(()=>setTerminalAppearance(true));
   assert.equal(await page.evaluate(()=>terminal.options.theme.background),'#111916');
+  assert.deepEqual(await page.evaluate(()=>({text:terminalSnapshot().text,cols:terminal.cols,rows:terminal.rows,viewport:terminal.buffer.active.viewportY,token:connectionToken,inputs:events.filter(e=>['input','binaryInput'].includes(e[0])).length})),beforeTheme);
+  await page.evaluate(()=>setTerminalAppearance(true,{background:'#13141c',foreground:'#d5d9f8',cursor:'#7aa2f7',selectionBackground:'#334469'}));
+  assert.equal(await page.evaluate(()=>terminal.options.theme.background),'#13141c');
   assert.deepEqual(await page.evaluate(()=>({text:terminalSnapshot().text,cols:terminal.cols,rows:terminal.rows,viewport:terminal.buffer.active.viewportY,token:connectionToken,inputs:events.filter(e=>['input','binaryInput'].includes(e[0])).length})),beforeTheme);
   // Mixed CJK punctuation must occupy the same grid as the width-cache samples.
   // A pure run of one ideograph does not expose contextual punctuation trimming.

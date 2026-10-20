@@ -1,5 +1,7 @@
 package dev.mtmux
 
+import androidx.compose.ui.graphics.toArgb
+
 import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -95,11 +97,12 @@ class TerminalView(
     fun sendDraft(text: String, token: String, id: String, enter: Boolean) =
         js("sendDraft(${JSONObject.quote(text)},${JSONObject.quote(token)},${JSONObject.quote(id)},$enter)")
     private var darkAppearance: Boolean? = null
-    fun appearance(dark: Boolean, force: Boolean = false) {
-        if (!force && darkAppearance == dark) return
-        darkAppearance=dark
-        setBackgroundColor(if(dark) 0xFF111916.toInt() else 0xFFF7FAF8.toInt())
-        js("if(typeof setTerminalAppearance==='function') setTerminalAppearance($dark)")
+    private var paletteAppearance: AppPalette? = null
+    fun appearance(dark: Boolean, force: Boolean = false, palette: AppPalette = AppPalette.EMERALD) {
+        if (!force && darkAppearance == dark && paletteAppearance == palette) return
+        darkAppearance=dark; paletteAppearance=palette
+        setBackgroundColor(appColors(dark,palette).background.toArgb())
+        js("if(typeof setTerminalAppearance==='function') setTerminalAppearance($dark,${terminalTheme(dark,palette)})")
     }
     fun font(size: Int) = js("setFont($size)")
     fun copySelection() = js("copySelection()")
@@ -121,7 +124,7 @@ class TerminalView(
     }
     fun latest() = js("scrollLatest()")
     fun remoteTouch(enabled: Boolean) = js("setRemoteTouch($enabled)")
-    fun scrollSensitivity(value: Float) = js("setScrollSensitivity(${value.coerceIn(0.5f, 2f)})")
+    fun scrollSensitivity(value: Float) = js("setScrollSensitivity(${ScrollSpeed.normalize(value)})")
     private fun js(code: String) {
         if(disposed) return
         if(pageReady) evaluateJavascript(code,null)

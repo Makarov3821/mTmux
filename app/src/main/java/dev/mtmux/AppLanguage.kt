@@ -3,7 +3,8 @@ package dev.mtmux
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -45,10 +46,11 @@ enum class AppLanguage(val tag: String, @StringRes val label: Int) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable fun LanguageSettings() {
     val selected = AppLanguage.current()
     Text(stringResource(R.string.settings_language), color = MaterialTheme.colorScheme.primary)
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         AppLanguage.entries.forEach { option ->
             FilterChip(selected = selected == option, onClick = { AppLanguage.select(option) },
                 label = { Text(stringResource(option.label)) }, modifier = Modifier.testTag("language-${option.name}"))

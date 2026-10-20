@@ -35,3 +35,9 @@ test('scrollback remains bounded under large output and resize', async () => {
   assert.ok(term.buffer.active.length <= 3012);
   term.dispose();
 });
+
+test('scroll speed normalizes old fractional values and bounds every input', () => {
+  for (const [input,expected] of [[0.5,1],[1,1],[1.5,2],[5,5],[10,10],[100,10],[-1,1],[NaN,1],[Infinity,1]]) {
+    assert.equal(protocol.normalizeScrollSpeed(input),expected);
+  }
+});

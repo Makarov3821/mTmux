@@ -338,4 +338,17 @@
     <string name="voice_error_cancelled">Voice transcription was cancelled.</string>
     <string name="voice_error_generic">Voice transcription failed. Your draft was not changed.</string>
     <string name="voice_starting">Preparing microphone…</string>
+    <string name="settings_palette">Color palette</string>
+    <string name="settings_appearance_language">Appearance and language</string>
+    <string name="editor_target">Target server</string>
+    <string name="scroll_speed_title">Remote scroll multiplier</string>
+    <string name="scroll_speed_help">1×–10×: the same swipe sends more wheel events. The remote app controls the resulting number of lines.</string>
+    <string name="home_empty_detail">Add a server to discover tmux tasks or open an SSH terminal.</string>
+    <string name="terminal_hide_compact">Hide</string>
+    <string name="terminal_send_compact">Send ⏎</string>
+    <string name="terminal_replies_compact">Replies</string>
+    <string name="terminal_tools_compact">Tools</string>
+    <string name="voice_local_badge">Offline · on device</string>
+    <string name="terminal_replies_short">Replies</string>
+    <string name="terminal_send_short">Send ⏎</string>
 </resources>

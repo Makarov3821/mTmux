@@ -20,14 +20,16 @@ import androidx.compose.ui.unit.dp
     var value by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<UiText?>(null) }
     fun save(next: List<String>) { runCatching { store.save(next);replies=next;editIndex=null;error=null }.onFailure {error=errorText(it)} }
-    ModalBottomSheet(onDismissRequest=onDismiss,sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true)) {
-        Column(Modifier.fillMaxWidth().heightIn(max=550.dp).verticalScroll(rememberScrollState()).padding(20.dp)) {
+    ModalBottomSheet(onDismissRequest=onDismiss,containerColor=MaterialTheme.colorScheme.surface,shape=MaterialTheme.shapes.extraLarge,sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true)) {
+        Column(Modifier.fillMaxWidth().heightIn(max=550.dp).verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.terminal_quick_replies),style=MaterialTheme.typography.titleLarge)
-            Text(stringResource(R.string.quick_reply_help),style=MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.quick_reply_help),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             replies.forEachIndexed { index, text ->
+                Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surfaceVariant) {
                 Row(Modifier.fillMaxWidth()) {
-                    TextButton(onClick={onPick(text)},modifier=Modifier.weight(1f).testTag("quick-reply-$index")) { Text(text,Modifier.fillMaxWidth()) }
+                    TextButton(onClick={onPick(text)},modifier=Modifier.weight(1f).testTag("quick-reply-$index")) { Text(text,Modifier.fillMaxWidth(),style=MaterialTheme.typography.bodyMedium,maxLines=3,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
                     TextButton(onClick={editIndex=index;value=text;error=null},modifier=Modifier.testTag("edit-quick-reply-$index")) { Text(stringResource(R.string.common_edit)) }
+                }
                 }
             }
             error?.let { Text(it.string(),color=MaterialTheme.colorScheme.error) }

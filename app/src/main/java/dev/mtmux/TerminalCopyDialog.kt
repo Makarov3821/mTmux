@@ -7,6 +7,7 @@ import android.graphics.Typeface
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -25,13 +26,14 @@ data class TerminalSnapshot(val text: String, val clipped: Boolean, val viewport
 @Composable fun TerminalCopyDialog(snapshot: TerminalSnapshot, fontSize: Int, dark: Boolean, onClose: () -> Unit) {
     val context = LocalContext.current
     val textColor=MaterialTheme.colorScheme.onSurface.toArgb()
-    val selectionColor=MaterialTheme.colorScheme.primaryContainer.toArgb()
+    val selectionColor=MaterialTheme.colorScheme.primary.copy(alpha=.35f).toArgb()
+    val backgroundColor=MaterialTheme.colorScheme.background.toArgb()
     var copied by remember { mutableStateOf(false) }
     Dialog(onDismissRequest=onClose, properties=DialogProperties(usePlatformDefaultWidth=false)) {
         val dialogView=androidx.compose.ui.platform.LocalView.current
         SideEffect {
             (dialogView.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.let { window ->
-                window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(if(dark) 0xFF111916.toInt() else 0xFFF7FAF8.toInt()))
+                window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(backgroundColor))
                 androidx.core.view.WindowCompat.getInsetsController(window,dialogView).apply { isAppearanceLightStatusBars=!dark;isAppearanceLightNavigationBars=!dark }
             }
         }
@@ -50,6 +52,7 @@ data class TerminalSnapshot(val text: String, val clipped: Boolean, val viewport
                 Text(stringResource(R.string.copy_help),style=MaterialTheme.typography.bodySmall)
                 if(snapshot.clipped) Text(stringResource(R.string.copy_clipped),style=MaterialTheme.typography.bodySmall)
                 if(snapshot.text.isEmpty()) Text(stringResource(R.string.copy_empty),Modifier.padding(top=24.dp))
+                Surface(Modifier.weight(1f).fillMaxWidth().padding(top=12.dp),shape=MaterialTheme.shapes.large,color=MaterialTheme.colorScheme.surfaceVariant,border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)) {
                 AndroidView(factory={ ctx ->
                     ScrollView(ctx).apply {
                         isFillViewport=true
@@ -60,7 +63,7 @@ data class TerminalSnapshot(val text: String, val clipped: Boolean, val viewport
                             typeface=Typeface.MONOSPACE
                             setTextColor(textColor)
                             highlightColor=selectionColor
-                            setPadding(8,24,8,24)
+                            val inset=(12*resources.displayMetrics.density).toInt();setPadding(inset,inset,inset,inset)
                             setTextIsSelectable(true)
                             // Keep selection local: no editable input, links or remote actions.
                             autoLinkMask=0
@@ -68,7 +71,8 @@ data class TerminalSnapshot(val text: String, val clipped: Boolean, val viewport
                         addView(textView)
                         post { textView.layout?.let { layout -> scrollTo(0,layout.getLineTop(layout.getLineForOffset(snapshot.viewportOffset.coerceIn(0,snapshot.text.length)))) } }
                     }
-                },update={scroll -> (scroll.getChildAt(0) as TextView).apply {setTextColor(textColor);highlightColor=selectionColor}},modifier=Modifier.weight(1f).fillMaxWidth().testTag("terminal-copy-content"))
+                },update={scroll -> (scroll.getChildAt(0) as TextView).apply {setTextColor(textColor);highlightColor=selectionColor}},modifier=Modifier.fillMaxSize().testTag("terminal-copy-content"))
+                }
             }
         }
     }

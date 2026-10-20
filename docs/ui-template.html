@@ -1,0 +1,876 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>mTmux · Termius Bento 全量 12 界面设计系统</title>
+<style>
+  * { box-sizing: border-box; transition: background-color 0.2s, border-color 0.2s, color 0.15s; }
+  body {
+    margin: 0; padding: 32px 40px 60px;
+    background: #07080C; color: #E2E8F0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Noto Sans CJK SC', sans-serif;
+  }
+
+  /* ==================== 6套内置主题色板 ==================== */
+  [data-palette="tokyo"] {
+    --bg: #13141C; --surface: #1C1E2B; --elevated: #26293C; --border: rgba(122,162,247,0.14);
+    --fg: #D5D9F8; --muted: #8B93B8; --subtle: #565F89;
+    --accent: #7AA2F7; --accent-fg: #13141C; --accent-soft: rgba(122, 162, 247, 0.15);
+    --ok: #9ECE6A; --warn: #E0AF68; --err: #F7768E; --err-soft: rgba(247, 118, 142, 0.14);
+  }
+  [data-palette="catppuccin"] {
+    --bg: #11111B; --surface: #1E1E2E; --elevated: #2A2B3D; --border: rgba(203,166,247,0.14);
+    --fg: #CDD6F4; --muted: #A6ADC8; --subtle: #6C7086;
+    --accent: #CBA6F7; --accent-fg: #11111B; --accent-soft: rgba(203, 166, 247, 0.15);
+    --ok: #A6E3A1; --warn: #F9E2AF; --err: #F38BA8; --err-soft: rgba(243, 139, 168, 0.14);
+  }
+  [data-palette="emerald"] {
+    --bg: #0B120F; --surface: #131F1A; --elevated: #1C2D26; --border: rgba(110,231,183,0.14);
+    --fg: #ECFDF5; --muted: #8FA89B; --subtle: #526B5E;
+    --accent: #6EE7B7; --accent-fg: #06281E; --accent-soft: rgba(110, 231, 183, 0.15);
+    --ok: #34D399; --warn: #FBBF24; --err: #F87171; --err-soft: rgba(248, 113, 113, 0.14);
+  }
+  [data-palette="zinc"] {
+    --bg: #09090B; --surface: #141418; --elevated: #202026; --border: rgba(255,255,255,0.1);
+    --fg: #FAFAFA; --muted: #A1A1AA; --subtle: #52525B;
+    --accent: #F4F4F5; --accent-fg: #09090B; --accent-soft: rgba(255,255,255,0.1);
+    --ok: #10B981; --warn: #F59E0B; --err: #EF4444; --err-soft: rgba(239, 68, 68, 0.14);
+  }
+  [data-palette="nord"] {
+    --bg: #1E222A; --surface: #282E39; --elevated: #343C4A; --border: rgba(136,192,208,0.16);
+    --fg: #ECEFF4; --muted: #B0BACC; --subtle: #677691;
+    --accent: #88C0D0; --accent-fg: #1E222A; --accent-soft: rgba(136, 192, 208, 0.16);
+    --ok: #A3BE8C; --warn: #EBCB8B; --err: #BF616A; --err-soft: rgba(191, 97, 106, 0.16);
+  }
+  [data-palette="paper"] {
+    --bg: #F2F4F7; --surface: #FFFFFF; --elevated: #E8ECF2; --border: rgba(15,23,42,0.08);
+    --fg: #0F172A; --muted: #64748B; --subtle: #94A3B8;
+    --accent: #0D9488; --accent-fg: #FFFFFF; --accent-soft: rgba(13, 148, 136, 0.12);
+    --ok: #16A34A; --warn: #D97706; --err: #DC2626; --err-soft: rgba(220, 38, 38, 0.1);
+  }
+
+  /* 顶部导航栏 */
+  .top-header {
+    position: sticky; top: 0; z-index: 99;
+    background: rgba(7, 8, 12, 0.88); backdrop-filter: blur(16px);
+    padding: 16px 0 20px; margin-bottom: 32px;
+    border-bottom: 1px solid #1E2230;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;
+  }
+  .top-header h1 { font-size: 22px; margin: 0 0 4px; color: #fff; }
+  .top-header p { font-size: 13px; color: #8A94A6; margin: 0; }
+  .palette-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+  .p-btn {
+    background: #141722; border: 1px solid #262B3D; color: #94A3B8;
+    padding: 8px 14px; border-radius: 99px; font-size: 12px; cursor: pointer; font-weight: 600;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .p-btn.active { background: #fff; color: #090A0F; border-color: #fff; }
+  .dot-swatch { width: 9px; height: 9px; border-radius: 50%; }
+
+  /* 网格画布 */
+  .section-heading {
+    font-size: 16px; font-weight: 700; color: #F8FAFC;
+    margin: 36px 0 18px; padding-left: 12px; border-left: 3px solid #7AA2F7;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-heading small { font-size: 12px; color: #64748B; font-weight: 400; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 32px; }
+
+  /* 手机外框与通用悬浮岛样式 */
+  .screen-card { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+  .screen-title { width: 360px; font-size: 13px; font-weight: 600; color: #CBD5E1; display: flex; justify-content: space-between; }
+  .screen-title code { font-size: 11px; color: #7AA2F7; background: rgba(122,162,247,0.12); padding: 2px 6px; border-radius: 5px; }
+  .phone {
+    width: 360px; height: 740px;
+    background: var(--bg); color: var(--fg);
+    border: 2px solid var(--border); border-radius: 36px;
+    overflow: hidden; display: flex; flex-direction: column;
+    box-shadow: 0 24px 54px rgba(0,0,0,0.6); position: relative;
+  }
+  .sbar { height: 28px; padding: 0 22px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: var(--subtle); font-family: monospace; flex-shrink: 0; }
+  .nav { height: 52px; padding: 0 16px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+  .nav-title { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; }
+  .island {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; padding: 14px;
+  }
+  .pill {
+    background: var(--elevated); border: 1px solid var(--border);
+    border-radius: 99px; padding: 5px 12px; font-size: 12px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .icon-sq {
+    width: 34px; height: 34px; border-radius: 11px;
+    background: var(--surface); border: 1px solid var(--border);
+    display: inline-flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .icon-sq.accent { background: var(--accent); color: var(--accent-fg); border: none; font-weight: 700; }
+  .icon-sq.soft { background: var(--accent-soft); color: var(--accent); border-color: var(--border); font-weight: 700; }
+  .led { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .led.ok { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .led.warn { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+  .led.err { background: var(--err); box-shadow: 0 0 8px var(--err); }
+  .led.unk { background: var(--subtle); }
+  .body-scroll { flex: 1; padding: 4px 14px 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+  .mono { font-family: 'JetBrains Mono', 'DejaVu Sans Mono', monospace; }
+
+  /* Bottom Sheet & Modal 遮罩层 */
+  .scrim {
+    position: absolute; inset: 0; background: rgba(0, 0, 0, 0.62);
+    backdrop-filter: blur(4px); display: flex; flex-direction: column; justify-content: flex-end;
+  }
+  .scrim.center { justify-content: center; padding: 18px; }
+  .sheet {
+    background: var(--surface); border-top: 1px solid var(--border);
+    border-radius: 26px 26px 0 0; padding: 12px 18px 22px;
+    display: flex; flex-direction: column; gap: 14px;
+    box-shadow: 0 -12px 36px rgba(0,0,0,0.45);
+  }
+  .sheet-handle { width: 38px; height: 4px; background: var(--subtle); border-radius: 99px; margin: 0 auto 2px; opacity: 0.5; }
+  .modal-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 24px; padding: 20px; display: flex; flex-direction: column; gap: 14px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.65);
+  }
+
+  /* 终端专用底部栏 */
+  .term-dock {
+    height: 156px; padding: 6px 12px 8px; background: var(--surface);
+    border-top: 1px solid var(--border); border-radius: 22px 22px 0 0;
+    display: flex; flex-direction: column; justify-content: space-between; flex-shrink: 0;
+  }
+  .key-row { display: flex; gap: 5px; height: 34px; align-items: center; }
+  .key-cap {
+    flex: 1; height: 30px; border-radius: 9px; background: var(--elevated);
+    border: 1px solid var(--border); color: var(--fg); font-family: monospace;
+    font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center;
+  }
+  .draft-pill {
+    height: 56px; border-radius: 14px; background: var(--bg);
+    border: 1px solid var(--border); padding: 0 12px;
+    display: flex; align-items: center; gap: 8px; font-size: 12.5px;
+  }
+  .dock-actions { display: flex; gap: 6px; height: 40px; align-items: center; }
+  .dock-btn {
+    flex: 1; height: 34px; border-radius: 10px; background: var(--elevated);
+    color: var(--muted); font-size: 11px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; gap: 4px;
+  }
+  .dock-btn.primary { flex: 1.3; background: var(--accent); color: var(--accent-fg); font-weight: 700; }
+
+  /* 语音声波动画示意 */
+  .wave-bars { display: flex; align-items: center; justify-content: center; gap: 4px; height: 36px; }
+  .wave-bars span { width: 4px; border-radius: 99px; background: var(--accent); display: inline-block; }
+</style>
+</head>
+<body data-palette="tokyo">
+
+<div class="top-header">
+  <div>
+    <h1>mTmux · Termius 悬浮岛风格（Modern Bento）全界面设计图谱</h1>
+    <p>涵盖全部 12 个页面、抽屉与安全弹窗 · 严格遵守 204.dp 终端防重排与 testTag 契约 · 点击右侧切换主题色</p>
+  </div>
+  <div class="palette-bar">
+    <button class="p-btn active" onclick="setTheme('tokyo', this)"><i class="dot-swatch" style="background:#7AA2F7"></i>Tokyo Night</button>
+    <button class="p-btn" onclick="setTheme('catppuccin', this)"><i class="dot-swatch" style="background:#CBA6F7"></i>Catppuccin</button>
+    <button class="p-btn" onclick="setTheme('emerald', this)"><i class="dot-swatch" style="background:#6EE7B7"></i>Emerald 翠绿</button>
+    <button class="p-btn" onclick="setTheme('zinc', this)"><i class="dot-swatch" style="background:#FAFAFA"></i>Zinc 钛黑</button>
+    <button class="p-btn" onclick="setTheme('nord', this)"><i class="dot-swatch" style="background:#88C0D0"></i>Nord 冰川</button>
+    <button class="p-btn" onclick="setTheme('paper', this)"><i class="dot-swatch" style="background:#0D9488"></i>Paper 暖白</button>
+  </div>
+</div>
+
+<!-- ==================== 第一组：首页、空状态、设置、服务器编辑 ==================== -->
+<div class="section-heading">第一部分：核心管理与配置流 <small>ServerHome · EmptyState · ServerEditor · Settings</small></div>
+<div class="grid">
+
+  <!-- 01. 首页：服务器与 Tmux 悬浮岛列表 -->
+  <div class="screen-card">
+    <div class="screen-title"><span>01 · 首页列表与异常缓存态</span><code>ServerHome.kt</code></div>
+    <div class="phone">
+      <div class="sbar"><span>09:41</span><span>WARM POOL · 2 ACTIVE</span></div>
+      <div class="nav">
+        <div class="nav-title">Servers</div>
+        <div style="display:flex;gap:8px">
+          <div class="icon-sq" title="设置">⚙</div>
+          <div class="icon-sq accent" title="添加服务器">＋</div>
+        </div>
+      </div>
+      <!-- 悬浮搜索与过滤岛 -->
+      <div style="padding:0 14px 10px;display:flex;gap:8px">
+        <div class="pill" style="flex:1;height:40px;border-radius:13px;color:var(--subtle)">🔍 搜索主机、会话或窗口…</div>
+        <div class="pill" style="height:40px;border-radius:13px;color:var(--muted)">⇅ 最近</div>
+        <div class="pill" style="height:40px;border-radius:13px;color:var(--accent)">📁+</div>
+      </div>
+
+      <div class="body-scroll">
+        <!-- 文件夹胶囊头 -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:2px 4px">
+          <span style="font-size:12px;font-weight:700;color:var(--accent)">▾ 生产集群 · 2</span>
+          <div style="display:flex;gap:6px">
+            <span class="pill" style="padding:3px 8px;font-size:11px">↻</span>
+            <span class="pill" style="padding:3px 8px;font-size:11px">⋮</span>
+          </div>
+        </div>
+
+        <!-- 服务器卡片 1：正常展开 + 多 Pane 展开 -->
+        <div class="island" style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="color:var(--accent);font-weight:bold">▾</span>
+              <b style="font-size:15px">家里的服务器</b>
+              <span class="pill mono" style="font-size:10px;padding:2px 7px;color:var(--muted)">14:20</span>
+            </div>
+            <div style="display:flex;gap:6px">
+              <div class="icon-sq soft mono" style="width:auto;padding:0 10px;height:28px;font-size:11px">&gt;_</div>
+              <div class="icon-sq" style="width:28px;height:28px;font-size:12px;background:var(--elevated)">↻</div>
+              <div class="icon-sq" style="width:28px;height:28px;font-size:12px;background:var(--elevated)">⋮</div>
+            </div>
+          </div>
+
+          <!-- Tmux 任务悬浮槽 1 -->
+          <div style="background:var(--elevated);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px">
+            <span class="led ok"></span>
+            <span class="mono" style="flex:1;font-size:12.5px"><b>agent</b> / codex</span>
+            <span style="font-size:10px;background:var(--accent-soft);color:var(--accent);padding:2px 7px;border-radius:99px;font-weight:600">上次使用</span>
+            <span style="color:var(--subtle)">›</span>
+          </div>
+
+          <!-- Tmux 任务悬浮槽 2 (多 Pane 展开态) -->
+          <div style="background:var(--elevated);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="led warn"></span>
+              <span class="mono" style="flex:1;font-size:12.5px"><b>dev</b> / 1 · backend</span>
+              <span style="font-size:11px;color:var(--muted)">⌄ 2</span>
+            </div>
+            <div style="padding-left:14px;border-left:2px solid var(--border);display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;align-items:center;gap:8px;font-size:11.5px" class="mono">
+                <span class="led warn"></span><span style="flex:1">窗格 %1 (nvim)</span><span style="color:var(--subtle)">›</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11.5px" class="mono">
+                <span class="led ok"></span><span style="flex:1">窗格 %2 (cargo watch)</span><span style="color:var(--subtle)">›</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 服务器卡片 2：正在探测刷新中 -->
+        <div class="island" style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="color:var(--muted)">▾</span>
+              <b style="font-size:15px">AI 训练节点 A100</b>
+            </div>
+            <div style="display:flex;gap:6px">
+              <div class="icon-sq soft mono" style="width:auto;padding:0 10px;height:28px;font-size:11px">&gt;_</div>
+              <div class="icon-sq" style="width:28px;height:28px;font-size:11px;color:var(--accent)">◌</div>
+              <div class="icon-sq" style="width:28px;height:28px;font-size:12px;background:var(--elevated)">⋮</div>
+            </div>
+          </div>
+          <div style="background:var(--accent-soft);color:var(--accent);padding:7px 10px;border-radius:10px;font-size:11px;display:flex;align-items:center;gap:8px">
+            <span>◌</span><span>跳板 1 → 正在验证身份…</span>
+          </div>
+        </div>
+
+        <!-- 服务器卡片 3：刷新失败 / 需确认指纹横幅 -->
+        <div class="island" style="display:flex;flex-direction:column;gap:8px;border-color:rgba(247,118,142,0.3)">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="color:var(--muted)">›</span>
+              <b style="font-size:15px">测试环境 #3</b>
+            </div>
+            <div style="display:flex;gap:6px">
+              <div class="icon-sq soft mono" style="width:auto;padding:0 10px;height:28px;font-size:11px">&gt;_</div>
+              <div class="icon-sq" style="width:28px;height:28px;font-size:12px;background:var(--elevated)">↻</div>
+              <div class="icon-sq" style="width:28px;height:28px;font-size:12px;background:var(--elevated)">⋮</div>
+            </div>
+          </div>
+          <div style="background:var(--err-soft);color:var(--err);padding:7px 10px;border-radius:10px;font-size:11px;display:flex;justify-content:space-between;align-items:center">
+            <span>⚠ 需确认主机指纹 · 点击核对</span>
+            <b>查看 ›</b>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 02. 首页空状态 + 新建/移动文件夹弹窗 -->
+  <div class="screen-card">
+    <div class="screen-title"><span>02 · 空状态与文件夹管理弹窗</span><code>ServerOrganization.kt</code></div>
+    <div class="phone">
+      <div class="sbar"><span>09:41</span><span>mTmux</span></div>
+      <div class="nav">
+        <div class="nav-title">Servers</div>
+        <div style="display:flex;gap:8px"><div class="icon-sq">⚙</div><div class="icon-sq accent">＋</div></div>
+      </div>
+      <div style="padding:40px 20px;display:flex;flex-direction:column;align-items:center;text-align:center">
+        <div class="island" style="width:100%;padding:32px 20px;display:flex;flex-direction:column;align-items:center;gap:12px">
+          <div class="icon-sq soft mono" style="width:56px;height:56px;border-radius:18px;font-size:22px">&gt;_</div>
+          <b style="font-size:16px">添加服务器，连接你的终端</b>
+          <span style="font-size:12px;color:var(--muted);line-height:1.6">支持多级 SSH Jump Host 跳板链、<br>Tmux 会话自动探测与离线语音草稿</span>
+          <div class="pill" style="background:var(--accent);color:var(--accent-fg);font-weight:700;padding:10px 22px;margin-top:6px">＋ 添加第一台服务器</div>
+        </div>
+      </div>
+
+      <!-- 叠加展示：新建/重命名文件夹 & 移动分组弹窗 -->
+      <div class="scrim center" style="background:rgba(0,0,0,0.45)">
+        <div class="modal-box">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="icon-sq soft">📁</div>
+            <div>
+              <b style="font-size:15px">新建文件夹</b>
+              <div style="font-size:11px;color:var(--muted)">对本地服务器列表进行单层归类</div>
+            </div>
+          </div>
+          <div style="background:var(--bg);border:1px solid var(--accent);border-radius:12px;padding:10px 12px">
+            <div style="font-size:10px;color:var(--accent);margin-bottom:3px">文件夹名称 (最多 60 字符)</div>
+            <div style="font-size:13.5px;font-weight:600">核心生产环境<span style="color:var(--accent)">|</span></div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px">
+            <div class="pill" style="padding:8px 16px;color:var(--muted)">取消</div>
+            <div class="pill" style="padding:8px 18px;background:var(--accent);color:var(--accent-fg);font-weight:700">保存</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 03. 添加/编辑服务器（含多级 Jump Host 路由） -->
+  <div class="screen-card">
+    <div class="screen-title"><span>03 · 模块化服务器与多级跳板表单</span><code>ServerEditor.kt</code></div>
+    <div class="phone">
+      <div class="sbar"><span>09:41</span><span>FLAG_SECURE ON</span></div>
+      <div class="nav">
+        <div class="pill" style="color:var(--muted)">取消</div>
+        <div class="nav-title" style="font-size:16px">编辑服务器</div>
+        <div class="pill" style="background:var(--accent);color:var(--accent-fg);font-weight:700">保存</div>
+      </div>
+      <div class="body-scroll">
+        <!-- 基础卡片 -->
+        <div class="island" style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:0.5px">TARGET HOST · 目标服务器</div>
+          <div style="background:var(--bg);border-radius:12px;padding:8px 12px;border:1px solid var(--border)">
+            <div style="font-size:10px;color:var(--muted)">别名 (可选)</div>
+            <div style="font-size:13px;font-weight:600">家里的服务器</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <div style="flex:2.2;background:var(--bg);border-radius:12px;padding:8px 12px;border:1px solid var(--border)">
+              <div style="font-size:10px;color:var(--muted)">主机地址 (IP/域名)</div>
+              <div class="mono" style="font-size:12.5px">10.0.0.8</div>
+            </div>
+            <div style="flex:1;background:var(--bg);border-radius:12px;padding:8px 12px;border:1px solid var(--border)">
+              <div style="font-size:10px;color:var(--muted)">端口</div>
+              <div class="mono" style="font-size:12.5px">22</div>
+            </div>
+          </div>
+          <div style="background:var(--bg);border-radius:12px;padding:8px 12px;border:1px solid var(--border)">
+            <div style="font-size:10px;color:var(--muted)">用户名</div>
+            <div class="mono" style="font-size:12.5px">makarov</div>
+          </div>
+        </div>
+
+        <!-- 认证卡片 -->
+        <div class="island" style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:0.5px">AUTHENTICATION · 认证方式</div>
+          <div style="display:flex;background:var(--bg);padding:3px;border-radius:12px">
+            <div style="flex:1;text-align:center;padding:6px;background:var(--elevated);color:var(--accent);border-radius:9px;font-size:12px;font-weight:700">🔑 私钥认证</div>
+            <div style="flex:1;text-align:center;padding:6px;color:var(--muted);font-size:12px">••• 密码认证</div>
+          </div>
+          <div style="background:var(--accent-soft);border:1px dashed var(--accent);border-radius:12px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:12px;color:var(--accent);font-weight:600">✓ 私钥已导入就绪</span>
+            <div style="display:flex;gap:6px">
+              <span class="pill" style="font-size:11px;padding:3px 8px">文件</span>
+              <span class="pill" style="font-size:11px;padding:3px 8px">粘贴</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 高级选项与多级跳板链 -->
+        <div class="island" style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:12px;font-weight:700">⌄ 高级选项 · 2 级跳板</span>
+            <span class="pill" style="font-size:10px;color:var(--accent);background:var(--accent-soft)">生产集群 ▾</span>
+          </div>
+          <!-- 路由拓扑胶囊条 -->
+          <div style="background:var(--bg);border-radius:10px;padding:8px 10px;font-size:11px;color:var(--accent);display:flex;align-items:center;justify-content:space-between" class="mono">
+            <span>📱 手机</span><span>→</span><span>🛡 跳板 1</span><span>→</span><span>🛡 跳板 2</span><span>→</span><span>🎯 目标</span>
+          </div>
+          <!-- 折叠的跳板项 -->
+          <div style="background:var(--elevated);border-radius:12px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center;font-size:12px">
+            <span><b>› 跳板 1</b> · <span class="mono" style="color:var(--muted)">gw@bastion.io:22</span></span>
+            <span style="color:var(--err);font-size:11px">↓ 删</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <div class="pill" style="flex:1;justify-content:center;border-radius:10px;padding:8px">＋ 添加跳板</div>
+            <div class="pill" style="flex:1;justify-content:center;border-radius:10px;padding:8px;color:var(--accent)">从已存服务器选</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 04. 全局设置页（新增多主题色卡选择器） -->
+  <div class="screen-card">
+    <div class="screen-title"><span>04 · 全局偏好与主题中心</span><code>ServerHome("settings")</code></div>
+    <div class="phone">
+      <div class="sbar"><span>09:41</span><span>SETTINGS</span></div>
+      <div class="nav">
+        <div class="icon-sq">‹</div>
+        <div class="nav-title" style="font-size:17px">设置</div>
+        <div style="width:34px"></div>
+      </div>
+      <div class="body-scroll">
+        <!-- 主题与明暗卡片 -->
+        <div class="island" style="display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--accent)">APPEARANCE &amp; THEME · 外观与主题</div>
+          <div style="display:flex;background:var(--bg);padding:3px;border-radius:12px">
+            <div style="flex:1;text-align:center;padding:6px;font-size:12px;color:var(--muted)">跟随系统</div>
+            <div style="flex:1;text-align:center;padding:6px;font-size:12px;color:var(--muted)">浅色</div>
+            <div style="flex:1;text-align:center;padding:6px;background:var(--elevated);color:var(--accent);border-radius:9px;font-size:12px;font-weight:700">深色</div>
+          </div>
+          <!-- 新增：Bento 色彩主题横向胶囊 -->
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+            <div class="pill" style="border-radius:10px;border-color:var(--accent);background:var(--accent-soft);font-size:11px"><i class="dot-swatch" style="background:#7AA2F7"></i>Tokyo</div>
+            <div class="pill" style="border-radius:10px;font-size:11px"><i class="dot-swatch" style="background:#CBA6F7"></i>Mocha</div>
+            <div class="pill" style="border-radius:10px;font-size:11px"><i class="dot-swatch" style="background:#6EE7B7"></i>Emerald</div>
+          </div>
+          <div style="display:flex;gap:6px;padding-top:4px;border-top:1px solid var(--border)">
+            <span class="pill" style="font-size:11px">跟随系统</span>
+            <span class="pill" style="font-size:11px;background:var(--accent-soft);color:var(--accent);font-weight:700">简体中文</span>
+            <span class="pill" style="font-size:11px">English</span>
+          </div>
+        </div>
+
+        <!-- 语音与隐私卡片 -->
+        <div class="island" style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:11px;font-weight:700;color:var(--accent)">PRIVACY &amp; VOICE · 隐私与离线语音</div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:13px;font-weight:600">隐私显示与防截屏保护</div>
+              <div style="font-size:11px;color:var(--muted)">隐藏 IP/用户名，启用 FLAG_SECURE</div>
+            </div>
+            <div style="width:42px;height:24px;background:var(--accent);border-radius:99px;padding:3px;display:flex;justify-content:flex-end"><i style="width:18px;height:18px;background:var(--accent-fg);border-radius:50%"></i></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--border)">
+            <span style="font-size:13px">Whisper 离线模型语言</span>
+            <span class="pill" style="font-size:11px;color:var(--accent)">自动检测 (Auto) ▾</span>
+          </div>
+        </div>
+
+        <!-- 终端字号与调试日志卡片 -->
+        <div class="island" style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:11px;font-weight:700;color:var(--accent)">TERMINAL &amp; DIAGNOSTICS · 终端与诊断</div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:13px">终端字号</span>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="icon-sq" style="width:28px;height:28px;background:var(--elevated)">−</div>
+              <b class="mono" style="font-size:14px">14</b>
+              <div class="icon-sq" style="width:28px;height:28px;background:var(--elevated)">＋</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;padding-top:8px;border-top:1px solid var(--border)">
+            <div class="pill" style="flex:1;justify-content:center;border-radius:10px;padding:8px;color:var(--accent)">导出诊断日志 (10MiB)</div>
+            <div class="pill" style="justify-content:center;border-radius:10px;padding:8px;color:var(--muted)">清空</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 第二组：终端工作台、断线重连、语音输入、工具抽屉 ==================== -->
+<div class="section-heading">第二部分：沉浸式终端工作台与悬浮抽屉 <small>TerminalView · DisconnectedBanner · VoiceInputSheet · ToolsSheet</small></div>
+<div class="grid">
+
+  <!-- 05. 终端主界面（正常连接 + 机械键帽 + Prompt 输入框） -->
+  <div class="screen-card">
+    <div class="screen-title"><span>05 · 终端工作台（固定网格防抖）</span><code>MainActivity.kt</code></div>
+    <div class="phone">
+      <div class="sbar"><span>09:41</span><span>80×24 ·BOUND PANE %1</span></div>
+      <!-- 48dp 悬浮胶囊顶栏 -->
+      <div style="height:48px;padding:0 12px;display:flex;align-items:center;gap:8px">
+        <div class="icon-sq" style="width:34px;height:34px">‹</div>
+        <div class="pill" style="flex:1;height:34px;justify-content:center;background:var(--surface)">
+          <span class="led ok"></span>
+          <b style="font-size:12.5px">家里的服务器</b>
+          <span style="color:var(--muted);font-size:12px">· agent / codex</span>
+        </div>
+        <div class="icon-sq soft" style="width:34px;height:34px" title="回到底端">⇣</div>
+      </div>
+
+      <!-- 终端内容区 -->
+      <div style="flex:1;padding:12px 14px;font-size:11.5px;line-height:1.68;overflow:hidden" class="mono">
+        <div style="color:var(--subtle)">╭─ ~/workspace/mtmux ────────────────</div>
+        <div style="color:var(--accent)">│ ● Codex CLI · Bento UI Refinement</div>
+        <div style="color:var(--subtle)">╰────────────────────────────────────</div>
+        <br>
+        <div>› 正在重构 <span style="color:var(--accent)">ServerHome.kt</span> 与 <span style="color:var(--accent)">MainActivity.kt</span></div>
+        <br>
+        <div style="color:var(--ok)">✓ 保持 gridHeight = maxHeight - 204.dp</div>
+        <div style="color:var(--muted)">  软键盘弹出仅裁剪底部视口，不触发 PTY 重排</div>
+        <div style="color:var(--ok)">✓ 保留全部 38 个自动化 UI 测试 testTag</div>
+        <br>
+        <div style="color:var(--subtle)">─────────────────────────────────────</div>
+        <div><span style="color:var(--ok)">➜</span> <b>mtmux</b> <span style="color:var(--muted)">git:(main)</span> <span style="background:var(--accent);color:var(--accent-fg)">&nbsp;</span></div>
+      </div>
+
+      <!-- 156dp 底部操控岛 -->
+      <div class="term-dock">
+        <div class="key-row">
+          <div class="key-cap">Esc</div>
+          <div class="key-cap">Tab</div>
+          <div class="key-cap" style="color:var(--err)">Ctrl-C</div>
+          <div class="key-cap">↑</div>
+          <div class="key-cap">↓</div>
+          <div class="key-cap" style="color:var(--accent);background:var(--accent-soft)">Enter</div>
+        </div>
+        <div class="draft-pill mono">
+          <span style="color:var(--accent);font-weight:bold">❯</span>
+          <span style="flex:1">./gradlew connectedAndroidTest</span>
+        </div>
+        <div class="dock-actions">
+          <div class="dock-btn">🛠 工具</div>
+          <div class="dock-btn">⌨ 收起</div>
+          <div class="dock-btn" style="flex:0.7;color:var(--accent);background:var(--accent-soft)">🎤</div>
+          <div class="dock-btn">⚡ 快捷</div>
+          <div class="dock-btn primary">发送回车 ↵</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 06. 终端断线保留历史 + 悬浮重连岛 -->
+  <div class="screen-card">
+    <div class="screen-title"><span>06 · 异常断线/拦截悬浮横幅</span><code>connection-status</code></div>
+    <div class="phone">
+      <div class="sbar"><span>09:41</span><span>DISCONNECTED · HISTORY KEPT</span></div>
+      <div style="height:48px;padding:0 12px;display:flex;align-items:center;gap:8px">
+        <div class="icon-sq" style="width:34px;height:34px">‹</div>
+        <div class="pill" style="flex:1;height:34px;justify-content:center;background:var(--surface)">
+          <span class="led err"></span>
+          <b style="font-size:12.5px">家里的服务器</b>
+          <span style="color:var(--muted);font-size:12px">· 已断开</span>
+        </div>
+        <div class="icon-sq" style="width:34px;height:34px">⇣</div>
+      </div>
+
+      <div style="flex:1;position:relative;padding:12px 14px;font-size:11.5px;line-height:1.68" class="mono">
+        <div style="opacity:0.45">
+          <div>[14:19:02] Building target :app:assembleVoiceDebug...</div>
+          <div>[14:19:45] Compiling Kotlin sources...</div>
+          <div>[14:20:10] Connection reset by peer (10054)</div>
+        </div>
+
+        <!-- 顶部悬浮断线重连胶囊岛（不挤压底层终端尺寸） -->
+        <div class="island" style="position:absolute;top:10px;left:12px;right:12px;background:var(--surface);border-color:var(--err);box-shadow:0 12px 32px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="led err"></span>
+            <b style="font-size:12.5px;color:var(--fg)">目标服务器连接已断开（ネットワーク中断）</b>
+          </div>
+          <div style="font-size:11px;color:var(--err)">已保留上次屏幕历史，当前无法发送输入。</div>
+          <div style="display:flex;gap:8px;margin-top:2px">
+            <div class="pill" style="background:var(--accent);color:var(--accent-fg);font-weight:700;padding:6px 14px">↻ 重连最近任务</div>
+            <div class="pill" style="padding:6px 14px;color:var(--muted)">返回重选任务</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="term-dock" style="opacity:0.6">
+        <div class="key-row">
+          <div class="key-cap">Esc</div><div class="key-cap">Tab</div><div class="key-cap">Ctrl-C</div><div class="key-cap">↑</div><div class="key-cap">↓</div><div class="key-cap">Enter</div>
+        </div>
+        <div class="draft-pill mono"><span style="color:var(--muted)">❯</span><span style="color:var(--muted)">草稿已安全保留，重连后可继续发送…</span></div>
+        <div class="dock-actions">
+          <div class="dock-btn">🛠 工具</div><div class="dock-btn">⌨ 收起</div><div class="dock-btn" style="flex:0.7">🎤</div><div class="dock-btn">⚡ 快捷</div><div class="dock-btn">发送回车</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 07. 离线语音输入悬浮面板 (Whisper.cpp Voice Flavor) -->
+  <div class="screen-card">
+    <div class="screen-title"><span>07 · Whisper 离线语音转写胶囊岛</span><code>VoiceIntegration.kt</code></div>
+    <div class="phone">
+      <div class="sbar"><span>09:41</span><span>WHISPER BASE Q5_1 · OFFLINE</span></div>
+      <div style="flex:1;padding:20px;opacity:0.3" class="mono">
+        <div>➜ mtmux git:(main)</div>
+      </div>
+
+      <!-- 语音输入 BottomSheet -->
+      <div class="scrim">
+        <div class="sheet">
+          <div class="sheet-handle"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="led err"></span>
+              <b style="font-size:16px">离线语音输入</b>
+              <span class="pill" style="font-size:10px;color:var(--ok);background:rgba(16,185,129,0.12);border:none">🔒 本机 Whisper</span>
+            </div>
+            <span class="pill mono" style="font-size:11px;color:var(--accent)">中/英 Auto ▾</span>
+          </div>
+
+          <!-- 声波与计时器岛 -->
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:10px">
+            <div class="wave-bars">
+              <span style="height:10px"></span><span style="height:22px"></span><span style="height:32px"></span>
+              <span style="height:16px"></span><span style="height:28px"></span><span style="height:36px"></span>
+              <span style="height:18px"></span><span style="height:26px"></span><span style="height:12px"></span>
+            </div>
+            <div class="mono" style="font-size:12px;color:var(--muted)">正在录音 <b style="color:var(--fg)">00:12</b> / 01:00</div>
+          </div>
+
+          <!-- 转写结果预览区 -->
+          <div style="background:var(--elevated);border-radius:14px;padding:12px;font-size:13px;line-height:1.5">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:4px">转写结果（仅填入草稿框，不会自动发送）：</div>
+            <div>帮我检查一下 <span class="mono" style="color:var(--accent)">SshClient.kt</span> 里面的跳板机超时重连逻辑</div>
+          </div>
+
+          <!-- 操作按钮 -->
+          <div style="display:flex;gap:8px">
+            <div class="pill" style="flex:1;justify-content:center;padding:11px;border-radius:12px;color:var(--muted)">取消</div>
+            <div class="pill" style="flex:1;justify-content:center;padding:11px;border-radius:12px;color:var(--err);background:var(--err-soft);font-weight:700">■ 停止录音</div>
+            <div class="pill" style="flex:1.4;justify-content:center;padding:11px;border-radius:12px;background:var(--accent);color:var(--accent-fg);font-weight:700">填入草稿 ↵</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 08. 终端工具面板 (Tools BottomSheet) -->
+  <div class="screen-card">
+    <div class="screen-title"><span>08 · 终端工具与窗格绑定抽屉</span><code>showTools Sheet</code></div>
+    <div class="phone">
+      <div class="sbar"><span>09:41</span><span>TOOLS SHEET</span></div>
+      <div class="scrim">
+        <div class="sheet">
+          <div class="sheet-handle"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <b style="font-size:17px">终端工具箱</b>
+            <span class="pill mono" style="font-size:11px;color:var(--muted)">80×24 · 14.2 KB</span>
+          </div>
+
+          <!-- 当前回复目标核对岛 -->
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:12px;display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:11px;color:var(--muted)">当前锁定回复窗格 (Bound Pane)</div>
+              <div class="mono" style="font-size:13.5px;font-weight:700;color:var(--accent);margin-top:2px">Pane %1 (agent / codex)</div>
+            </div>
+            <div class="pill" style="color:var(--accent);background:var(--accent-soft);font-weight:600">重新绑定当前窗格</div>
+          </div>
+
+          <!-- 快捷动作宫格 (2x2 Bento Grid) -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="background:var(--elevated);border-radius:14px;padding:12px;display:flex;align-items:center;gap:10px">
+              <span style="font-size:18px">📋</span>
+              <div><b style="font-size:12.5px;display:block">选择复制文本</b><span style="font-size:10px;color:var(--muted)">打开静态快照</span></div>
+            </div>
+            <div style="background:var(--elevated);border-radius:14px;padding:12px;display:flex;align-items:center;gap:10px">
+              <span style="font-size:18px">📥</span>
+              <div><b style="font-size:12.5px;display:block">仅粘贴草稿</b><span style="font-size:10px;color:var(--muted)">不附带回车符</span></div>
+            </div>
+          </div>
+
+          <!-- 触控与字号调节岛 -->
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:12.5px">远端触摸滚轮与点击 (Tmux Mouse)</span>
+              <div style="width:38px;height:22px;background:var(--accent);border-radius:99px"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:12.5px">滚动速度 <b class="mono" style="color:var(--accent)">1.0×</b></span>
+              <div style="display:flex;gap:6px">
+                <span class="pill" style="font-size:11px">字号 −</span>
+                <span class="pill" style="font-size:11px">字号 ＋</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:12px;color:var(--err)">🗑 清空当前草稿</span>
+            <span class="pill" style="padding:8px 20px">关闭</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== 第三组：快捷回复、静态复制、指纹安全拦截、私钥/多行预览 ==================== -->
+<div class="section-heading">第三部分：快捷回复、文本快照与安全确认弹窗 <small>QuickReplySheet · TerminalCopyDialog · HostKeyChallenge · PastePreview</small></div>
+<div class="grid">
+
+  <!-- 09. 快捷回复面板 + 冲突追加/替换弹窗 -->
+  <div class="screen-card">
+    <div class="screen-title"><span>09 · 快捷指令面板与草稿合并</span><code>QuickReplySheet.kt</code></div>
+    <div class="phone">
+      <div class="sbar"><span>09:41</span><span>QUICK REPLIES</span></div>
+      <div class="scrim">
+        <div class="sheet">
+          <div class="sheet-handle"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <b style="font-size:17px">快捷回复</b>
+              <div style="font-size:11px;color:var(--muted)">点击填入草稿框，确认后再发送 (最多 12 条)</div>
+            </div>
+            <div class="pill" style="color:var(--accent);background:var(--accent-soft);font-weight:700">＋ 新增</div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="background:var(--elevated);border-radius:12px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
+              <span class="mono" style="font-size:12px">继续执行下一步，并运行全部单元测试</span>
+              <span style="font-size:11px;color:var(--accent)">编辑</span>
+            </div>
+            <div style="background:var(--elevated);border-radius:12px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
+              <span class="mono" style="font-size:12px">git status -sb &amp;&amp; git diff --stat</span>
+              <span style="font-size:11px;color:var(--accent)">编辑</span>
+            </div>
+            <div style="background:var(--elevated);border-radius:12px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
+              <span class="mono" style="font-size:12px">请先不要修改代码，给我列出排查方案</span>
+              <span style="font-size:11px;color:var(--accent)">编辑</span>
+            </div>
+          </div>
+
+          <!-- 叠加展示：当草稿非空时的追加/替换询问弹窗 -->
+          <div style="background:var(--bg);border:1px solid var(--accent);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px">
+            <b style="font-size:13px;color:var(--accent)">输入框已有未发送草稿</b>
+            <span style="font-size:11.5px;color:var(--muted)">如何处理刚选择的快捷回复 / 语音文本？</span>
+            <div style="display:flex;justify-content:flex-end;gap:8px">
+              <span class="pill" style="font-size:11px">取消</span>
+              <span class="pill" style="font-size:11px;color:var(--warn)">替换原草稿</span>
+              <span class="pill" style="font-size:11px;background:var(--accent);color:var(--accent-fg);font-weight:700">追加在末尾</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. 终端静态副本选择复制页 -->
+  <div class="screen-card">
+    <div class="screen-title"><span>10 · 终端文本静态快照复制页</span><code>TerminalCopyDialog.kt</code></div>
+    <div class="phone">
+      <div class="sbar"><span>09:41</span><span>STATIC SNAPSHOT · READ ONLY</span></div>
+      <div class="nav">
+        <div class="pill">‹ 返回终端</div>
+        <b style="font-size:15px">选择复制</b>
+        <div class="pill" style="background:var(--accent);color:var(--accent-fg);font-weight:700">复制全部</div>
+      </div>
+      <div style="padding:0 16px 8px;font-size:11px;color:var(--muted)">
+        长按下方静态副本即可自由拖动系统选区手柄，不会触发远端鼠标事件。
+      </div>
+      <div style="flex:1;margin:0 14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:14px;font-size:11.5px;line-height:1.7" class="mono">
+        <div style="color:var(--muted)">$ ./gradlew testDebugUnitTest</div>
+        <div>&gt; Task :core:test</div>
+        <div style="background:var(--accent-soft);color:var(--accent);border-radius:4px;padding:2px 4px">
+          ✓ AgentSignalsTest &gt; detects attention prompt PASSED<br>
+          ✓ WarmConnectionPoolTest &gt; reuses active client PASSED
+        </div>
+        <div>&nbsp;</div>
+        <div style="color:var(--ok)">BUILD SUCCESSFUL in 4s</div>
+        <div style="color:var(--muted)">28 actionable tasks: 28 executed</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 11. SSH 主机指纹首次核对 / 密钥变更高危拦截弹窗 -->
+  <div class="screen-card">
+    <div class="screen-title"><span>11 · 主机指纹核对与变更拦截</span><code>HostKeyChallenge</code></div>
+    <div class="phone">
+      <div class="sbar"><span>09:41</span><span>HOST KEY VERIFICATION</span></div>
+      <div class="scrim center">
+        <!-- 上半：首次连接信任核对 -->
+        <div class="modal-box" style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="icon-sq soft">🛡</div>
+            <div>
+              <b style="font-size:15px">首次连接：核对主机指纹</b>
+              <div class="mono" style="font-size:11px;color:var(--muted)">10.0.0.8:22 (经跳板 1)</div>
+            </div>
+          </div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:10px;font-size:11px;word-break:break-all;color:var(--accent)" class="mono">
+            SHA256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px">
+            <span class="pill" style="padding:7px 14px">关闭</span>
+            <span class="pill" style="padding:7px 16px;background:var(--accent);color:var(--accent-fg);font-weight:700">信任并保存</span>
+          </div>
+        </div>
+
+        <!-- 下半：主机指纹变化高危拦截 -->
+        <div class="modal-box" style="border-color:var(--err)">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="icon-sq" style="background:var(--err-soft);color:var(--err);border:none">⚠</div>
+            <div>
+              <b style="font-size:15px;color:var(--err)">主机密钥已改变，已阻止连接！</b>
+              <div style="font-size:11px;color:var(--muted)">可能存在中间人攻击或重装了系统</div>
+            </div>
+          </div>
+          <div style="background:var(--err-soft);border-radius:12px;padding:10px;font-size:11px;color:var(--err)" class="mono">
+            新指纹: SHA256:4b227777d4dd1fc61c6f884f48641d02
+          </div>
+          <div style="display:flex;justify-content:flex-end">
+            <span class="pill" style="padding:7px 18px;background:var(--err);color:#000;font-weight:700">我知道了，立即断开</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 12. 私钥粘贴导入弹窗 + 多行命令发送前预览弹窗 -->
+  <div class="screen-card">
+    <div class="screen-title"><span>12 · 私钥安全粘贴与多行发送预览</span><code>PrivateKey &amp; Preview</code></div>
+    <div class="phone">
+      <div class="sbar"><span>09:41</span><span>FLAG_SECURE DIALOGS</span></div>
+      <div class="scrim center">
+        <!-- 上半：私钥粘贴弹窗 -->
+        <div class="modal-box" style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <b style="font-size:15px">粘贴导入 SSH 私钥</b>
+            <span class="pill" style="font-size:10px;color:var(--accent)">读取剪贴板</span>
+          </div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:10px;font-size:11px;color:var(--muted)" class="mono">
+            -----BEGIN OPENSSH PRIVATE KEY-----<br>
+            •••••••••••••••••••••••••••••••••••<br>
+            -----END OPENSSH PRIVATE KEY-----
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:11px;color:var(--muted)">👁 显示明文</span>
+            <div style="display:flex;gap:8px">
+              <span class="pill" style="padding:7px 14px">取消</span>
+              <span class="pill" style="padding:7px 16px;background:var(--accent);color:var(--accent-fg);font-weight:700">加密导入</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 下半：多行命令发送前安全预览 -->
+        <div class="modal-box">
+          <div>
+            <b style="font-size:15px">发送并回车至：家里的服务器</b>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">包含多行内容，请核对目标与命令正文：</div>
+          </div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:10px;font-size:11.5px;line-height:1.5" class="mono">
+            git add -A<br>
+            git commit -m "feat(ui): bento theme overhaul"<br>
+            git push origin main
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px">
+            <span class="pill" style="padding:7px 14px">取消</span>
+            <span class="pill" style="padding:7px 16px;background:var(--accent);color:var(--accent-fg);font-weight:700">确认发送 ↵</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function setTheme(name, btn) {
+    document.body.setAttribute('data-palette', name);
+    document.querySelectorAll('.p-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>

@@ -135,10 +135,12 @@ class TerminalUiTest {
 
     @Test fun lightDarkAndSystemThemesPersistAndKeepTerminalContent() {
         val prefs=compose.activity.getSharedPreferences("terminal-settings",0)
+        val previousPalette=prefs.getString("palette",null)
         val mode=compose.activity.getSystemService(android.app.UiModeManager::class.java)
         try {
             compose.onNodeWithTag("settings").performClick()
-            compose.onNodeWithTag("theme-LIGHT").performClick().assertIsSelected()
+            compose.onNodeWithTag("palette-EMERALD").performScrollTo().performClick()
+            compose.onNodeWithTag("theme-LIGHT").performScrollTo().performClick().assertIsSelected()
             saveScreenshot("settings-light")
             compose.onNodeWithText("‹ 返回").performClick()
             saveScreenshot("home-light")
@@ -156,7 +158,7 @@ class TerminalUiTest {
             compose.runOnUiThread { mode.setApplicationNightMode(android.app.UiModeManager.MODE_NIGHT_NO) }
             compose.waitUntil(10000) { evaluate(view,"terminal.options.theme.background")=="\"#f7faf8\"" }
             compose.onNodeWithTag("theme-DARK").performClick()
-            compose.waitUntil(10000) { evaluate(view,"terminal.options.theme.foreground")=="\"#e2eee8\"" }
+            compose.waitUntil(10000) { evaluate(view,"terminal.options.theme.foreground")=="\"#e9efec\"" }
             compose.onNodeWithTag("theme-LIGHT").performClick()
             compose.onNodeWithText("‹ 返回").performClick()
             showTerminalForFixture()
@@ -174,7 +176,7 @@ class TerminalUiTest {
             compose.onNodeWithTag("close-terminal-copy").performClick()
             assertTrue(evaluate(view,"terminalSnapshot().text").contains("浅色终端"))
         } finally {
-            prefs.edit().remove("appearance").commit()
+            prefs.edit().remove("appearance").putString("palette",previousPalette).commit()
             compose.runOnUiThread { mode.setApplicationNightMode(android.app.UiModeManager.MODE_NIGHT_AUTO) }
             compose.activityRule.scenario.recreate()
         }
@@ -529,13 +531,13 @@ class TerminalUiTest {
             compose.onNodeWithTag("settings").performClick()
             compose.onNodeWithTag("privacy-display").performScrollTo().assertIsOn().performClick()
             assertSecure(true)
-            compose.onNodeWithText("‹ 返回").performScrollTo().performClick()
+            compose.onNodeWithText("‹ 返回").performClick()
             compose.onNodeWithTag("server-title-${profile.id}",useUnmergedTree=true).assertTextContains("private-user@192.0.2.67",substring=true)
             compose.activityRule.scenario.recreate()
             assertSecure(true)
             compose.onNodeWithTag("settings").performClick()
             compose.onNodeWithTag("privacy-display").performScrollTo().assertIsOff().performClick()
-            compose.onNodeWithText("‹ 返回").performScrollTo().performClick()
+            compose.onNodeWithText("‹ 返回").performClick()
             assertSecure(false)
             compose.onNodeWithTag("server-title-${profile.id}",useUnmergedTree=true).assertTextContains(label,substring=true)
             compose.onNodeWithTag("add-server").performClick()
@@ -637,7 +639,7 @@ class TerminalUiTest {
         compose.waitForIdle()
         compose.onNodeWithTag("command-input").assertTextContains("pwd")
         compose.runOnUiThread { assertTrue("IME must not collapse WebView to zero", view.height >= 80 * view.resources.displayMetrics.density) }
-        compose.onNodeWithText("收起键盘").performClick()
+        compose.onNodeWithTag("hide-keyboard").performClick()
         compose.onNodeWithTag("terminal-panel").assertIsDisplayed()
         compose.waitUntil(10000) { evaluate(view, "terminal.rows > 1") == "true" }
         assertPaintedGreenText(view, "after-keyboard")
@@ -712,7 +714,7 @@ class TerminalUiTest {
             }
             compose.waitUntil(30000) {evaluate(view,"connected")=="true"}
             compose.onNodeWithTag("command-input").performTextInput("UNSENT_FUNCTION_DRAFT")
-            compose.onNodeWithText("收起键盘").performClick()
+            compose.onNodeWithTag("hide-keyboard").performClick()
             fun verifyWidth(labels:List<String>) {
                 val bounds=labels.map {compose.onNodeWithTag("terminal-key-$it").fetchSemanticsNode().boundsInRoot}
                 val bar=compose.onNodeWithTag("terminal-key-pages").fetchSemanticsNode().boundsInRoot
@@ -763,7 +765,7 @@ class TerminalUiTest {
                 val location=IntArray(2);compose.runOnUiThread {view.getLocationOnScreen(location)}
                 assertEquals("Native WebView must not move",top[1],location[1])
                 if(it==0) saveScreenshot(if(alternate) "terminal-alternate-keyboard" else "terminal-history-keyboard")
-                compose.onNodeWithText("收起键盘").performClick()
+                compose.onNodeWithTag("hide-keyboard").performClick()
                 compose.waitUntil(10000) { var closed=false;compose.runOnUiThread {closed=ViewCompat.getRootWindowInsets(view)?.isVisible(WindowInsetsCompat.Type.ime())==false};closed }
                 Thread.sleep(250)
                 assertEquals(before,evaluate(view,anchor))
@@ -1008,7 +1010,7 @@ class TerminalUiTest {
             saveScreenshot("ui-settings")
             compose.onNodeWithTag("settings-speed").performScrollTo().performTouchInput { click(androidx.compose.ui.geometry.Offset(width*0.9f,height*0.5f)) }
             val updated=ServerCache(compose.activity).read(profile)!!.updatedAt
-            compose.onNodeWithText("‹ 返回").performScrollTo().performClick()
+            compose.onNodeWithText("‹ 返回").performClick()
             compose.waitForIdle()
             assertEquals(updated,ServerCache(compose.activity).read(profile)!!.updatedAt)
             compose.activityRule.scenario.recreate()
@@ -1017,7 +1019,7 @@ class TerminalUiTest {
             // Internal navigation never refreshes, even when the interval has expired.
             ServerCache(compose.activity).markAttempt(profile,System.currentTimeMillis()-30*60*1000L)
             compose.onNodeWithTag("settings").performClick()
-            compose.onNodeWithText("‹ 返回").performScrollTo().performClick()
+            compose.onNodeWithText("‹ 返回").performClick()
             compose.waitForIdle()
             assertEquals(updated,ServerCache(compose.activity).read(profile)!!.updatedAt)
             compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
@@ -1601,7 +1603,7 @@ class TerminalUiTest {
                 assertEquals(tmuxAnchor,state("#{pane_width}:#{pane_height}:#{scroll_position}:#{pane_in_mode}"))
                 assertEquals(topLine,evaluate(view,"terminal.buffer.active.getLine(terminal.buffer.active.viewportY).translateToString(true)"))
                 if(it==0) saveScreenshot("terminal-tmux-keyboard-anchor")
-                compose.onNodeWithText("收起键盘").performClick()
+                compose.onNodeWithTag("hide-keyboard").performClick()
                 compose.waitUntil(10000) { var closed=false;compose.runOnUiThread {closed=ViewCompat.getRootWindowInsets(view)?.isVisible(WindowInsetsCompat.Type.ime())==false};closed }
                 Thread.sleep(300)
                 assertEquals(tmuxAnchor,state("#{pane_width}:#{pane_height}:#{scroll_position}:#{pane_in_mode}"))
@@ -1691,7 +1693,7 @@ class TerminalUiTest {
             compose.onNodeWithTag("voice-auto-language").performScrollTo().assertIsOff().performClick().assertIsOn()
             assertTrue(compose.activity.getSharedPreferences("voice-settings",0).getBoolean("automatic-language",false))
         } else compose.onNodeWithTag("voice-auto-language").assertDoesNotExist()
-        compose.onNodeWithText("‹ 返回").performScrollTo().performClick()
+        compose.onNodeWithText("‹ 返回").performClick()
         showTerminalForFixture()
         val control=compose.onNodeWithTag("voice-input")
         if (voice) {

@@ -1,6 +1,7 @@
 package dev.mtmux
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
@@ -11,6 +12,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -42,7 +45,7 @@ private class HomeRefresh {
 
 @Composable fun ServerHome(warmConnections: WarmConnectionPool<SshClient>, openSettings: Boolean = false, privacyDisplay: Boolean, onPrivacyDisplay: (Boolean) -> Unit, refreshOnEntry: Boolean, onEntryHandled: () -> Unit, onOpen: (ServerProfile, RecentTask?, SshClient?) -> Unit,
                           onPreferences: (Int,Float,Boolean) -> Unit,
-                          appearance: AppAppearance, onAppearance: (AppAppearance) -> Unit) {
+                          appearance: AppAppearance, onAppearance: (AppAppearance) -> Unit, palette: AppPalette, onPalette: (AppPalette) -> Unit) {
     val context = LocalContext.current
     val privacySettings = remember { PrivacyDisplay(context) }
     val store = remember { ServerProfiles(context) }; val cache = remember { ServerCache(context) }
@@ -84,7 +87,7 @@ private class HomeRefresh {
     val currentPage by rememberUpdatedState(page)
     var message by remember { mutableStateOf<UiText?>(null) }
     var font by remember { mutableIntStateOf(settings.getInt("fontSize",14)) }
-    var speed by remember { mutableFloatStateOf(settings.getFloat("scrollSensitivity",1f)) }
+    var speed by remember { mutableFloatStateOf(savedScrollSpeed(settings)) }
     var touch by remember { mutableStateOf(settings.getBoolean("remoteTouch",true)) }
     fun preferences() { settings.edit().putInt("fontSize",font).putFloat("scrollSensitivity",speed).putBoolean("remoteTouch",touch).apply(); onPreferences(font,speed,touch) }
     fun refresh(profile: ServerProfile, automatic: Boolean = false) {
@@ -255,31 +258,10 @@ private class HomeRefresh {
             })
             "settings" -> {
                 BackHandler { page = "home" }
-                Column(Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { TextButton(onClick = { page = "home" }) { Text(stringResource(R.string.common_back)) }; Text(stringResource(R.string.settings_title),style = MaterialTheme.typography.titleLarge) }
-                    Text(stringResource(R.string.settings_appearance),color=MaterialTheme.colorScheme.primary)
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                        AppAppearance.entries.forEach { option -> FilterChip(selected=appearance==option,onClick={onAppearance(option)},label={Text(stringResource(option.label))},modifier=Modifier.testTag("theme-${option.name}")) }
-                    }
-                    LanguageSettings()
-                    SshRetentionSettings(warmConnections)
-                    VoiceSettings()
-                    Text(stringResource(R.string.settings_privacy),color=MaterialTheme.colorScheme.primary)
-                    Row(verticalAlignment=Alignment.CenterVertically) {
-                        Text(stringResource(R.string.settings_privacy_display),Modifier.weight(1f))
-                        Switch(checked=privacyDisplay,onCheckedChange=onPrivacyDisplay,modifier=Modifier.testTag("privacy-display"))
-                    }
-                    Text(stringResource(R.string.settings_privacy_help),style=MaterialTheme.typography.bodySmall)
-                    Text(stringResource(R.string.settings_terminal_display),color=MaterialTheme.colorScheme.primary)
-                    Row(verticalAlignment=Alignment.CenterVertically) { Text(stringResource(R.string.settings_font_size),Modifier.weight(1f)); TextButton(onClick={font=(font-1).coerceAtLeast(8);preferences()}){Text("−")}; Text("$font"); TextButton(onClick={font=(font+1).coerceAtMost(28);preferences()}){Text("＋")} }
-                    HorizontalDivider()
-                    Text(stringResource(R.string.settings_terminal_input),color=MaterialTheme.colorScheme.primary)
-                    Row(verticalAlignment=Alignment.CenterVertically) { Text(stringResource(R.string.settings_touch),Modifier.weight(1f)); Switch(touch,{touch=it;preferences()}) }
-                    Text(stringResource(R.string.scroll_speed,"%.1f".format(java.util.Locale.ROOT,speed)))
-                    Slider(speed,{speed=it;preferences()},valueRange=0.5f..2f,steps=2,modifier=Modifier.testTag("settings-speed"))
-                    Text(stringResource(R.string.settings_touch_help),style=MaterialTheme.typography.bodySmall)
-                    DebugLogSettings()
-                }
+                AppSettings(onBack={page="home"},pool=warmConnections,appearance=appearance,onAppearance=onAppearance,
+                    palette=palette,onPalette=onPalette,privacy=privacyDisplay,onPrivacy=onPrivacyDisplay,
+                    font=font,onFont={font=it;preferences()},speed=speed,onSpeed={speed=it;preferences()},
+                    touch=touch,onTouch={touch=it;preferences()})
             }
             else -> Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal=16.dp)) {
                 val settingsLabel=stringResource(R.string.settings_title); val addServerLabel=stringResource(R.string.home_add_server)
@@ -288,25 +270,30 @@ private class HomeRefresh {
                 val moreLabel=stringResource(R.string.home_more_actions); val ungroupedLabel=stringResource(R.string.home_ungrouped)
                 Row(Modifier.fillMaxWidth().height(68.dp),verticalAlignment=Alignment.CenterVertically) {
                     Text(stringResource(R.string.home_title),Modifier.weight(1f),style=MaterialTheme.typography.headlineSmall)
-                    TextButton(onClick={page="settings"},modifier=Modifier.semantics{contentDescription=settingsLabel}.testTag("settings")){Text("⚙",style=MaterialTheme.typography.headlineSmall)}
-                    TextButton(onClick={edit=null;page="edit"},modifier=Modifier.semantics{contentDescription=addServerLabel}.testTag("add-server")){Text("＋",style=MaterialTheme.typography.headlineMedium)}
+                    AppIconButton(UiSymbol.SETTINGS,settingsLabel,{page="settings"},Modifier.testTag("settings"))
+                    AppIconButton(UiSymbol.PLUS,addServerLabel,{edit=null;page="edit"},Modifier.testTag("add-server"),prominent=true)
                 }
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                    OutlinedTextField(query,{query=it},placeholder={Text(stringResource(R.string.home_search),maxLines=1,overflow=TextOverflow.Ellipsis)},singleLine=true,
+                    OutlinedTextField(query,{query=it},shape=MaterialTheme.shapes.medium,
+                        leadingIcon={AppIcon(UiSymbol.SEARCH)},textStyle=MaterialTheme.typography.bodyMedium,placeholder={Text(stringResource(R.string.home_search),maxLines=1,overflow=TextOverflow.Ellipsis)},singleLine=true,
                         trailingIcon={if(query.isNotEmpty()) TextButton(onClick={query=""}){Text(stringResource(R.string.common_clear))}},
                         modifier=Modifier.weight(1f).testTag("server-search"))
                     Box {
-                        TextButton(onClick={sortMenu=true},modifier=Modifier.testTag("server-sort")){Text(stringResource(R.string.home_sort))}
+                        AppIconButton(UiSymbol.SORT,stringResource(R.string.home_sort),{sortMenu=true},Modifier.testTag("server-sort"))
                         DropdownMenu(expanded=sortMenu,onDismissRequest={sortMenu=false}) {
                             ServerSort.entries.forEach { option -> DropdownMenuItem(text={Text((if(sort==option) "✓ " else "")+stringResource(option.label))},onClick={runCatching {organization.sort(option);sort=option;sortMenu=false}.onFailure {message=uiText(R.string.home_sort_failed)}},modifier=Modifier.testTag("sort-${option.name}")) }
                         }
                     }
-                    TextButton(onClick={folderEdit(null)},modifier=Modifier.semantics {contentDescription=addFolderLabel}.testTag("add-folder")){Text("▱＋")}
+                    AppIconButton(UiSymbol.FOLDER,addFolderLabel,{folderEdit(null)},Modifier.testTag("add-folder"))
                 }
                 message?.let { Text(it.string(),color=MaterialTheme.colorScheme.error) }
-                if(profiles.isEmpty() && folders.isEmpty()) Column(Modifier.fillMaxWidth().padding(top=100.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-                    Text(stringResource(R.string.home_empty))
-                    Spacer(Modifier.height(16.dp)); OutlinedButton(onClick={edit=null;page="edit"}){Text(stringResource(R.string.home_add_server))}
+                if(profiles.isEmpty() && folders.isEmpty()) BentoCard(Modifier.padding(top=36.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(vertical=20.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(14.dp)) {
+                        AppIcon(UiSymbol.TERMINAL,modifier=Modifier.size(40.dp),tint=MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.home_empty),style=MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.home_empty_detail),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        Button(onClick={edit=null;page="edit"}) { AppIcon(UiSymbol.PLUS); Spacer(Modifier.width(6.dp));Text(stringResource(R.string.home_add_server)) }
+                    }
                 }
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                     // Search is local and does not trigger discovery. Expanded search results
@@ -336,10 +323,10 @@ private class HomeRefresh {
                                 TextButton(onClick={allMembers.forEach { refresh(it) }},enabled=allMembers.isNotEmpty() && !groupRefreshing,
                                     contentPadding=PaddingValues(0.dp),modifier=Modifier.sizeIn(minWidth=44.dp,minHeight=48.dp)
                                         .semantics {contentDescription=refreshFolderLabel}.testTag("refresh-folder-${folderId ?: "ungrouped"}")) {
-                                    if(groupRefreshing) CircularProgressIndicator(Modifier.size(16.dp),strokeWidth=2.dp) else Text("⟳",style=MaterialTheme.typography.titleLarge)
+                                    if(groupRefreshing) CircularProgressIndicator(Modifier.size(16.dp),strokeWidth=2.dp) else AppIcon(UiSymbol.REFRESH)
                                 }
                                 if(folderId!=null) Box {
-                                    TextButton(onClick={folderMenu=folderId},modifier=Modifier.testTag("folder-menu-$folderId")){Text("⋮")}
+                                    AppIconButton(UiSymbol.MORE,moreLabel,{folderMenu=folderId},Modifier.testTag("folder-menu-$folderId"))
                                     DropdownMenu(expanded=folderMenu==folderId,onDismissRequest={folderMenu=null}) {
                                         DropdownMenuItem(text={Text(stringResource(R.string.home_rename_folder))},onClick={folderMenu=null;folderEdit(folders.first {it.id==folderId})})
                                         DropdownMenuItem(text={Text(stringResource(R.string.home_delete_folder))},onClick={folderMenu=null;deletingFolder=folders.first {it.id==folderId}})
@@ -354,24 +341,30 @@ private class HomeRefresh {
                         // not the previous tick (which predates the snapshot and made it gray for up to 60s).
                         val stateNow = remember(statusClock, state.snapshot) { System.currentTimeMillis() }
                         val folded = search.isEmpty() && (collapsed[profile.id] ?: cache.collapsed(profile.id))
-                        Column(Modifier.fillMaxWidth().padding(vertical=4.dp).testTag("profile-${profile.id}")) {
+                        Surface(Modifier.fillMaxWidth().padding(vertical=6.dp).testTag("profile-${profile.id}"),
+                            shape=MaterialTheme.shapes.large,color=MaterialTheme.colorScheme.surface,
+                            border=BorderStroke(1.dp,if(state.error!=null) MaterialTheme.colorScheme.error.copy(alpha=.35f) else MaterialTheme.colorScheme.outlineVariant)) {
+                        Column(Modifier.padding(horizontal=12.dp,vertical=8.dp)) {
                             Row(verticalAlignment=Alignment.CenterVertically) {
-                                Row(Modifier.weight(1f).clickable(enabled=search.isEmpty()) { collapsed[profile.id]=!folded;cache.collapse(profile.id,!folded) }, verticalAlignment=Alignment.CenterVertically) {
-                                    val title = privacySettings.label(profile, privacyDisplay)
-                                    Text("${if(folded) "›" else "⌄"} $title", Modifier.weight(1f,fill=false).testTag("server-title-${profile.id}"),style=MaterialTheme.typography.titleMedium,maxLines=1,overflow=TextOverflow.Ellipsis)
-                                    state.snapshot?.let { snapshot ->
-                                        val time = java.text.SimpleDateFormat("HH:mm",java.util.Locale.ROOT).format(java.util.Date(snapshot.updatedAt))
-                                        val fullTime = java.text.SimpleDateFormat("MM-dd HH:mm",java.util.Locale.ROOT).format(java.util.Date(snapshot.updatedAt))
-                                        val updatedLabel=stringResource(R.string.home_updated_at, fullTime)
-                                        Text(time,Modifier.padding(start=6.dp).semantics { contentDescription=updatedLabel }.testTag("server-updated-${profile.id}"),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1)
+                                Row(Modifier.weight(1f).heightIn(min=48.dp).clickable(enabled=search.isEmpty()) { collapsed[profile.id]=!folded;cache.collapse(profile.id,!folded) }, verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+                                    AppIcon(if(folded) UiSymbol.NEXT else UiSymbol.DOWN,modifier=Modifier.size(16.dp),tint=MaterialTheme.colorScheme.primary)
+                                    Column(Modifier.weight(1f)) {
+                                        val title = privacySettings.label(profile, privacyDisplay)
+                                        Text(title,Modifier.testTag("server-title-${profile.id}"),style=MaterialTheme.typography.titleMedium,maxLines=1,overflow=TextOverflow.Ellipsis)
+                                        state.snapshot?.let { snapshot ->
+                                            val time=java.text.SimpleDateFormat("HH:mm",java.util.Locale.ROOT).format(java.util.Date(snapshot.updatedAt))
+                                            val fullTime=java.text.SimpleDateFormat("MM-dd HH:mm",java.util.Locale.ROOT).format(java.util.Date(snapshot.updatedAt))
+                                            val updatedLabel=stringResource(R.string.home_updated_at,fullTime)
+                                            Text(time,Modifier.semantics {contentDescription=updatedLabel}.testTag("server-updated-${profile.id}"),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
                                     }
                                 }
-                                TextButton(onClick={open(profile,null)},contentPadding=PaddingValues(0.dp),modifier=Modifier.sizeIn(minWidth=44.dp,minHeight=48.dp).semantics{contentDescription=openSshLabel}.testTag("ssh-${profile.id}")){Text(">_")}
+                                AppIconButton(UiSymbol.TERMINAL,openSshLabel,{open(profile,null)},Modifier.testTag("ssh-${profile.id}"))
                                 TextButton(onClick={refresh(profile)},enabled=!state.refreshing,contentPadding=PaddingValues(0.dp),modifier=Modifier.sizeIn(minWidth=44.dp,minHeight=48.dp).semantics{contentDescription=refreshServerLabel}.testTag("refresh-${profile.id}")){
-                                    if(state.refreshing) CircularProgressIndicator(Modifier.size(16.dp),strokeWidth=2.dp) else Text("⟳",style=MaterialTheme.typography.titleLarge)
+                                    if(state.refreshing) CircularProgressIndicator(Modifier.size(16.dp),strokeWidth=2.dp) else AppIcon(UiSymbol.REFRESH)
                                 }
                                 Box {
-                                    TextButton(onClick={menu=profile.id},contentPadding=PaddingValues(0.dp),modifier=Modifier.sizeIn(minWidth=36.dp,minHeight=48.dp).semantics{contentDescription=moreLabel}.testTag("more-${profile.id}")){Text("⋮",style=MaterialTheme.typography.titleLarge)}
+                                    AppIconButton(UiSymbol.MORE,moreLabel,{menu=profile.id},Modifier.testTag("more-${profile.id}"))
                                     DropdownMenu(expanded=menu==profile.id,onDismissRequest={menu=null}) {
                                         DropdownMenuItem(text={Text(stringResource(R.string.home_edit_server))},onClick={menu=null;edit=profile;page="edit"})
                                         DropdownMenuItem(text={Text(stringResource(R.string.home_move_to_folder))},onClick={menu=null;movingServer=profile})
@@ -381,7 +374,10 @@ private class HomeRefresh {
                             }
                             val note = when { opening == profile.id -> stringResource(R.string.home_opening_task); state.refreshing -> state.progress.string(); state.error != null -> state.error.string() + if(state.snapshot!=null) stringResource(R.string.home_showing_cache) else "";state.snapshot==null -> stringResource(R.string.home_no_cache);else -> null }
                             if (opening == profile.id) TextButton(onClick = { openingJob?.cancel() }) { Text(stringResource(R.string.common_cancel)) }
-                            if (note != null) Text(note,Modifier.padding(start=16.dp).clickable(enabled=state.challenge!=null){trust=profile to state.challenge!!},style=MaterialTheme.typography.labelSmall,color=if(state.error!=null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (note != null) Surface(Modifier.fillMaxWidth().padding(vertical=6.dp).clickable(enabled=state.challenge!=null){trust=profile to state.challenge!!},
+                                shape=MaterialTheme.shapes.small,color=if(state.error!=null) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant) {
+                                Text(note,Modifier.padding(10.dp),style=MaterialTheme.typography.bodySmall,color=if(state.error!=null) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                             if(!folded) {
                                 val tasks = state.snapshot?.tasks.orEmpty().filter { search.isEmpty() || folderMatch || profile.matchesSearch(search) || it.matchesSearch(search) }
                                 if(tasks.isEmpty() && state.snapshot!=null && !state.refreshing && state.error==null) Text(stringResource(R.string.home_no_sessions),Modifier.padding(16.dp),style=MaterialTheme.typography.bodySmall)
@@ -389,17 +385,20 @@ private class HomeRefresh {
                                 tasks.groupBy { it.binding!!.identity.split(':').slice(2..3).joinToString(":") }.forEach { (id, group) ->
                                     val title="${group.first().sessionName} / ${group.first().windowName}"
                                     val expanded=search.isNotEmpty() || expandedWindows[profile.id+id]==true
-                                    TextButton(onClick={if(group.size==1) open(profile,group.first()) else expandedWindows[profile.id+id]=!expanded},modifier=Modifier.fillMaxWidth().testTag("task-${profile.id}-${group.first().binding!!.pane}"),contentPadding=PaddingValues(start=24.dp,end=8.dp,top=12.dp,bottom=12.dp)) {
+                                    TextButton(onClick={if(group.size==1) open(profile,group.first()) else expandedWindows[profile.id+id]=!expanded},shape=MaterialTheme.shapes.medium,colors=ButtonDefaults.textButtonColors(containerColor=MaterialTheme.colorScheme.surfaceVariant),modifier=Modifier.fillMaxWidth().padding(vertical=4.dp).testTag("task-${profile.id}-${group.first().binding!!.pane}"),contentPadding=PaddingValues(horizontal=12.dp,vertical=10.dp)) {
                                         TaskStatusDot(TaskStates.aggregate(group.map { if(state.error==null) state.snapshot?.taskState(it,stateNow) ?: TaskState.UNKNOWN else TaskState.UNKNOWN }),"task-status-${profile.id}-${group.first().binding!!.pane}")
-                                        Text(title,Modifier.weight(1f),color=MaterialTheme.colorScheme.onSurface)
-                                        if(group.any { it.identity==last?.identity }) Text(stringResource(R.string.home_last_used),style=MaterialTheme.typography.labelSmall)
-                                        Text(if(group.size==1) "  ›" else if(expanded) "  ⌄" else "  › ${group.size}")
+                                        Text(title,Modifier.weight(1f),color=MaterialTheme.colorScheme.onSurface,style=MaterialTheme.typography.bodyMedium,maxLines=2,overflow=TextOverflow.Ellipsis)
+                                        if(group.any { it.identity==last?.identity }) Surface(shape=MaterialTheme.shapes.extraSmall,color=MaterialTheme.colorScheme.primaryContainer) {
+                                            Text(stringResource(R.string.home_last_used),Modifier.padding(horizontal=6.dp,vertical=3.dp),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
+                                        }
+                                        if(group.size>1) Text(" ${group.size}",style=MaterialTheme.typography.labelMedium); AppIcon(if(group.size>1 && expanded) UiSymbol.DOWN else UiSymbol.NEXT,modifier=Modifier.size(16.dp))
                                     }
-                                    if(group.size>1 && expanded) group.forEach { task -> TextButton(onClick={open(profile,task)},modifier=Modifier.fillMaxWidth().padding(start=36.dp).testTag("pane-${profile.id}-${task.binding!!.pane}")){TaskStatusDot(if(state.error==null) state.snapshot?.taskState(task,stateNow) ?: TaskState.UNKNOWN else TaskState.UNKNOWN,"pane-status-${profile.id}-${task.binding!!.pane}");Text(stringResource(R.string.home_pane, task.binding!!.pane),Modifier.weight(1f));Text("›")} }
+                                    val paneGuide=MaterialTheme.colorScheme.outlineVariant
+                                    if(group.size>1 && expanded) Column(Modifier.padding(start=12.dp).drawBehind { drawLine(paneGuide,Offset(0f,0f),Offset(0f,size.height),1.dp.toPx()) }) { group.forEach { task -> TextButton(onClick={open(profile,task)},modifier=Modifier.fillMaxWidth().padding(start=8.dp).testTag("pane-${profile.id}-${task.binding!!.pane}")){TaskStatusDot(if(state.error==null) state.snapshot?.taskState(task,stateNow) ?: TaskState.UNKNOWN else TaskState.UNKNOWN,"pane-status-${profile.id}-${task.binding!!.pane}");Text(stringResource(R.string.home_pane, task.binding!!.pane),Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium);AppIcon(UiSymbol.NEXT,modifier=Modifier.size(16.dp))} } }
                                 }
                             }
                         }
-                        HorizontalDivider(color=MaterialTheme.colorScheme.outlineVariant)
+                        }
                     } }
                         }
                     }
@@ -422,7 +421,7 @@ private class HomeRefresh {
     delete?.let { profile -> AlertDialog(onDismissRequest={delete=null},title={Text(stringResource(R.string.delete_server_title, privacySettings.label(profile, privacyDisplay)))},text={Text(stringResource(R.string.delete_server_body))},confirmButton={TextButton(onClick={
         runCatching { store.delete(profile.id);revisions[profile.id]=(revisions[profile.id] ?: 0)+1;jobs.remove(profile.id)?.cancel();profiles=store.all();rows.remove(profile.id);delete=null }.onFailure { message=uiText(R.string.delete_server_failed) }
     }){Text(stringResource(R.string.common_delete))}},dismissButton={TextButton(onClick={delete=null}){Text(stringResource(R.string.common_cancel))}}) }
-    trust?.let { (profile, item) -> ProtectSensitiveContent(); AlertDialog(properties=protectedDialogProperties,onDismissRequest={trust=null},title={Text(stringResource(if(item.changed) R.string.trust_changed_title else R.string.trust_verify_title))},text={Text("${item.endpoint.substringBefore("|via:")}\n${item.fingerprint}\n${stringResource(R.string.trust_verify_hint)}")},confirmButton={if(!item.changed) TextButton(onClick={pins.edit().putString(item.endpoint,item.key).apply();trust=null;refresh(profile)}){Text(stringResource(R.string.host_key_trust))}},dismissButton={TextButton(onClick={trust=null}){Text(stringResource(R.string.common_close))}}) }
+    trust?.let { (profile, item) -> ProtectSensitiveContent(); AlertDialog(icon={AppIcon(UiSymbol.SHIELD,modifier=Modifier.size(28.dp),tint=if(item.changed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)},properties=protectedDialogProperties,onDismissRequest={trust=null},title={Text(stringResource(if(item.changed) R.string.trust_changed_title else R.string.trust_verify_title))},text={Text("${item.endpoint.substringBefore("|via:")}\n${item.fingerprint}\n${stringResource(R.string.trust_verify_hint)}")},confirmButton={if(!item.changed) TextButton(onClick={pins.edit().putString(item.endpoint,item.key).apply();trust=null;refresh(profile)}){Text(stringResource(R.string.host_key_trust))}},dismissButton={TextButton(onClick={trust=null}){Text(stringResource(R.string.common_close))}}) }
 }
 
 @Composable private fun TaskStatusDot(state: TaskState, tag: String) {

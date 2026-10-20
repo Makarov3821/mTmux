@@ -1,0 +1,25 @@
+2026-10-20 mTmux 0.8.3 (versionCode 31) UI refresh verification
+
+Android build:
+  app standard/voice debug APK assembly, lint and app unit tests: PASS
+  app unit tests: 8 per flavor, 0 failures, 0 errors, 0 skipped
+  standard Android test APK and voice Android test Kotlin compile: PASS
+  APK v2 signature verification: PASS for both debug APKs
+
+Bundled terminal:
+  Node tests: 5 passed
+  Chromium bundled-page regression (TERMINAL_TEST_FILE=1): PASS
+  Same slow gesture wheel events at 1x / 5x / 10x: 3 / 15 / 30
+
+Native pages:
+  Android 35 AOSP ATD, x86_64 software emulation, 360x800 dp
+  Real screenshots reviewed: home-tokyo, home-panes-tokyo, settings-tokyo
+  ATD drawing enabled with debug.hwui.drawing_enabled=1
+  Initial blank captures discarded; screenshot helper now rejects blank images
+  UiRefreshTest suite and separate retries: INCOMPLETE, not counted as passed
+  WebView 124 libwebviewchromium.so SIGTRAP interrupted instrumentation
+  Temporary WebView JIT/GPU debug switches removed; emulator stopped
+
+Remaining device checks:
+  Complete native UI integration, light mode/412 dp/large fonts,
+  ARM voice recording/transcription and real remote TUI scrolling feel.
