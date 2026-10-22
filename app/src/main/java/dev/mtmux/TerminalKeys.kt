@@ -9,35 +9,48 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 
 private val keyPages = listOf(
-    listOf("Esc" to "\u001b", "Tab" to "\t", "Ctrl-C" to "\u0003", "↑" to "\u001b[A", "↓" to "\u001b[B", "Enter" to "\r"),
-    listOf("F1" to "\u001bOP", "F2" to "\u001bOQ", "F3" to "\u001bOR", "F4" to "\u001bOS", "F5" to "\u001b[15~", "F6" to "\u001b[17~"),
-    listOf("F7" to "\u001b[18~", "F8" to "\u001b[19~", "F9" to "\u001b[20~", "F10" to "\u001b[21~", "F11" to "\u001b[23~", "F12" to "\u001b[24~")
+    listOf("Esc" to "Escape", "Tab" to "Tab", "Ctrl-C" to "Ctrl-C", "↑" to "ArrowUp", "↓" to "ArrowDown", "Enter" to "Enter"),
+    (1..6).map { "F$it" to "F$it" },
+    (7..12).map { "F$it" to "F$it" },
+    listOf("Ctrl" to "Ctrl", "Shift" to "Shift", "Alt" to "Alt", "←" to "ArrowLeft", "→" to "ArrowRight", "⌫" to "Backspace")
 )
 
-@Composable fun TerminalKeys(enabled: Boolean, onKey: (String, String) -> Unit) {
-    val pager = rememberPagerState(pageCount = { keyPages.size })
-    val pageLabel = stringResource(R.string.keys_page, pager.currentPage + 1, keyPages.size)
+@Composable fun TerminalKeys(enabled: Boolean, modifiers: Int, onModifier: (Int) -> Unit, onKey: (String) -> Unit) {
+    val pager = rememberPagerState(initialPage=TERMINAL_KEY_PAGER_START,pageCount={Int.MAX_VALUE})
+    val pageLabel = stringResource(R.string.keys_page,terminalKeyPage(pager.currentPage)+1,TERMINAL_KEY_PAGE_COUNT)
+    val pending = if(modifiers == 0) "" else stringResource(R.string.keys_modifier_pending,TerminalKeyStroke.label(modifiers))
     Box(Modifier.fillMaxWidth().height(48.dp)) {
-        HorizontalPager(pager, modifier = Modifier.fillMaxSize().testTag("terminal-key-pages")) { page ->
-            Row(Modifier.fillMaxSize().padding(top=4.dp,bottom=6.dp),horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                keyPages[page].forEach { (label, data) ->
-                    TextButton(onClick = { onKey(label, data) }, enabled = enabled,
-                        shape=MaterialTheme.shapes.small, colors=ButtonDefaults.textButtonColors(containerColor=MaterialTheme.colorScheme.surfaceVariant),contentPadding = PaddingValues(0.dp), modifier = Modifier.weight(1f).fillMaxHeight().testTag("terminal-key-$label")) {
-                        Text(label, maxLines = 1,style=MaterialTheme.typography.labelMedium,color=if(enabled && label=="Ctrl-C") MaterialTheme.colorScheme.error else LocalContentColor.current)
+        HorizontalPager(pager,reverseLayout=true,overscrollEffect=null,
+            modifier=Modifier.fillMaxSize().testTag("terminal-key-pages").semantics { stateDescription=pageLabel }) { page ->
+            Row(Modifier.fillMaxSize().padding(bottom=4.dp)) {
+                keyPages[terminalKeyPage(page)].forEach { (label,key) ->
+                    val bit = when(key) {"Ctrl" -> TerminalKeyStroke.CTRL;"Shift" -> TerminalKeyStroke.SHIFT;"Alt" -> TerminalKeyStroke.ALT;else -> 0}
+                    val latched = bit != 0 && modifiers and bit != 0
+                    TextButton(onClick={if(bit!=0) onModifier(bit) else onKey(key)},enabled=enabled,
+                        shape=MaterialTheme.shapes.small,
+                        colors=ButtonDefaults.textButtonColors(containerColor=if(latched) MaterialTheme.colorScheme.primary.copy(alpha=.16f) else Color.Transparent),
+                        contentPadding=PaddingValues(0.dp),modifier=Modifier.weight(1f).fillMaxHeight().testTag("terminal-key-$label")
+                            .semantics { if(bit!=0) selected=latched }) {
+                        Text(label,maxLines=1,style=MaterialTheme.typography.labelMedium,
+                            color=if(enabled && (latched || modifiers!=0 && bit==0)) MaterialTheme.colorScheme.primary else LocalContentColor.current)
                     }
                 }
             }
         }
-        Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp).semantics { contentDescription = pageLabel }, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            repeat(3) { page ->
-                Box(Modifier.size(3.dp).background(if (page == pager.currentPage) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, CircleShape))
+        Row(Modifier.align(Alignment.BottomCenter).padding(bottom=1.dp).semantics {contentDescription=pageLabel;stateDescription=pending},
+            horizontalArrangement=Arrangement.spacedBy(4.dp)) {
+            repeat(TERMINAL_KEY_PAGE_COUNT) { page ->
+                Box(Modifier.size(3.dp).background(if(page==terminalKeyPage(pager.currentPage)) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,CircleShape))
             }
         }
     }

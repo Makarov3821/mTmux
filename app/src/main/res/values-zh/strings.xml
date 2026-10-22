@@ -345,4 +345,6 @@
     <string name="voice_local_badge">离线 · 本机处理</string>
     <string name="terminal_replies_short">回复</string>
     <string name="terminal_send_short">发送 ↵</string>
+    <string name="keys_modifier_pending">%1$s · 等待按键</string>
+    <string name="keys_modifier_unsupported">所选组合不支持传统终端按键编码。</string>
 </resources>

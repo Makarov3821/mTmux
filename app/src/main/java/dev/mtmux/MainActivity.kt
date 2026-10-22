@@ -29,6 +29,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -392,8 +396,35 @@ class MainActivity : AppCompatActivity() {
         val keyboard = LocalSoftwareKeyboardController.current
         val draftFocus = remember { FocusRequester() }
         val density = LocalDensity.current
-        val imeVisible = WindowInsets.ime.getBottom(density) > 0
         var visibleTerminalHeight by remember { mutableIntStateOf(0) }
+        val sticky=remember(wireToken,draftScopeKey,replyPane?.identity,showConfig) {StickyKeys()}
+        val keyInput=remember(sticky) {TerminalImeSession()}
+        val keyView=LocalView.current
+        val keyToken=wireToken
+        val keyBinding=replyPane
+        val keysEnabled=!showConfig && keyToken.isNotEmpty() && !pastePending && !busy
+        fun clearModifiers() {if(sticky.modifiers!=0) {sticky.clear();keyInput.restart(keyView)}}
+        LaunchedEffect(keysEnabled,showTools,quickReplyToken,copySnapshot,preview) {
+            if((!keysEnabled || showTools || quickReplyToken!=null || copySnapshot!=null || preview) && sticky.modifiers!=0) {
+                clearModifiers()
+            }
+        }
+        val keyLifecycle=LocalLifecycleOwner.current.lifecycle
+        DisposableEffect(keyLifecycle,sticky) {
+            val observer=LifecycleEventObserver {_,event ->
+                if(event==Lifecycle.Event.ON_STOP) {sticky.clear();keyInput.connection?.retire()}
+                if(event==Lifecycle.Event.ON_RESUME) keyInput.restart(keyView)
+            }
+            keyLifecycle.addObserver(observer)
+            onDispose {keyLifecycle.removeObserver(observer);sticky.clear();keyInput.connection?.retire()}
+        }
+        fun sendKeyStroke(key: String, additional: Int=0) {
+            val modifiers=sticky.take() or additional
+            if(!keysEnabled || keyToken!=wireToken || keyBinding!=replyPane) return
+            val encoded=TerminalKeyStroke.encode(key,modifiers)
+            if(encoded==null) {status=TerminalStatus(uiText(R.string.keys_modifier_unsupported),alert=true);return}
+            submitBytes(keyToken,encoded.toByteArray(Charsets.UTF_8),bound=keyBinding)
+        }
         fun latest() {
             val session = connectedSession
             val connection = client
@@ -537,20 +568,36 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     }
-                    Surface(Modifier.fillMaxWidth().height(156.dp),shape=RoundedCornerShape(topStart=18.dp,topEnd=18.dp),color=MaterialTheme.colorScheme.surface) {
+                    Surface(Modifier.fillMaxWidth().height(156.dp),color=MaterialTheme.colorScheme.surface) {
                     Column {
-                        val compactCaptions = LocalDensity.current.fontScale > 1.15f || androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 360
-                        TerminalKeys(enabled = wireToken.isNotEmpty() && !pastePending) { label, data ->
-                            if (label == "Enter") requestDraft(true)
-                            else submitBytes(wireToken, data.toByteArray(), bound = replyPane)
+                        TerminalKeys(enabled=keysEnabled,modifiers=sticky.modifiers,onModifier={bit ->
+                            keyInput.finishComposition()
+                            sticky.toggle(bit)
+                            draftFocus.requestFocus();keyboard?.show();keyInput.restart(keyView)
+                        },onKey={key ->
+                            val hadModifiers=sticky.modifiers!=0
+                            keyInput.finishComposition()
+                            when {
+                                key=="Ctrl-C" -> sendKeyStroke("c",TerminalKeyStroke.CTRL)
+                                key=="Enter" && sticky.modifiers==0 -> requestDraft(true)
+                                else -> sendKeyStroke(key)
+                            }
+                            if(hadModifiers) keyInput.restart(keyView)
+                        })
+                        TerminalKeyInput(keyInput,{sticky.modifiers},onTextKey={text ->
+                            if(sticky.modifiers==0) false
+                            else if(text.codePointCount(0,text.length)!=1) {sticky.clear();keyInput.restart(keyView);false}
+                            else {sendKeyStroke(when(text) {"\n","\r" -> "Enter";"\t" -> "Tab";else -> text});true}
+                        },onBackspace={if(sticky.modifiers==0) false else {sendKeyStroke("Backspace");true}}) {
+                            DraftInput(draft,{draft=it},onSend={clearModifiers();requestDraft(true)},
+                                sendEnabled=keysEnabled && draft.isNotEmpty(),sending=pastePending,pendingModifiers=sticky.modifiers,
+                                modifier=Modifier.focusRequester(draftFocus).testTag("command-input").captureTerminalKey(sticky,keyInput) {key,modifiers -> sendKeyStroke(key,modifiers)})
                         }
-                        DraftInput(draft,{draft=it},Modifier.focusRequester(draftFocus).testTag("command-input"))
-                        Row(Modifier.fillMaxWidth().height(52.dp),horizontalArrangement=Arrangement.spacedBy(4.dp),verticalAlignment=Alignment.CenterVertically) {
-                            TextButton(onClick={showTools=true},contentPadding=PaddingValues(0.dp),shape=MaterialTheme.shapes.small,colors=ButtonDefaults.textButtonColors(containerColor=MaterialTheme.colorScheme.surfaceVariant),modifier=Modifier.weight(.85f).height(48.dp).testTag("terminal-tools")){Text(stringResource(R.string.terminal_tools_compact),maxLines=1,style=MaterialTheme.typography.labelLarge)}
-                            TextButton(onClick={focusManager.clearFocus();keyboard?.hide()},enabled=imeVisible,contentPadding=PaddingValues(0.dp),shape=MaterialTheme.shapes.small,colors=ButtonDefaults.textButtonColors(containerColor=MaterialTheme.colorScheme.surfaceVariant),modifier=Modifier.weight(1.1f).height(48.dp).semantics { contentDescription=getString(R.string.terminal_hide_keyboard) }.testTag("hide-keyboard")){Text(stringResource(R.string.terminal_hide_compact),maxLines=1,style=MaterialTheme.typography.labelLarge)}
-                            VoiceInputControl(modifier=Modifier.width(48.dp), enabled=wireToken.isNotEmpty() && !pastePending && !busy,
+                        TerminalActions(keysEnabled,
+                            onTools={clearModifiers();showTools=true},onReplies={clearModifiers();quickReplyToken=wireToken}) {
+                            VoiceInputControl(modifier=Modifier, enabled=wireToken.isNotEmpty() && !pastePending && !busy,
                                 connectionToken=wireToken, targetKey=draftScopeKey,
-                                onHideKeyboard={focusManager.clearFocus(force=true);keyboard?.hide()},
+                                onHideKeyboard={clearModifiers();focusManager.clearFocus(force=true);keyboard?.hide()},
                                 onOfferDraft={expectedToken,expectedTarget,text ->
                                     val decision=decideVoiceDraftOffer(expectedToken,expectedTarget,wireToken,draftScopeKey,draft,text)
                                     if(decision==VoiceDraftOffer.INSERTED) draft=text
@@ -562,8 +609,6 @@ class MainActivity : AppCompatActivity() {
                                     commit.accepted
                                 },
                                 onStatus={status=it})
-                            TextButton(onClick={quickReplyToken=wireToken},enabled=wireToken.isNotEmpty() && !pastePending,contentPadding=PaddingValues(0.dp),shape=MaterialTheme.shapes.small,colors=ButtonDefaults.textButtonColors(containerColor=MaterialTheme.colorScheme.surfaceVariant),modifier=Modifier.weight(1.1f).height(48.dp).semantics { contentDescription=getString(R.string.terminal_quick_replies) }.testTag("quick-replies")){Text(stringResource(if(compactCaptions) R.string.terminal_replies_short else R.string.terminal_replies_compact),maxLines=1,style=MaterialTheme.typography.labelLarge)}
-                            Button(onClick={requestDraft(true)},enabled=wireToken.isNotEmpty() && !pastePending && draft.isNotEmpty(),shape=RoundedCornerShape(10.dp),contentPadding=PaddingValues(horizontal=8.dp),modifier=Modifier.weight(1.3f).height(48.dp).semantics { contentDescription=getString(R.string.terminal_send_enter) }.testTag("send-enter")){Text(stringResource(if(pastePending) R.string.terminal_sending else if(compactCaptions) R.string.terminal_send_short else R.string.terminal_send_compact),maxLines=1,style=MaterialTheme.typography.labelLarge)}
                         }
                     }
                     }

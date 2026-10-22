@@ -102,22 +102,55 @@ private val vectors = UiSymbol.entries.associateWith { symbol ->
     Text(stringResource(R.string.scroll_speed_help),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
-@Composable fun DraftInput(value: String, onChange: (String) -> Unit, modifier: Modifier = Modifier) {
+@Composable fun DraftInput(value: String, onChange: (String) -> Unit, onSend: () -> Unit,
+    sendEnabled: Boolean, sending: Boolean, pendingModifiers: Int, modifier: Modifier = Modifier) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    BasicTextField(value,onChange,modifier.fillMaxWidth().height(56.dp), maxLines=if(androidx.compose.ui.platform.LocalDensity.current.fontScale>1.2f) 1 else 2,
-        interactionSource=interaction, cursorBrush=SolidColor(MaterialTheme.colorScheme.primary),
-        textStyle=MaterialTheme.typography.bodyMedium.copy(color=MaterialTheme.colorScheme.onSurface,fontFamily=FontFamily.Monospace),
-        decorationBox={ inner ->
-            Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surfaceVariant,
-                border=BorderStroke(if(focused) 2.dp else 1.dp,if(focused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)) {
-                Row(Modifier.fillMaxSize().padding(horizontal=12.dp,vertical=6.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    AppIcon(UiSymbol.NEXT,tint=MaterialTheme.colorScheme.primary,modifier=Modifier.size(16.dp))
-                    Box(Modifier.weight(1f)) {
-                        if(value.isEmpty()) Text(stringResource(R.string.terminal_input_placeholder),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                        inner()
-                    }
+    val sendDescription=stringResource(R.string.terminal_send_enter)
+    Row(Modifier.fillMaxWidth().height(56.dp).padding(vertical=6.dp)) {
+        Surface(shape=RoundedCornerShape(8.dp),color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=if(focused) 1f else .65f)) {
+            Row(Modifier.fillMaxSize(),verticalAlignment=Alignment.CenterVertically) {
+                BasicTextField(value,onChange,modifier.weight(1f).fillMaxHeight(),maxLines=if(androidx.compose.ui.platform.LocalDensity.current.fontScale>1.2f) 1 else 2,
+                    interactionSource=interaction,cursorBrush=SolidColor(MaterialTheme.colorScheme.primary),
+                    textStyle=MaterialTheme.typography.bodyMedium.copy(color=MaterialTheme.colorScheme.onSurface,fontFamily=FontFamily.Monospace),
+                    decorationBox={ inner ->
+                        Box(Modifier.fillMaxSize().padding(horizontal=12.dp),contentAlignment=Alignment.CenterStart) {
+                            if(value.isEmpty()) Text(if(pendingModifiers==0) stringResource(R.string.terminal_input_placeholder)
+                                else stringResource(R.string.keys_modifier_pending,TerminalKeyStroke.label(pendingModifiers)),
+                                style=MaterialTheme.typography.bodyMedium,maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,color=if(pendingModifiers==0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary)
+                            inner()
+                        }
+                    })
+                Button(onClick=onSend,enabled=sendEnabled,shape=RoundedCornerShape(0.dp),contentPadding=PaddingValues(horizontal=12.dp),
+                    modifier=Modifier.fillMaxHeight().widthIn(min=72.dp).testTag("send-enter").semantics {contentDescription=sendDescription}) {
+                    Text(stringResource(if(sending) R.string.terminal_sending else R.string.terminal_send_short),maxLines=1,style=MaterialTheme.typography.labelLarge)
                 }
             }
-        })
+        }
+    }
+}
+
+/** Flat utility row shared by both product flavors; the voice slot is empty in standard. */
+@Composable fun TerminalActions(enabled: Boolean, onTools: () -> Unit,
+    onReplies: () -> Unit, voice: @Composable () -> Unit) {
+    val compact=androidx.compose.ui.platform.LocalDensity.current.fontScale>1.15f || androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp<360
+    val repliesDescription=stringResource(R.string.terminal_quick_replies)
+    Row(Modifier.fillMaxWidth().height(52.dp),verticalAlignment=Alignment.CenterVertically) {
+        Box(Modifier.weight(1f),contentAlignment=Alignment.Center) {
+        TextButton(onClick=onTools,colors=ButtonDefaults.textButtonColors(contentColor=MaterialTheme.colorScheme.onSurfaceVariant),
+            contentPadding=PaddingValues(horizontal=8.dp),modifier=Modifier.height(48.dp).testTag("terminal-tools")) {
+            AppIcon(UiSymbol.TOOLS,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.terminal_tools_compact),maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,style=MaterialTheme.typography.labelMedium)
+        }
+        }
+        Box(contentAlignment=Alignment.Center) {voice()}
+        Box(Modifier.weight(1f),contentAlignment=Alignment.Center) {
+        TextButton(onClick=onReplies,enabled=enabled,colors=ButtonDefaults.textButtonColors(contentColor=MaterialTheme.colorScheme.onSurfaceVariant),
+            contentPadding=PaddingValues(horizontal=8.dp),modifier=Modifier.height(48.dp)
+                .semantics {contentDescription=repliesDescription}.testTag("quick-replies")) {
+            AppIcon(UiSymbol.REPLY,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp))
+            Text(stringResource(if(compact) R.string.terminal_replies_short else R.string.terminal_replies_compact),maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,style=MaterialTheme.typography.labelMedium)
+        }
+        }
+    }
 }

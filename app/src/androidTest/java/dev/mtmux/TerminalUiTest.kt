@@ -46,6 +46,18 @@ class TerminalUiTest {
         compose.waitForIdle()
     }
 
+    private fun hideKeyboard() {
+        compose.runOnUiThread {
+            (compose.activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
+                .hideSoftInputFromWindow(compose.activity.window.decorView.windowToken,0)
+        }
+        compose.waitUntil(10000) {
+            var hidden=false
+            compose.runOnUiThread {hidden=ViewCompat.getRootWindowInsets(compose.activity.window.decorView)?.isVisible(WindowInsetsCompat.Type.ime())!=true}
+            hidden
+        }
+    }
+
     private fun findTerminal(view: View): TerminalView? {
         if (view is TerminalView) return view
         if (view is ViewGroup) for (index in 0 until view.childCount) {
@@ -376,11 +388,13 @@ class TerminalUiTest {
             val token=evaluate(view,"connectionToken").trim('"')
             evaluate(view,"window.replyInputs=[];terminal.onData(d=>replyInputs.push(d));")
             compose.onNodeWithTag("agent-card").assertDoesNotExist()
-            val keyboardButton=compose.onNodeWithTag("hide-keyboard").fetchSemanticsNode().boundsInRoot
+            compose.onNodeWithTag("hide-keyboard").assertDoesNotExist()
+            val toolsButton=compose.onNodeWithTag("terminal-tools").fetchSemanticsNode().boundsInRoot
             val repliesButton=compose.onNodeWithTag("quick-replies").fetchSemanticsNode().boundsInRoot
             val sendButton=compose.onNodeWithTag("send-enter").fetchSemanticsNode().boundsInRoot
-            assertTrue(keyboardButton.right<=repliesButton.left && repliesButton.right<=sendButton.left)
-            assertEquals(keyboardButton.center.y,repliesButton.center.y,1f)
+            assertTrue(toolsButton.right<=repliesButton.left)
+            assertTrue(sendButton.bottom<=repliesButton.top)
+            assertEquals(toolsButton.center.y,repliesButton.center.y,1f)
             saveScreenshot("terminal-bottom-replies")
             compose.onNodeWithTag("quick-replies").performClick()
             compose.onNodeWithTag("quick-reply-0").performClick()
@@ -639,7 +653,7 @@ class TerminalUiTest {
         compose.waitForIdle()
         compose.onNodeWithTag("command-input").assertTextContains("pwd")
         compose.runOnUiThread { assertTrue("IME must not collapse WebView to zero", view.height >= 80 * view.resources.displayMetrics.density) }
-        compose.onNodeWithTag("hide-keyboard").performClick()
+        hideKeyboard()
         compose.onNodeWithTag("terminal-panel").assertIsDisplayed()
         compose.waitUntil(10000) { evaluate(view, "terminal.rows > 1") == "true" }
         assertPaintedGreenText(view, "after-keyboard")
@@ -714,7 +728,7 @@ class TerminalUiTest {
             }
             compose.waitUntil(30000) {evaluate(view,"connected")=="true"}
             compose.onNodeWithTag("command-input").performTextInput("UNSENT_FUNCTION_DRAFT")
-            compose.onNodeWithTag("hide-keyboard").performClick()
+            hideKeyboard()
             fun verifyWidth(labels:List<String>) {
                 val bounds=labels.map {compose.onNodeWithTag("terminal-key-$it").fetchSemanticsNode().boundsInRoot}
                 val bar=compose.onNodeWithTag("terminal-key-pages").fetchSemanticsNode().boundsInRoot
@@ -723,18 +737,18 @@ class TerminalUiTest {
                 assertTrue(bounds.all {kotlin.math.abs(it.width-bar.width/6)<2})
             }
             verifyWidth(listOf("Esc","Tab","Ctrl-C","↑","↓","Enter"))
-            compose.onNodeWithTag("terminal-key-pages").performTouchInput {swipeLeft()}
+            compose.onNodeWithTag("terminal-key-pages").performTouchInput {swipeRight()}
             verifyWidth((1..6).map {"F$it"})
             saveScreenshot("terminal-keys-f1-f6")
             (1..6).forEach {compose.onNodeWithTag("terminal-key-F$it").performClick()}
-            compose.onNodeWithTag("terminal-key-pages").performTouchInput {swipeLeft()}
+            compose.onNodeWithTag("terminal-key-pages").performTouchInput {swipeRight()}
             verifyWidth((7..12).map {"F$it"})
             saveScreenshot("terminal-keys-f7-f12")
             (7..12).forEach {compose.onNodeWithTag("terminal-key-F$it").performClick()}
             val expected="1b4f501b4f511b4f521b4f531b5b31357e1b5b31377e1b5b31387e1b5b31397e1b5b32307e1b5b32317e1b5b32337e1b5b32347e"
             compose.waitUntil(15000) {controller.exec(dev.mtmux.core.Tmux.history(binding.pane,path)).output.replace("\n","").replace("\r","").contains("KEY_BYTES="+expected)}
             compose.onNodeWithTag("command-input").assertTextContains("UNSENT_FUNCTION_DRAFT")
-            compose.onNodeWithTag("terminal-key-pages").performTouchInput {swipeRight()}
+            compose.onNodeWithTag("terminal-key-pages").performTouchInput {swipeLeft()}
             compose.onNodeWithTag("terminal-key-F1").assertIsDisplayed()
             disconnectFixture()
             compose.onNodeWithTag("terminal-key-F1").assertIsNotEnabled()
@@ -765,7 +779,7 @@ class TerminalUiTest {
                 val location=IntArray(2);compose.runOnUiThread {view.getLocationOnScreen(location)}
                 assertEquals("Native WebView must not move",top[1],location[1])
                 if(it==0) saveScreenshot(if(alternate) "terminal-alternate-keyboard" else "terminal-history-keyboard")
-                compose.onNodeWithTag("hide-keyboard").performClick()
+                hideKeyboard()
                 compose.waitUntil(10000) { var closed=false;compose.runOnUiThread {closed=ViewCompat.getRootWindowInsets(view)?.isVisible(WindowInsetsCompat.Type.ime())==false};closed }
                 Thread.sleep(250)
                 assertEquals(before,evaluate(view,anchor))
@@ -1603,7 +1617,7 @@ class TerminalUiTest {
                 assertEquals(tmuxAnchor,state("#{pane_width}:#{pane_height}:#{scroll_position}:#{pane_in_mode}"))
                 assertEquals(topLine,evaluate(view,"terminal.buffer.active.getLine(terminal.buffer.active.viewportY).translateToString(true)"))
                 if(it==0) saveScreenshot("terminal-tmux-keyboard-anchor")
-                compose.onNodeWithTag("hide-keyboard").performClick()
+                hideKeyboard()
                 compose.waitUntil(10000) { var closed=false;compose.runOnUiThread {closed=ViewCompat.getRootWindowInsets(view)?.isVisible(WindowInsetsCompat.Type.ime())==false};closed }
                 Thread.sleep(300)
                 assertEquals(tmuxAnchor,state("#{pane_width}:#{pane_height}:#{scroll_position}:#{pane_in_mode}"))
@@ -1698,10 +1712,14 @@ class TerminalUiTest {
         val control=compose.onNodeWithTag("voice-input")
         if (voice) {
             control.assertExists().assertIsNotEnabled()
-            val hide=compose.onNodeWithTag("hide-keyboard").fetchSemanticsNode().boundsInRoot
+            compose.onNodeWithTag("hide-keyboard").assertDoesNotExist()
+            val tools=compose.onNodeWithTag("terminal-tools").fetchSemanticsNode().boundsInRoot
             val microphone=control.fetchSemanticsNode().boundsInRoot
             val replies=compose.onNodeWithTag("quick-replies").fetchSemanticsNode().boundsInRoot
-            assertTrue("voice button must be between keyboard and quick replies",hide.right <= microphone.left && microphone.right <= replies.left)
+            assertTrue("voice button must be between tools and quick replies",tools.right <= microphone.left && microphone.right <= replies.left)
+            val bar=compose.onNodeWithTag("terminal-key-pages").fetchSemanticsNode().boundsInRoot
+            assertEquals(bar.center.x,microphone.center.x,1f)
+            assertEquals(microphone.width,microphone.height,1f)
         } else control.assertDoesNotExist()
     }
 

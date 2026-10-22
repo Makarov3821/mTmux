@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>mTmux · 终端底栏效果图</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef0f5;color:#24283b;font-family:Arial,"Noto Sans CJK SC",sans-serif}main{width:1208px;padding:32px 40px 26px}h1{font-size:25px;font-weight:600;letter-spacing:-.6px;margin:0 0 9px}.intro{font-size:13px;color:#657087;margin:0 0 28px}.board{display:grid;grid-template-columns:repeat(3,360px);gap:24px}.column h2{font-size:15px;line-height:22px;margin:0 0 12px;font-weight:600}.column h2 small{margin-left:9px;font-size:11px;font-weight:400;color:#748096}.phone{--bg:#13141c;--surface:#1c1e2b;--raised:#26293c;--fg:#d5d9f8;--muted:#9da6ca;--accent:#7aa2f7;--on-accent:#13141c;--green:#9ece6a;width:360px;height:620px;display:flex;flex-direction:column;overflow:hidden;border-radius:19px;background:var(--surface);color:var(--fg);box-shadow:0 7px 25px #1e264015}.light{--bg:#f2f4f7;--surface:#fff;--raised:#e8ecf2;--fg:#0f172a;--muted:#59677c;--accent:#087e74;--on-accent:#fff;--green:#176b39}.status{height:24px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 20px;font-size:10px;color:var(--muted)}.app{flex:1;min-height:0;display:flex;flex-direction:column;padding:0 12px}.top{height:48px;flex:none;display:flex;align-items:center}.top-action{height:48px;width:48px;flex:none;display:grid;place-items:center}.top-action span{width:34px;height:34px;border-radius:11px;background:var(--raised);display:grid;place-items:center}.top-action svg{width:20px;height:20px}.title{display:flex;align-items:center;gap:6px;padding:8px 10px;min-width:0;flex:1;font-size:14px;white-space:nowrap;overflow:hidden}.title svg{color:var(--accent);width:14px;height:14px;flex:none}.title span{overflow:hidden;text-overflow:ellipsis}.terminal{background:var(--bg);flex:1;min-height:0;padding:16px 11px;overflow:hidden;font:12px/1.9 "DejaVu Sans Mono","Noto Sans CJK SC",monospace}.terminal p{margin:0;white-space:pre}.terminal .space{height:16px}.dim{color:var(--muted)}.accent{color:var(--accent)}.green{color:var(--green)}.dock{height:156px;flex:none;background:var(--surface)}button{font:inherit;border:0;cursor:pointer;color:inherit;background:none;padding:0}.shortcuts{height:48px;position:relative;padding-bottom:4px;display:flex}.shortcut{height:44px;flex:1;min-width:0;display:grid;place-items:center;font-size:12px;font-weight:500;color:var(--accent);border-radius:10px}.shortcut.active{background:color-mix(in srgb,var(--accent) 16%,transparent)}.dots{position:absolute;bottom:1px;left:50%;transform:translateX(-50%);display:flex;gap:4px}.dots i{width:3px;height:3px;border-radius:50%;background:color-mix(in srgb,var(--accent) 18%,transparent)}.dots i:last-child{background:var(--accent)}.draft{height:56px;padding:6px 0}.composer{height:44px;display:flex;align-items:center;background:var(--raised);border-radius:8px;overflow:hidden}.draft-text{flex:1;min-width:0;padding:0 12px;font:14px "DejaVu Sans Mono","Noto Sans CJK SC",monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cursor{display:inline-block;height:18px;border-left:1px solid var(--accent);vertical-align:-3px;margin-left:2px}.send{height:44px;min-width:72px;padding:0 12px;background:var(--accent);color:var(--on-accent);font-size:14px;font-weight:500}.actions{height:52px;display:grid;grid-template-columns:minmax(0,1fr) max-content minmax(0,1fr);align-items:center}.side{height:48px;display:flex;align-items:center;gap:6px;padding:0 8px;min-width:0;font-size:12px;font-weight:500;color:var(--muted);white-space:nowrap}.side svg{width:18px;height:18px;flex:none}.side span{overflow:hidden;text-overflow:ellipsis}.tools{justify-self:center}.replies{justify-self:center}.voice-slot{display:grid;place-items:center}.voice{width:52px;height:52px;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center}.voice svg{width:30px;height:30px;fill:currentColor;stroke:none}.gesture{height:20px;flex:none;display:grid;place-items:center}.gesture i{width:88px;height:3px;border-radius:2px;background:var(--muted);opacity:.45}svg.line{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.caption{margin:15px 0 0;font-size:12px;line-height:1.8;color:#657087}.caption strong{font-weight:500;color:#384258}footer{font-size:11px;color:#748096;margin-top:25px;display:flex;justify-content:space-between;gap:20px;line-height:1.8}.defs{position:absolute;width:0;height:0;overflow:hidden}button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<svg class="defs" xmlns="http://www.w3.org/2000/svg"><defs>
+<symbol id="back" viewBox="0 0 24 24"><path d="M14 5 7 12 14 19"/></symbol>
+<symbol id="latest" viewBox="0 0 24 24"><path d="M12 3v13m-5-5 5 5 5-5M5 21h14"/></symbol>
+<symbol id="terminal" viewBox="0 0 24 24"><path d="m4 6 6 6-6 6m8 0h8"/></symbol>
+<symbol id="tools" viewBox="0 0 24 24"><path d="M14 3C20 1 23 8 19 12L9 22 3 16 13 6 14 3 17 7 20 4"/></symbol>
+<symbol id="reply" viewBox="0 0 24 24"><path d="m8 5-6 6 6 6M3 11h11c5 0 7 3 7 9"/></symbol>
+<symbol id="voice" viewBox="0 0 1024 1024"><path d="M512.2 995.4c-33.2 0-60.2-26.9-60.2-60.1V88.8c0-33.2 26.9-60.2 60.2-60.2 33.2 0 60.2 26.9 60.2 60.2v846.5c0 33.1-27 60.1-60.2 60.1zM738.3 826.1c-33.2 0-60.1-26.9-60.1-60.1V258.1c0-33.2 26.9-60.2 60.1-60.2s60.1 26.9 60.1 60.2V766c0 33.2-26.9 60.1-60.1 60.1zM286.2 826.1c-33.2 0-60.2-26.9-60.2-60.1V258.1c0-33.2 26.9-60.2 60.2-60.2s60.2 26.9 60.2 60.2V766c-0.1 33.2-27 60.1-60.2 60.1zM964.3 656.8c-33.2 0-60.1-26.9-60.1-60.1V427.4c0-33.2 26.9-60.2 60.1-60.2s60.1 26.9 60.1 60.2v169.3c0 33.2-26.9 60.1-60.1 60.1zM60.2 656.8c-33.2 0-60.2-26.9-60.2-60.1V427.4c0-33.2 26.9-60.2 60.2-60.2s60.2 26.9 60.2 60.2v169.3c-0.1 33.2-27 60.1-60.2 60.1z"/></symbol>
+</defs></svg>
+<main>
+<header><h1>终端底栏 · 最新布局</h1><p class="intro">标准版两项操作均匀分布；语音版两侧操作各自居中，中央放圆形声波按钮。</p></header>
+<div class="board" id="board"></div>
+<footer><span>布局效果图 · 根据当前 Compose 代码绘制，终端内容为示例，非 Android 实机截图。</span><span>360 dp 宽 · 底栏 156 dp · 圆形按钮 52 dp / 图标 30 dp</span></footer>
+</main>
+<script>
+const icon=(name)=>`<svg class="line" aria-hidden="true"><use href="#${name}"/></svg>`;
+const states=[
+ {title:'标准版',theme:'Tokyo Night · 深色',voice:false,light:false,note:'<strong>两项操作均匀分布。</strong><br>各占半栏，在各自区域内居中，按钮不再贴边。'},
+ {title:'语音版',theme:'Tokyo Night · 深色',voice:true,light:false,note:'<strong>中央声波，两侧居中。</strong><br>工具和快捷回复在两侧剩余空间内分别居中。'},
+ {title:'语音版',theme:'Paper · 浅色',voice:true,light:true,note:'<strong>浅色主题同步适配。</strong><br>圆底跟随强调色，图标保留清晰对比；底栏没有分割线。'}
+];
+document.querySelector('#board').innerHTML=states.map(s=>`<section class="column"><h2>${s.title}<small>${s.theme}</small></h2>
+<div class="phone ${s.light?'light':''}"><div class="status"><span>9:41</span><span>Wi-Fi　▰</span></div>
+<div class="app"><div class="top"><button class="top-action" aria-label="返回"><span>${icon('back')}</span></button><div class="title">${icon('terminal')}<span>开发服务器 · work / agent</span></div><button class="top-action" aria-label="回到底端"><span>${icon('latest')}</span></button></div>
+<div class="terminal" aria-label="示例终端内容"><p class="dim">~/workspace/mtmux</p><p><span class="green">❯</span> tmux attach -t work</p><div class="space"></div><p class="accent">work / agent</p><p class="dim">正在查看当前任务的输出。</p><div class="space"></div><p>› 继续检查当前修改</p><div class="space"></div><p class="dim">  app/</p><p class="dim">  core/</p><p class="dim">  docs/</p><div class="space"></div><p>  等待下一条指令<span class="accent"> ▍</span></p></div>
+<div class="dock"><div class="shortcuts" aria-label="快捷键第四页">${['Ctrl','Shift','Alt','←','→','⌫'].map(k=>`<button class="shortcut">${k}</button>`).join('')}<div class="dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div></div>
+<div class="draft"><div class="composer"><div class="draft-text">继续检查当前修改<span class="cursor"></span></div><button class="send">发送 ⏎</button></div></div>
+<div class="actions"><button class="side tools">${icon('tools')}<span>工具</span></button><div class="voice-slot">${s.voice?'<button class="voice" aria-label="语音输入"><svg viewBox="0 0 1024 1024" aria-hidden="true"><use href="#voice"/></svg></button>':''}</div><button class="side replies">${icon('reply')}<span>快捷回复</span></button></div>
+</div></div><div class="gesture"><i></i></div></div><p class="caption">${s.note}</p></section>`).join('');
+// Only demonstrate the latch highlight; this document does not send terminal input.
+document.querySelectorAll('.shortcuts').forEach(row=>row.addEventListener('click',event=>{
+ const button=event.target.closest('.shortcut');if(!button)return;
+ if(['Ctrl','Shift','Alt'].includes(button.textContent))button.classList.toggle('active');
+ else row.querySelectorAll('.active').forEach(item=>item.classList.remove('active'));
+}));
+</script>
+</body>
+</html>

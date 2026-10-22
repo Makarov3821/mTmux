@@ -118,7 +118,10 @@ class UiRefreshTest {
             compose.onNodeWithTag("command-input").performClick().performTextInput("检查一下当前任务")
             screenshot("terminal-keyboard")
             assertEquals(before,evaluate("JSON.stringify([terminal.cols,terminal.rows])"))
-            compose.onNodeWithTag("hide-keyboard").performClick()
+            compose.runOnUiThread {
+                (compose.activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
+                    .hideSoftInputFromWindow(compose.activity.window.decorView.windowToken,0)
+            }
             compose.onNodeWithTag("terminal-tools").performClick()
             compose.onNodeWithTag("scroll-speed").performScrollTo().performSemanticsAction(SemanticsActions.SetProgress){it(5f)}
             screenshot("terminal-tools")

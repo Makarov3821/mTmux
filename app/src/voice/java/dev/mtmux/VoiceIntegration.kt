@@ -7,6 +7,7 @@ import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
@@ -19,6 +20,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -196,9 +198,13 @@ private enum class VoicePhase { IDLE, STARTING, RECORDING, TRANSCRIBING, RESULT,
         while (phase == VoicePhase.RECORDING) { value = ((System.currentTimeMillis() - recordingStarted) / 1000).toInt(); delay(250) }
     }
     val description = stringResource(R.string.voice_button)
-    TextButton(onClick = ::requestStart, enabled = enabled && phase == VoicePhase.IDLE,
-        contentPadding = PaddingValues(0.dp), modifier = modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp).testTag("voice-input")) {
-        AppIcon(if(phase==VoicePhase.RECORDING) UiSymbol.STOP else UiSymbol.MIC,label=description,tint=MaterialTheme.colorScheme.primary)
+    FilledIconButton(onClick=::requestStart,enabled=enabled && phase==VoicePhase.IDLE,shape=CircleShape,
+        colors=IconButtonDefaults.filledIconButtonColors(containerColor=MaterialTheme.colorScheme.primary,
+            contentColor=MaterialTheme.colorScheme.onPrimary,
+            disabledContainerColor=MaterialTheme.colorScheme.surfaceVariant,
+            disabledContentColor=MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=.38f)),
+        modifier=modifier.size(52.dp).testTag("voice-input")) {
+        Icon(painterResource(R.drawable.ic_voice_input),contentDescription=description,modifier=Modifier.size(30.dp))
     }
 
     if (dialog) ModalBottomSheet(onDismissRequest={cancelAll()},containerColor=MaterialTheme.colorScheme.surface,

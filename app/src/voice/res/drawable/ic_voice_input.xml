@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Converted from docs/design/assets/voice.svg; Compose supplies the theme tint. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="30dp" android:height="30dp"
+    android:viewportWidth="1024" android:viewportHeight="1024">
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M512.2 995.4c-33.2 0-60.2-26.9-60.2-60.1V88.8c0-33.2 26.9-60.2 60.2-60.2 33.2 0 60.2 26.9 60.2 60.2v846.5c0 33.1-27 60.1-60.2 60.1zM738.3 826.1c-33.2 0-60.1-26.9-60.1-60.1V258.1c0-33.2 26.9-60.2 60.1-60.2s60.1 26.9 60.1 60.2V766c0 33.2-26.9 60.1-60.1 60.1zM286.2 826.1c-33.2 0-60.2-26.9-60.2-60.1V258.1c0-33.2 26.9-60.2 60.2-60.2s60.2 26.9 60.2 60.2V766c-0.1 33.2-27 60.1-60.2 60.1zM964.3 656.8c-33.2 0-60.1-26.9-60.1-60.1V427.4c0-33.2 26.9-60.2 60.1-60.2s60.1 26.9 60.1 60.2v169.3c0 33.2-26.9 60.1-60.1 60.1zM60.2 656.8c-33.2 0-60.2-26.9-60.2-60.1V427.4c0-33.2 26.9-60.2 60.2-60.2s60.2 26.9 60.2 60.2v169.3c-0.1 33.2-27 60.1-60.2 60.1z" />
+</vector>

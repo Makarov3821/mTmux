@@ -351,4 +351,6 @@
     <string name="voice_local_badge">Offline · on device</string>
     <string name="terminal_replies_short">Replies</string>
     <string name="terminal_send_short">Send ⏎</string>
+    <string name="keys_modifier_pending">%1$s · press a key</string>
+    <string name="keys_modifier_unsupported">This key has no traditional terminal encoding with the selected modifiers.</string>
 </resources>

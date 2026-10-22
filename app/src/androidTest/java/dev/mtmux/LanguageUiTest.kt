@@ -99,7 +99,8 @@ class LanguageUiTest {
                         .any { it.text.startsWith("Target server: ") }
                 }
             }
-            listOf("Tools", "Hide", "Replies", "Send ⏎").forEach { compose.onNodeWithText(it).assertIsDisplayed() }
+            listOf("Tools", "Replies", "Send ⏎").forEach { compose.onNodeWithText(it).assertIsDisplayed() }
+            compose.onNodeWithTag("hide-keyboard").assertDoesNotExist()
             assertNoChinese("Terminal")
             saveScreenshot("english-terminal-error")
         } finally { store.delete(profile.id) }
