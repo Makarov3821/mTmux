@@ -4,7 +4,7 @@ Android 上的 SSH + tmux Agent 控制端。目标是离开电脑后，打开手
 
 **当前正式版为 0.8.4（应用 ID `dev.mtmux`，名称 mTmux）：终端采用无边底栏，支持 Ctrl / Shift / Alt 粘滞组合键和循环翻页；保留六套浅深主题、1×～10× 远端滚动倍率及 standard/voice 双版本。voice 内置离线 Whisper base q5_1，尚未完成 ARM 真机质量/性能验收。** 完整产品范围见 [plan.md](plan.md)，验证结果和剩余门槛见 [P0 报告](docs/testing/p0-report.md)。
 
-0.8.5-rc.1 / code33 预发行：按住录音与上滑取消、Whisper base q8、可关闭的离线标点恢复及轻量 SRF 对照构建。两种模型组合的试验、实际包体与设备验证范围见 [模型记录](docs/testing/voice-models-20261023.md)；当前默认构建为 q8 + CT，0.8.4 已发布 APK 仍为 q5；预发行两个语音包经 GitHub 原证书签名后可直接覆盖升级，见 [发布记录](docs/releases/0.8.5-rc.1.md)。
+0.8.5-rc.2 / code34 预发行：按住录音与上滑取消、Whisper base q8、可关闭的离线标点恢复及轻量 SRF 对照构建。两种模型组合的试验、实际包体与设备验证范围见 [模型记录](docs/testing/voice-models-20261023.md)；当前默认构建为 q8 + CT，0.8.4 已发布 APK 仍为 q5；预发行两个语音包经 GitHub 原证书签名后可直接覆盖升级，见 [发布记录](docs/releases/0.8.5-rc.2.md)。
 
 版本功能清单见 [CHANGELOG.md](CHANGELOG.md)；本轮详细记录见 [0.8.4](docs/releases/0.8.4.md)。
 

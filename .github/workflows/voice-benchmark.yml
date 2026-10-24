@@ -88,6 +88,7 @@ jobs:
           "$zipalign" -c -P 16 -v 4 "$benchmark"
       - name: Build and verify light punctuation comparison
         run: |
+          python3 scripts/fetch_voice_punctuation.py --model srf
           mkdir -p app/build/outputs/voice-comparison
           cp app/build/outputs/apk/voice/debug/app-voice-debug.apk app/build/outputs/voice-comparison/mtmux-q8-ct-debug.apk
           # Repack from scratch: the incremental ZIP writer can retain deleted model payloads as holes.

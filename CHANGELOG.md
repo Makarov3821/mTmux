@@ -2,6 +2,10 @@
 
 版本号不代表完整真机验收。每个版本的实现细节、验证结果、截图与 APK SHA-256 见对应的「详细记录」；测试证据在 [docs/evidence/](docs/evidence/)。文档目录说明见 [docs/README.md](docs/README.md)。
 
+## [0.8.5-rc.2] — 2026-10-24 · versionCode 34 · Pre-release
+
+详细记录：[0.8.5-rc.2](docs/releases/0.8.5-rc.2.md)。补齐辅助 Voice checks 的 SRF 模型下载，保留 rc.1 标签；语音交互和模型配置相同，两个原证书签名包可覆盖 0.8.4 或 rc.1。
+
 ## [0.8.5-rc.1] — 2026-10-24 · versionCode 33 · Pre-release
 
 详细记录：[0.8.5-rc.1](docs/releases/0.8.5-rc.1.md)。两个语音模型对照包使用既有正式证书，可覆盖 0.8.4 并互相替换；预发行版不替换正式 Latest。
