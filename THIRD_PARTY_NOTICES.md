@@ -17,7 +17,10 @@ mtmux 0.8.0-dev 采用下列组件；版本固定在 Gradle 构建文件及 `web
 | JUnit 4 / kotlin-test | 4.13.2 / 2.2.21 | EPL-1.0 / Apache-2.0 | 仅测试，不进入 APK |
 | Gradle wrapper | 8.13 | Apache-2.0 | 构建工具，不进入 APK |
 | whisper.cpp / ggml | 1.9.5，commit `d1be6fde…` | MIT | voice APK 的完全离线语音推理及独立 Android V0 基准；standard APK 不包含 |
-| OpenAI Whisper multilingual q5_1 权重 | HF revision `5359861…` | MIT | voice APK 内置 base q5_1；tiny/base 供 V0 基准；standard APK 不包含 |
+| OpenAI Whisper multilingual 量化权重 | HF revision `5359861…` | MIT | voice 默认内置 base q8_0，构建可选 q5_1；tiny/q5/q8 供独立基准；standard APK 不包含 |
+| ONNX Runtime Android | 1.23.2 | MIT；传递组件见随包 ThirdPartyNotices | voice 的 CPU 标点恢复推理；standard APK 不包含 |
+| DAMO / iic CT-Transformer 标点权重 | sherpa-onnx 2024-04-12 INT8 转换，固定归档与模型 SHA-256 | Apache-2.0 | 中英混合文本的离线标点恢复；来源 https://modelscope.cn/models/iic/punc_ct-transformer_zh-cn-common-vocab272727-pytorch 与 https://github.com/k2-fsa/sherpa-onnx/releases/tag/punctuation-models |
+| SRF 中文标点 INT8 权重 / 词表 | 模型 HF revision `055df91…`；词表源码 `e4814e7…`，固定 SHA-256 | MIT（上游声明） | 仅轻量对照构建内置；https://github.com/ximeiorg/srf-punctuation 与 https://huggingface.co/rkingzhong/srf-punctuation |
 
 许可证文本随本地资产保留：
 
@@ -31,6 +34,9 @@ mtmux 0.8.0-dev 采用下列组件；版本固定在 Gradle 构建文件及 `web
 - `voice-benchmark/src/main/assets/licenses/LICENSE-openai-whisper.txt`（benchmark APK）
 - `voice/src/main/assets/licenses/LICENSE-whisper.cpp.txt`（voice APK）
 - `voice/src/main/assets/licenses/LICENSE-openai-whisper.txt`（voice APK）
+- `voice/src/main/assets/licenses/LICENSE-onnxruntime.txt` / `NOTICE-onnxruntime.txt`（voice APK）
+- `voice/src/main/assets/licenses/LICENSE-ct-punctuation.txt` / `NOTICE-ct-punctuation.txt`（voice APK）
+- `voice/src/main/assets/licenses/LICENSE-srf-punctuation.txt`（轻量对照模型声明及许可，voice APK）
 
 构建还会引入 AndroidX/Kotlin 的传递依赖。发布前应导出实际 `debugRuntimeClasspath` / `releaseRuntimeClasspath` 依赖树，补齐所有分发组件的 NOTICE、开源声明入口和最终许可证审查。不得根据此直接依赖清单宣称“全部上架要求已满足”。
 

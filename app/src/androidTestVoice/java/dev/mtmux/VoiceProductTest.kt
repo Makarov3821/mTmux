@@ -7,6 +7,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.mtmux.voice.VoiceRecorder
 import dev.mtmux.voice.WhisperTranscriber
+import dev.mtmux.voice.PunctuationRestorer
+import dev.mtmux.voice.PunctuationCancellation
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,6 +19,28 @@ import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class VoiceProductTest {
+    @Test fun punctuationAddsMarksAndPreservesTechnicalLiterals() {
+        val context=InstrumentationRegistry.getInstrumentation().targetContext
+        val raw="先检查连接超时的原因然后修改代码修改完成后运行测试 保留 README.md 和 /home/项目/main.kt"
+        val result=PunctuationRestorer(context).restore(raw)
+        assertFalse("punctuation fell back instead of running",result.failed)
+        assertTrue(result.processed)
+        assertTrue(result.text,result.text.any {it in "，。？！"})
+        assertEquals(raw,result.text.filterNot {it in "，。？！、"})
+        assertTrue(result.text.contains("README.md"))
+        assertTrue(result.text.contains("/home/项目/main.kt"))
+        val model=File(context.noBackupFilesDir,"voice/${PunctuationRestorer.MODEL_NAME}")
+        assertEquals(PunctuationRestorer.MODEL_BYTES,model.length())
+        assertEquals(PunctuationRestorer.MODEL_SHA256,sha256(model))
+    }
+
+    @Test fun punctuationCancellationBeforeInferenceNeverReturnsText() {
+        val context=InstrumentationRegistry.getInstrumentation().targetContext
+        val cancellation=PunctuationCancellation().apply {cancel()}
+        val error=runCatching {PunctuationRestorer(context).restore("先检查问题然后修改代码",cancellation)}.exceptionOrNull()
+        assertTrue(error is java.util.concurrent.CancellationException)
+    }
+
     @Test fun bundledBaseModelExtractsAndNativeProbe() {
         val context=InstrumentationRegistry.getInstrumentation().targetContext
         File(context.noBackupFilesDir,"voice").deleteRecursively()

@@ -1739,15 +1739,18 @@ class TerminalUiTest {
             textState("draftScopeKey","voice-ui-pane")
         }
         compose.waitUntil(10000){runCatching{compose.onNodeWithTag("voice-input").assertIsEnabled()}.isSuccess}
-        compose.onNodeWithTag("voice-input").performClick()
-        compose.waitUntil(10000){compose.onAllNodesWithTag("voice-stop").fetchSemanticsNodes().isNotEmpty() ||
-            compose.onAllNodesWithTag("voice-error").fetchSemanticsNodes().isNotEmpty()}
-        if(compose.onAllNodesWithTag("voice-stop").fetchSemanticsNodes().isNotEmpty()) {
-            Thread.sleep(500)
-            compose.onNodeWithTag("voice-stop").performClick()
-            compose.waitUntil(10000){compose.onAllNodesWithTag("voice-transcribing").fetchSemanticsNodes().isNotEmpty() ||
-                compose.onAllNodesWithTag("voice-error").fetchSemanticsNodes().isNotEmpty()}
-            compose.waitUntil(60000){
+        val voiceButton=compose.onNodeWithTag("voice-input")
+        voiceButton.performTouchInput {down(center)}
+        var recording=false
+        try {
+            compose.waitUntil(10000) {
+                recording=compose.onAllNodesWithTag("voice-recording").fetchSemanticsNodes().isNotEmpty()
+                recording || compose.onAllNodesWithTag("voice-error").fetchSemanticsNodes().isNotEmpty()
+            }
+            if(recording) Thread.sleep(500)
+        } finally {voiceButton.performTouchInput {up()}}
+        if(recording) {
+            compose.waitUntil(60000) {
                 compose.onAllNodesWithTag("voice-transcribing").fetchSemanticsNodes().isEmpty() &&
                     (compose.onAllNodesWithTag("voice-error").fetchSemanticsNodes().isNotEmpty() ||
                      compose.onAllNodesWithTag("voice-result").fetchSemanticsNodes().isNotEmpty() ||

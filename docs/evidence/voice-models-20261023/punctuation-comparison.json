@@ -1,0 +1,86 @@
+{
+  "environment": "desktop Linux CPU; 1 inference thread; not an Android latency measurement",
+  "onnxruntime": "1.23.2",
+  "details": {
+    "srf": {
+      "session_and_vocabulary_ms": 29.946,
+      "files": {
+        "srf-punct-int8.onnx": [
+          2243714,
+          "650eb96762e2b6cfe12a3f1b44ddcab0a3f790e11a98afab3895f863d5eaec62"
+        ],
+        "srf-vocab.json": [
+          119104,
+          "76684d3d381bed15057f19e6b22972a00ec79e72fa4bfd5682afde4fdcc5a3a2"
+        ]
+      }
+    },
+    "ct": {
+      "session_and_vocabulary_ms": 261.747,
+      "files": {
+        "ct-punct-int8.onnx": [
+          75519198,
+          "65a3fb9f5ad7bfb96bf69e0dc4481df97f6ee60513c1d94ce981ba6effd524b1"
+        ]
+      }
+    }
+  },
+  "cases": [
+    {
+      "text": "先检查连接超时的原因然后修改代码修改完成后运行测试",
+      "srf": {
+        "raw_output": "先检查连接超时的原因，然后修改代码修改，完成后运行测试。",
+        "median_inference_ms": 0.663
+      },
+      "ct": {
+        "raw_output": "先检查连接超时的原因，然后修改代码，修改完成后运行测试。",
+        "median_inference_ms": 5.694
+      }
+    },
+    {
+      "text": "不要删除现有配置如果连接失败就回到主界面并保留错误日志",
+      "srf": {
+        "raw_output": "不要删除现有配置。如果连接失败，就回到主界面，并保留错误日志。",
+        "median_inference_ms": 0.713
+      },
+      "ct": {
+        "raw_output": "不要删除现有配置，如果连接失败，就回到主界面，并保留错误日志。",
+        "median_inference_ms": 5.718
+      }
+    },
+    {
+      "text": "这个问题是什么原因造成的可以帮我检查一下吗",
+      "srf": {
+        "raw_output": "这个问题是什么？原因造成的？可以帮我检查一下吗？",
+        "median_inference_ms": 0.65
+      },
+      "ct": {
+        "raw_output": "这个问题是什么原因造成的，可以帮我检查一下吗？",
+        "median_inference_ms": 4.127
+      }
+    },
+    {
+      "text": "今天天气很好我们出去散步吧",
+      "srf": {
+        "raw_output": "今天天气很好，我们出去散步吧！",
+        "median_inference_ms": 0.47
+      },
+      "ct": {
+        "raw_output": "今天天气很好，我们出去散步吧。",
+        "median_inference_ms": 2.733
+      }
+    },
+    {
+      "text": "我现在想要重构语音输入的逻辑按下准备好后发出绿色的光晕表示开始录音松手就进行转文字",
+      "srf": {
+        "raw_output": "我现在想要重构语音输入的逻辑，按下准备好后发出绿色的光晕，表示，开始录音，松手就进行转文字。",
+        "median_inference_ms": 0.866
+      },
+      "ct": {
+        "raw_output": "我现在想要重构语音输入的逻辑，按下准备好后发出绿色的光晕，表示开始录音，松手就进行转文字。",
+        "median_inference_ms": 7.125
+      }
+    }
+  ],
+  "scope": "Five illustrative natural-language examples; no held-out benchmark, F1, phone latency or product reconstruction claim."
+}

@@ -1,0 +1,13 @@
+{
+  "scope": "One public Chinese audio clip, desktop CPU, greedy best_of=1 beam_size=1 threads=4; not an Android or accuracy benchmark",
+  "source": "https://isv-data.oss-cn-hangzhou.aliyuncs.com/ics/MaaS/ASR/test_audio/asr_example_zh.wav",
+  "audio_sha256": "a1bd32dc78493c123f9625a66deee562aed2895f53fbc39f2cca3be7e6f4f20f",
+  "outputs": {
+    "q5": {
+      "text": "欢迎大家来体验打模院推出的与您识别模型"
+    },
+    "q8": {
+      "text": "欢迎大家来体验打模院推出的云石别模型"
+    }
+  }
+}

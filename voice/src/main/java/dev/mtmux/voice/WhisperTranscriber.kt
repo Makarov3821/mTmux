@@ -2,14 +2,12 @@ package dev.mtmux.voice
 
 import android.content.Context
 import org.json.JSONObject
-import java.io.File
-import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
 class WhisperTranscriber(private val context: Context) {
-    @Volatile private var verifiedModel: File? = null
+    private val model = BundledVoiceAsset(MODEL_NAME, MODEL_BYTES, MODEL_SHA256)
 
     fun prepareModel() { ensureModel() }
     fun probeModel():String = NativeVoice.probe(ensureModel().absolutePath).toString(Charsets.UTF_8)
@@ -24,6 +22,11 @@ class WhisperTranscriber(private val context: Context) {
         if(!state.compareAndSet(ACTIVE,CANCELLED)) return false
         NativeVoice.cancel(requestId)
         return true
+    }
+
+    /** Call after the inference block finishes, including cancellation before the block started. */
+    fun releaseRequest(requestId: Long) {
+        if (states.remove(requestId) != null) NativeVoice.forget(requestId)
     }
 
     fun transcribe(pcm: FloatArray, language: String, threads: Int, requestId: Long): VoiceResult {
@@ -45,39 +48,12 @@ class WhisperTranscriber(private val context: Context) {
         }
     }
 
-    private fun ensureModel(): File = synchronized(this) {
-        verifiedModel?.takeIf { it.isFile }?.let { return it }
-        val directory = File(context.noBackupFilesDir, "voice").apply { mkdirs() }
-        val target = File(directory, MODEL_NAME)
-        if (!isValid(target)) {
-            target.delete()
-            val temporary = File(directory, "$MODEL_NAME.part").apply { delete() }
-            try {
-                context.assets.open("models/$MODEL_NAME").use { source ->
-                    temporary.outputStream().buffered().use { output -> source.copyTo(output, 1024 * 1024) }
-                }
-                if (!isValid(temporary)) error("VOICE_MODEL_CHECKSUM")
-                check(temporary.renameTo(target)) { "VOICE_MODEL_INSTALL" }
-            } finally { temporary.delete() }
-        }
-        verifiedModel = target
-        target
-    }
-
-    private fun isValid(file: File): Boolean {
-        if (!file.isFile || file.length() != MODEL_BYTES) return false
-        val digest = MessageDigest.getInstance("SHA-256")
-        file.inputStream().buffered().use { input ->
-            val block = ByteArray(1024 * 1024)
-            while (true) { val count = input.read(block); if (count < 0) break; digest.update(block, 0, count) }
-        }
-        return digest.digest().joinToString("") { "%02x".format(it.toInt() and 0xff) } == MODEL_SHA256
-    }
+    private fun ensureModel() = model.file(context)
 
     companion object {
-        const val MODEL_NAME = "ggml-base-q5_1.bin"
-        const val MODEL_BYTES = 59_707_625L
-        const val MODEL_SHA256 = "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898"
+        const val MODEL_NAME = BuildConfig.WHISPER_MODEL_NAME
+        const val MODEL_BYTES = BuildConfig.WHISPER_MODEL_BYTES
+        const val MODEL_SHA256 = BuildConfig.WHISPER_MODEL_SHA256
         private val requestIds = AtomicLong(System.currentTimeMillis().coerceAtLeast(1))
         private val states = ConcurrentHashMap<Long,AtomicInteger>()
         private const val ACTIVE=0

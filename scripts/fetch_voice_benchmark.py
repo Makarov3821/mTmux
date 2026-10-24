@@ -30,6 +30,12 @@ FILES = {
         CACHE / "models/ggml-tiny-q5_1.bin",
     ),
     "base": (
+        f"https://huggingface.co/ggerganov/whisper.cpp/resolve/{MODEL_REVISION}/ggml-base-q8_0.bin?download=true",
+        "c577b9a86e7e048a0b7eada054f4dd79a56bbfa911fbdacf900ac5b567cbb7d9",
+        81_768_585,
+        CACHE / "models/ggml-base-q8_0.bin",
+    ),
+    "base-q5": (
         f"https://huggingface.co/ggerganov/whisper.cpp/resolve/{MODEL_REVISION}/ggml-base-q5_1.bin?download=true",
         "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898",
         59_707_625,
@@ -74,29 +80,46 @@ def fetch(name: str) -> Path:
         return target
     target.parent.mkdir(parents=True, exist_ok=True)
     temporary = target.with_suffix(target.suffix + ".part")
-    temporary.unlink(missing_ok=True)
-    print(f"Downloading {name} ({expected_size / 1_000_000:.1f} MB)…")
-    request = urllib.request.Request(url, headers={"User-Agent": "mtmux-voice-benchmark/1"})
-    digest = hashlib.sha256()
-    count = 0
-    try:
-        with urllib.request.urlopen(request, timeout=60) as source, temporary.open("wb") as output:
-            while True:
-                block = source.read(1024 * 1024)
-                if not block:
-                    break
-                count += len(block)
-                if count > expected_size:
-                    raise ValueError(f"{name}: response exceeds pinned size")
-                digest.update(block)
-                output.write(block)
-        if count != expected_size or digest.hexdigest() != expected_hash:
-            raise ValueError(f"{name}: checksum/size mismatch ({count}, {digest.hexdigest()})")
-        os.replace(temporary, target)
-    finally:
-        temporary.unlink(missing_ok=True)
-    print(f"OK fetched {name}: {target}")
-    return target
+    print(f"Downloading {name} ({expected_size / 1_000_000:.1f} MB)…", flush=True)
+    for attempt in range(4):
+        offset = temporary.stat().st_size if temporary.is_file() else 0
+        if offset >= expected_size:
+            if valid(temporary, expected_hash, expected_size):
+                os.replace(temporary, target)
+                return target
+            temporary.unlink(missing_ok=True)
+            offset = 0
+        separator = "&" if "?" in url else "?"
+        request = urllib.request.Request(url + f"{separator}mtmux_offset={offset}",
+            headers={"User-Agent": "mtmux-voice-benchmark/1", **({"Range": f"bytes={offset}-"} if offset else {})})
+        try:
+            with urllib.request.urlopen(request, timeout=60) as source:
+                if source.status == 206:
+                    if not source.headers.get("Content-Range", "").startswith(f"bytes {offset}-"):
+                        temporary.unlink(missing_ok=True)
+                        raise ValueError("unexpected download range")
+                elif offset:
+                    offset = 0  # Server ignored Range: replace the partial file.
+                count = offset
+                with temporary.open("ab" if offset else "wb") as output:
+                    while block := source.read(1024 * 1024):
+                        count += len(block)
+                        if count > expected_size:
+                            raise ValueError("response exceeds pinned size")
+                        output.write(block)
+            if count != expected_size:
+                raise ValueError("incomplete download")
+            if sha256(temporary) != expected_hash:
+                temporary.unlink(missing_ok=True)
+                raise ValueError("checksum mismatch")
+            os.replace(temporary, target)
+            print(f"OK fetched {name}: {target}", flush=True)
+            return target
+        except (OSError, ValueError) as error:
+            print(f"Retry {name} {attempt + 1}/4: {type(error).__name__}", flush=True)
+            if attempt == 3:
+                raise RuntimeError(f"{name}: pinned download failed; partial file kept for retry") from error
+    raise AssertionError("unreachable")
 
 
 def extract_source(archive: Path) -> None:
@@ -144,28 +167,30 @@ def extract_source(archive: Path) -> None:
 
 def main() -> None:
     command = sys.argv[1] if len(sys.argv) > 1 else "all"
-    if command not in {"all", "deps", "models", "base", "sample", "verify", "verify-source", "verify-base"}:
-        raise SystemExit("usage: fetch_voice_benchmark.py [all|deps|models|base|sample|verify|verify-source|verify-base]")
+    if command not in {"all", "deps", "models", "base", "base-q5", "sample", "verify", "verify-source", "verify-base", "verify-base-q5"}:
+        raise SystemExit("usage: fetch_voice_benchmark.py [all|deps|models|base|base-q5|sample|verify|verify-source|verify-base|verify-base-q5]")
     CACHE.mkdir(exist_ok=True)
     if command in {"all", "deps"}:
         extract_source(fetch("source"))
     if command in {"all", "models"}:
         fetch("tiny")
         fetch("base")
-    if command == "base":
-        fetch("base")
+        fetch("base-q5")
+    if command in {"base", "base-q5"}:
+        fetch(command)
     if command in {"all", "sample"}:
         fetch("sample")
-    if command in {"verify", "verify-source", "verify-base"}:
+    if command in {"verify", "verify-source", "verify-base", "verify-base-q5"}:
         failed = False
         names = (FILES if command == "verify" else
                  {"source": FILES["source"]} if command == "verify-source" else
+                 {"base-q5": FILES["base-q5"]} if command == "verify-base-q5" else
                  {"base": FILES["base"]})
         for name, (_, digest, size, path) in names.items():
             ok = valid(path, digest, size)
             print(f"{'OK' if ok else 'MISSING/BAD'} {name}: {path}")
             failed |= not ok
-        if command != "verify-base":
+        if command not in {"verify-base", "verify-base-q5"}:
             source_stamp = CACHE / "whisper.cpp/.mtmux-source"
             stamp_ok = source_stamp.is_file() and source_stamp.read_text().strip() == WHISPER_COMMIT
             tree_actual = tree_sha256(CACHE / "whisper.cpp") if stamp_ok else "missing"

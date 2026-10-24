@@ -83,6 +83,14 @@ class VoiceRecorder : AutoCloseable {
         recorder?.takeIf { it.recordingState == AudioRecord.RECORDSTATE_RECORDING }?.let { runCatching { it.stop() } }
     }
 
+    /** Background-only teardown before another hold starts; discard PCM without converting it. */
+    fun discard() {
+        cancel()
+        val job = future ?: return
+        try { job.get(3, TimeUnit.SECONDS) }
+        finally { if (job.isDone) synchronized(this) { if (future === job) future = null } }
+    }
+
     fun isRecording() = running.get()
     override fun close() { cancel(); future?.cancel(true); executor.shutdownNow() }
 

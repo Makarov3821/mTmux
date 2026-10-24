@@ -9,7 +9,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -29,6 +32,7 @@ private val keyPages = listOf(
     val pager = rememberPagerState(initialPage=TERMINAL_KEY_PAGER_START,pageCount={Int.MAX_VALUE})
     val pageLabel = stringResource(R.string.keys_page,terminalKeyPage(pager.currentPage)+1,TERMINAL_KEY_PAGE_COUNT)
     val pending = if(modifiers == 0) "" else stringResource(R.string.keys_modifier_pending,TerminalKeyStroke.label(modifiers))
+    val indicatorColor = MaterialTheme.colorScheme.primary
     Box(Modifier.fillMaxWidth().height(48.dp)) {
         HorizontalPager(pager,reverseLayout=true,overscrollEffect=null,
             modifier=Modifier.fillMaxSize().testTag("terminal-key-pages").semantics { stateDescription=pageLabel }) { page ->
@@ -47,10 +51,23 @@ private val keyPages = listOf(
                 }
             }
         }
-        Row(Modifier.align(Alignment.BottomCenter).padding(bottom=1.dp).semantics {contentDescription=pageLabel;stateDescription=pending},
+        Row(Modifier.align(Alignment.BottomCenter).padding(bottom=1.dp).semantics {contentDescription=pageLabel;stateDescription=pending}
+            .drawWithContent {
+                drawContent()
+                val step = 7.dp.toPx()
+                // Reduce the large virtual page index before converting to Float, keeping drag precision.
+                val position = terminalKeyPage(pager.currentPage) + pager.currentPageOffsetFraction
+                clipRect {
+                    // Draw edge copies so wrapping continues through the edge instead of jumping back.
+                    for (cycle in -1..1) {
+                        drawCircle(indicatorColor,1.5.dp.toPx(),
+                            Offset(3.5.dp.toPx() + (position + cycle * TERMINAL_KEY_PAGE_COUNT) * step,size.height / 2))
+                    }
+                }
+            }.padding(horizontal=2.dp),
             horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-            repeat(TERMINAL_KEY_PAGE_COUNT) { page ->
-                Box(Modifier.size(3.dp).background(if(page==terminalKeyPage(pager.currentPage)) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,CircleShape))
+            repeat(TERMINAL_KEY_PAGE_COUNT) {
+                Box(Modifier.size(3.dp).background(MaterialTheme.colorScheme.outlineVariant,CircleShape))
             }
         }
     }

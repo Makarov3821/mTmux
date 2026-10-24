@@ -1,0 +1,40 @@
+{
+  "ct": {
+    "voice_unit_tests": {
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "release_bytes": 196535810,
+    "trial_bytes": 196582345,
+    "trial_sha256": "22db46536c4bef6fa385053f081056c77b812e1b5d738e9ce07d0aec0bc3b19e",
+    "signature": "local Android debug certificate; cannot upgrade official release"
+  },
+  "srf": {
+    "voice_unit_tests": {
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "release_bytes": 136725073,
+    "trial_bytes": 136768532,
+    "trial_sha256": "aec2f5352eadae43b19afe0bcadb6003158c1f1e0f950dfb57eec40f568d190e",
+    "signature": "local Android debug certificate; cannot upgrade official release"
+  },
+  "validation": {
+    "standard_app_unit_tests": 22,
+    "voice_app_unit_tests": 22,
+    "voice_module_unit_tests_per_backend": 13,
+    "download_integrity_tests": 4,
+    "lint_errors": 0,
+    "standard_lint_warnings": 78,
+    "voice_lint_warnings": 50,
+    "android_test_apks_compiled": true,
+    "android_tests_run": false,
+    "native_load_segment_alignment": "16 KiB, arm64-v8a and x86_64",
+    "trial_signatures_and_zipalign": "passed",
+    "srf_debug_after_fresh_packaging_bytes": 141252797
+  }
+}

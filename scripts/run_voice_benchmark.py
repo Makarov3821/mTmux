@@ -20,7 +20,8 @@ ACTIVITY = f"{PACKAGE}/.BenchmarkActivity"
 APK = ROOT / "voice-benchmark/build/outputs/apk/release/voice-benchmark-release.apk"
 MODELS = {
     "tiny": CACHE / "models/ggml-tiny-q5_1.bin",
-    "base": CACHE / "models/ggml-base-q5_1.bin",
+    "base": CACHE / "models/ggml-base-q8_0.bin",
+    "base-q5": CACHE / "models/ggml-base-q5_1.bin",
 }
 
 def run(command: list[str], *, capture: bool = False, check: bool = True) -> str:
@@ -42,7 +43,7 @@ def adb(serial: str | None, *arguments: str, capture: bool = False, check: bool 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--models", default="tiny,base", help="comma-separated: tiny,base")
+    parser.add_argument("--models", default="base-q5,base", help="comma-separated: tiny,base-q5,base (q8)")
     parser.add_argument("--audio", type=Path, default=CACHE / "audio/jfk.wav")
     parser.add_argument("--language", choices=["auto", "en", "zh", "ja", "es"], default="auto")
     parser.add_argument("--threads", type=int, default=4)
@@ -53,7 +54,7 @@ def main() -> None:
     args = parser.parse_args()
     names = [name.strip() for name in args.models.split(",") if name.strip()]
     if not names or any(name not in MODELS for name in names):
-        parser.error("--models must contain tiny and/or base")
+        parser.error("--models must contain tiny, base-q5 and/or base (q8)")
     if args.threads not in range(1, 17) or args.repeat not in range(1, 11):
         parser.error("threads must be 1..16 and repeat 1..10")
     if not args.audio.is_file():

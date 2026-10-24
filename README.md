@@ -2,7 +2,9 @@
 
 Android 上的 SSH + tmux Agent 控制端。目标是离开电脑后，打开手机查看远程 Agent 输出、回复并继续工作；不在服务器安装常驻服务。
 
-**当前为 0.8.4（应用 ID `dev.mtmux`，名称 mTmux）：终端采用无边底栏，支持 Ctrl / Shift / Alt 粘滞组合键和循环翻页；保留六套浅深主题、1×～10× 远端滚动倍率及 standard/voice 双版本。voice 内置离线 Whisper base q5_1，尚未完成 ARM 真机质量/性能验收。** 完整产品范围见 [plan.md](plan.md)，验证结果和剩余门槛见 [P0 报告](docs/testing/p0-report.md)。
+**当前正式版为 0.8.4（应用 ID `dev.mtmux`，名称 mTmux）：终端采用无边底栏，支持 Ctrl / Shift / Alt 粘滞组合键和循环翻页；保留六套浅深主题、1×～10× 远端滚动倍率及 standard/voice 双版本。voice 内置离线 Whisper base q5_1，尚未完成 ARM 真机质量/性能验收。** 完整产品范围见 [plan.md](plan.md)，验证结果和剩余门槛见 [P0 报告](docs/testing/p0-report.md)。
+
+0.8.5-rc.1 / code33 预发行：按住录音与上滑取消、Whisper base q8、可关闭的离线标点恢复及轻量 SRF 对照构建。两种模型组合的试验、实际包体与设备验证范围见 [模型记录](docs/testing/voice-models-20261023.md)；当前默认构建为 q8 + CT，0.8.4 已发布 APK 仍为 q5；预发行两个语音包经 GitHub 原证书签名后可直接覆盖升级，见 [发布记录](docs/releases/0.8.5-rc.1.md)。
 
 版本功能清单见 [CHANGELOG.md](CHANGELOG.md)；本轮详细记录见 [0.8.4](docs/releases/0.8.4.md)。
 
@@ -46,13 +48,14 @@ printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
 # standard：无需 NDK/模型
 ./gradlew :core:test :app:assembleStandardDebug :app:lintStandardDebug
 
-# voice：先获取固定源码和 base q5_1（校验 SHA-256），需要 NDK 28.2/CMake 3.22.1
+# voice：固定源码、base q8 与标点模型（校验 SHA-256），需要 NDK 28.2/CMake 3.22.1
 python3 scripts/fetch_voice_benchmark.py deps
 python3 scripts/fetch_voice_benchmark.py base
+python3 scripts/fetch_voice_punctuation.py
 ./gradlew :voice:testDebugUnitTest :app:assembleVoiceDebug :app:lintVoiceDebug
 ```
 
-APK 输出：`app/build/outputs/apk/standard/debug/app-standard-debug.apk` 与 `app/build/outputs/apk/voice/debug/app-voice-debug.apk`。release voice 当前约 74.5 MB，含 arm64-v8a/x86_64；standard 约 12.1 MB。两个 flavor 使用同一应用 ID/版本/签名，只能安装一个，可相互覆盖并保留数据。
+APK 输出：`app/build/outputs/apk/standard/debug/app-standard-debug.apk` 与 `app/build/outputs/apk/voice/debug/app-voice-debug.apk`。0.8.4 已发布 voice 约 74.6 MB；当前未发布 q8 + CT 的未签名 Release 约 196.5 MB，SRF 对照约 136.7 MB，均含 arm64-v8a/x86_64；standard 约 12.2 MB。两个 flavor 使用同一应用 ID/版本/签名，只能安装一个，可相互覆盖并保留数据。
 
 终端资产已经打包进源码，无需运行时联网下载。修改 `web/` 后使用 Node.js 22+ 重建并测试：
 
@@ -75,7 +78,7 @@ export GRADLE_USER_HOME="$PWD/.tools/gradle-home"
 
 ### 语音 V0 基准（不进入正式 APK）
 
-独立 `:voice-benchmark` 模块固定 whisper.cpp 1.9.5，比较 multilingual tiny/base q5_1。需要 Android NDK 28.2.13676358、CMake 3.22.1 和 arm64-v8a/x86_64 测试设备；源码、模型和 WAV 下载到被忽略的 `.voice-benchmark/`，不会提交或打进 mTmux APK：
+独立 `:voice-benchmark` 模块固定 whisper.cpp 1.9.5，可比较 multilingual tiny q5、base q5/q8；当前运行脚本默认比较 base q5/q8。需要 Android NDK 28.2.13676358、CMake 3.22.1 和 arm64-v8a/x86_64 测试设备；源码、模型和 WAV 下载到被忽略的 `.voice-benchmark/`，不会提交或打进 mTmux APK：
 
 ```bash
 python3 scripts/fetch_voice_benchmark.py all
@@ -208,7 +211,7 @@ voice-benchmark/  独立 whisper.cpp Android 基准，不被正式 app 依赖
 
 应用从进程启动起自动记录少量运行事件。复现问题后进入“设置 → 调试日志 → 生成日志”，选择保存位置，把生成的 `.txt` 文件连同操作步骤、发生时间、预期/实际表现一起反馈。点击生成时已截取快照，之后发生的操作需重新生成。没有自动上传。
 
-记录内容包括应用/Android/WebView 版本、启动时间、前后台切换、SSH 连接阶段与错误类别、首页探测批次、终端行列/可见高度、首次渲染、累计输出字节数、输入被阻止/失败、私钥导入方式，以及 voice 权限结果、录音开始/停止、录音秒数、转写耗时和固定错误事件；另含异常类型和有限代码调用位置。服务器仅用本地配置标识的数字摘要关联，不记录别名、地址、用户名、密码、私钥、私钥口令、剪切板、命令、终端正文、语音音频、转写文字、识别语言或原始异常消息。
+记录内容包括应用/Android/WebView 版本、启动时间、前后台切换、SSH 连接阶段与错误类别、首页探测批次、终端行列/可见高度、首次渲染、累计输出字节数、输入被阻止/失败、私钥导入方式，以及 voice 权限结果、录音开始/停止、录音秒数、转写耗时和固定错误事件；另含标点处理阶段、耗时与回退标记，以及异常类型和有限代码调用位置。服务器仅用本地配置标识的数字摘要关联，不记录别名、地址、用户名、密码、私钥、私钥口令、剪切板、命令、终端正文、语音音频、转写文字、识别语言或原始异常消息。
 
 连接性能日志 v2（导出头 `build=connection-perf-v3`）细分 DNS、TCP、服务器 banner、密钥交换、认证、SSH 就绪、tmux 列表/准备/状态读取、通道打开、命令等待、终端打开和首批字节；每段记录开始、结果和单调时钟耗时，含尝试编号、跳板序号、操作/父操作编号、退出码及字节数。取消尝试单独记为 `CONNECTION_CANCELLED`，复用记为 `SSH_REUSED`；刷新交接请求与结果记为 `REFRESH_HANDOFF_REQUEST` / `REFRESH_HANDOFF`。字段含义、跳板计时边界和复测步骤见 [连接性能说明](docs/testing/connection-performance.md)。原始日志可放在被 Git 忽略的根目录 `debug-log/`。
 

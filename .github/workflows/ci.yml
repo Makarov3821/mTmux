@@ -31,7 +31,7 @@ jobs:
         run: |
           apk=app/build/outputs/apk/standard/debug/app-standard-debug.apk
           ! "$ANDROID_HOME/build-tools/35.0.0/aapt2" dump permissions "$apk" | grep RECORD_AUDIO
-          ! unzip -l "$apk" | grep -E 'libmtmux_voice|ggml-base-q5_1'
+          ! unzip -l "$apk" | grep -E 'libmtmux_voice|ggml-base-|ct-punct|srf-punct|onnxruntime'
       - run: sudo apt-get update && sudo apt-get install -y tmux openssh-server && sudo mkdir -p /run/sshd
       - run: python3 scripts/test_tmux.py
       - run: python3 scripts/test_ssh.py
