@@ -18,6 +18,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--android", action="store_true", help="Run Android UI + shell tests on an attached test device/emulator")
     parser.add_argument("--test-class", help="Optional Android instrumentation class or class#method filter")
+    parser.add_argument("--core-test", action="append", help="Optional Gradle --tests filter for the loopback JVM fixture")
+    parser.add_argument("--probe-pty", action="store_true", help="Check fixture PTY allocation using an isolated OpenSSH client")
     parser.add_argument("--android-variant", choices=("standard", "voice"), default="standard",
                         help="Product flavor used for Android tests (default: standard)")
     options = parser.parse_args()
@@ -121,7 +123,17 @@ bind -n WheelDownPane {
                     finally:
                         subprocess.run([adb, "reverse", "--remove", f"tcp:{port}"], check=False)
                 else:
-                    subprocess.run(["./gradlew", ":core:test", "--rerun-tasks", "--console=plain"], env=env, check=True)
+                    if options.probe_pty:
+                        probe = subprocess.run(["ssh", "-F", "/dev/null", "-o", "BatchMode=yes", "-o", "IdentitiesOnly=yes",
+                            "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-i", str(folder / "client"),
+                            "-p", str(port), "-tt", f"{user}@127.0.0.1", "printf PTY_FIXTURE_OK; exit"], capture_output=True, timeout=10)
+                        print("Fixture PTY probe:", "OK" if b"PTY_FIXTURE_OK" in probe.stdout else "FAILED",
+                            "(PTY allocation refused)" if b"PTY allocation" in probe.stderr else "", flush=True)
+                    command = ["./gradlew", ":core:test", "--no-daemon", "-Pkotlin.compiler.execution.strategy=in-process",
+                               "--rerun-tasks", "--console=plain", "--max-workers=2"]
+                    for test in options.core_test or []:
+                        command.extend(["--tests", test])
+                    subprocess.run(command, env=env, check=True)
                 print("PASS: disposable OpenSSH integration tests", flush=True)
             finally:
                 subprocess.run([str(wrapper), "kill-server"], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

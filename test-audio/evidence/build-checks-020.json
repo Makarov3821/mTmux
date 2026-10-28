@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "unitTests": 25,
+  "unitFailures": 0,
+  "unitSkipped": 0,
+  "lintErrors": 0,
+  "lintWarnings": 10,
+  "realModelPredictionCases": 27,
+  "kotlinReconstructionCases": 27,
+  "focusedWeightBytes": 329013996,
+  "sameCertificateAs010": true,
+  "signerSha256": "dc5524d7fd1cdf45d113be4950f1cf1afce888fcd88200a2d363700c66084a60",
+  "apkVersionCode": 2,
+  "zipalign16KiBVerified": true,
+  "androidDeviceMatrixPassed": false,
+  "notes": "No new Android hardware validation; user is evaluating on the target phone. Actual pinned ONNX inference ran on desktop; its predictions were reconstructed and checked by product Kotlin code in JVM tests.",
+  "androidTestHarnessCompiled": true
+}

@@ -2,6 +2,8 @@
 
 2026-10-23，未发布修改。用户要求寻找更小的中文标点方案，必要时接受 CT-Transformer INT8，并尝试把 Whisper q5 换成 q8。
 
+2026-10-25 后续本地改动：SRF 的弱标点和提前句末标点增加保守过滤，见 [过滤记录](srf-conservative-punctuation.md)；该调整尚未进入 rc.2 发布包。
+
 ## 最终实现
 
 默认：`按住录音 → Whisper multilingual base q8_0 → CT-Transformer INT8 → 可编辑草稿`。

@@ -15,6 +15,11 @@ data class JumpHost(val id: String = UUID.randomUUID().toString(), val host: Str
 fun ServerProfile.routeContext(): String = if (jumps.isEmpty()) "" else JSONArray().also { a -> jumps.forEach { a.put(it.json()) } }.toString()
 fun ServerProfiles.login(profile: ServerProfile): Login {
     val credentials = credentials(profile) ?: throw AppError(R.string.err_missing_credentials)
+    return profile.login(credentials)
+}
+/** Also supports an unsaved editor snapshot without persisting credentials first. */
+fun ServerProfile.login(credentials: SavedCredentials): Login {
+    val profile = this
     fun auth(host: String, port: Int, user: String, key: Boolean, saved: SavedCredentials, jumps: List<Login> = emptyList()): Login {
         if (key && saved.privateKey == null) throw AppError(R.string.err_reimport_key)
         return Login(host, port, user, saved.password, if (key) saved.privateKey else null, saved.passphrase, jumps)

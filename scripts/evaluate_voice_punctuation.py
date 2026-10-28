@@ -25,7 +25,7 @@ CORPUS = [
 ]
 
 
-def evaluate() -> dict:
+def evaluate(conservative: bool = False) -> dict:
     cases = [{"text": text} for text in CORPUS]
     details = {}
     for kind in ["srf", "ct"]:
@@ -55,20 +55,33 @@ def evaluate() -> dict:
             timings = []
             for _ in range(5):
                 started = time.perf_counter()
-                predicted = session.run(None, inputs)[0][0].argmax(-1)
+                logits = session.run(None, inputs)[0][0]
+                predicted = logits.argmax(-1)
                 timings.append((time.perf_counter() - started) * 1000)
             output = "".join(t + (labels[int(k)] if labels[int(k)] not in ["_", "<unk>"] else "") for t, k in zip(tokens, predicted))
             case[kind] = {"raw_output": output, "median_inference_ms": round(statistics.median(timings), 3)}
+            if conservative and kind == "srf":
+                scores = logits.astype(np.float64)
+                probabilities = np.exp(scores - scores.max(-1, keepdims=True))
+                probabilities /= probabilities.sum(-1, keepdims=True)
+                selected = predicted.copy()
+                for i, label in enumerate(predicted[:-1]):
+                    if label and (probabilities[i, 0] > .10 or (label in (2, 3, 4) and probabilities[i, label] < .97)):
+                        selected[i] = 0
+                case[kind]["filtered_output"] = "".join(t + labels[int(k)] for t, k in zip(tokens, selected))
+                case[kind]["removed_insertions"] = int(np.count_nonzero(predicted) - np.count_nonzero(selected))
         del session
     return {"environment": "desktop Linux CPU; 1 inference thread; not an Android latency measurement",
         "onnxruntime": ort.__version__, "details": details, "cases": cases,
-        "scope": "Five illustrative natural-language examples; no held-out benchmark, F1, phone latency or product reconstruction claim."}
+        "scope": "Five illustrative natural-language examples; no held-out benchmark, F1, phone latency or product reconstruction claim.",
+        "srf_conservative_filter": conservative}
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--srf-conservative", action="store_true")
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(evaluate(), ensure_ascii=False, indent=2) + "\n")
+    args.output.write_text(json.dumps(evaluate(args.srf_conservative), ensure_ascii=False, indent=2) + "\n")
     print(args.output)

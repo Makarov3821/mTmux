@@ -228,6 +228,9 @@ class TerminalUiTest {
             Thread.sleep(1000)
             saveScreenshot("private-key-auth")
             compose.onNodeWithTag("save-server").performClick()
+            compose.waitUntil(30000) { compose.onAllNodesWithTag("save-server-anyway").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithTag("save-server-anyway").performClick()
+            compose.waitUntil(10000) { store.credentials(profile)?.passphrase == "paste-passphrase-marker" }
             assertArrayEquals(key,store.credentials(profile)!!.privateKey)
             assertEquals("paste-passphrase-marker",store.credentials(profile)!!.passphrase)
             val log=DebugLog.snapshot().toString(Charsets.UTF_8)
@@ -975,8 +978,8 @@ class TerminalUiTest {
             assertTrue(cache.shouldRefresh(profile,now))
             cache.markAttempt(profile,now) // No successful snapshot: failures must also be throttled.
             val restored=ServerCache(compose.activity)
-            assertFalse(restored.shouldRefresh(profile,now+30*60*1000L-1))
-            assertTrue(restored.shouldRefresh(profile,now+30*60*1000L))
+            assertFalse(restored.shouldRefresh(profile,now+5*60*1000L-1))
+            assertTrue(restored.shouldRefresh(profile,now+5*60*1000L))
             assertTrue(restored.shouldRefresh(profile,now-1)) // Wall clock rollback must not block forever.
             assertFalse(restored.shouldRefresh(profile.copy(name="renamed"),now+1))
             assertTrue(restored.shouldRefresh(profile.copy(host="another.invalid"),now+1))
@@ -1031,7 +1034,7 @@ class TerminalUiTest {
             compose.waitForIdle()
             assertEquals(updated,ServerCache(compose.activity).read(profile)!!.updatedAt)
             // Internal navigation never refreshes, even when the interval has expired.
-            ServerCache(compose.activity).markAttempt(profile,System.currentTimeMillis()-30*60*1000L)
+            ServerCache(compose.activity).markAttempt(profile,System.currentTimeMillis()-5*60*1000L)
             compose.onNodeWithTag("settings").performClick()
             compose.onNodeWithText("‹ 返回").performClick()
             compose.waitForIdle()
@@ -1059,17 +1062,32 @@ class TerminalUiTest {
             compose.onNodeWithText("发送回车").performClick()
             compose.waitUntil(15000) { evaluate(view,"Array.from({length:terminal.buffer.active.length},(_,i)=>terminal.buffer.active.getLine(i).translateToString(true)).join('\\n')").contains("JUMP_UI_OK") }
             val beforeHome=ServerCache(compose.activity).read(profile)!!.updatedAt
-            ServerCache(compose.activity).markAttempt(profile,System.currentTimeMillis()-31*60*1000L)
+            // A recent automatic probe must not suppress the explicit terminal-return refresh.
+            ServerCache(compose.activity).markAttempt(profile)
+            ServerCache(compose.activity).markAttempt(offline)
+            val probePrefs=compose.activity.getSharedPreferences("server-profiles",0)
+            val offlineProbe=probePrefs.getString("probe:${offline.id}",null)
             compose.onNodeWithTag("terminal-home").performClick()
-            compose.waitForIdle()
-            assertEquals(beforeHome,ServerCache(compose.activity).read(profile)!!.updatedAt)
-            assertTrue(ServerCache(compose.activity).shouldRefresh(profile))
+            compose.waitUntil(30000) { (ServerCache(compose.activity).read(profile)?.updatedAt ?: 0L) > beforeHome }
+            assertFalse(ServerCache(compose.activity).shouldRefresh(profile))
+            assertEquals(offlineProbe,probePrefs.getString("probe:${offline.id}",null))
             compose.onNodeWithTag("task-${profile.id}-%0").performScrollTo().performClick()
             compose.waitUntil(45000) { evaluate(view,"connected")=="true" }
             compose.onNodeWithText("工具").performClick()
             compose.onNodeWithTag("reply-target").assertTextEquals("回复目标 %0")
             compose.onNodeWithText("关闭").performClick()
-            compose.onNodeWithTag("terminal-home").performClick()
+            val organization=ServerOrganization(compose.activity)
+            val folded=organization.saveFolder(name="返回刷新-${profile.id}")
+            try {
+                organization.move(profile.id,folded.id)
+                organization.collapse(folded.id,true)
+                ServerCache(compose.activity).markAttempt(profile,System.currentTimeMillis()-5*60*1000L)
+                val foldedProbe=probePrefs.getString("probe:${profile.id}",null)
+                compose.onNodeWithTag("terminal-home").performClick()
+                compose.onNodeWithTag("folder-${folded.id}").assertExists()
+                compose.waitForIdle()
+                assertEquals(foldedProbe,probePrefs.getString("probe:${profile.id}",null))
+            } finally { organization.deleteFolder(folded.id) }
         } finally {
             // Route edits invalidate target caches; shared hop trust survives until its last profile is removed.
             val saved = store.all().first { it.id == profile.id }
@@ -1094,11 +1112,15 @@ class TerminalUiTest {
         compose.onNodeWithTag("add-server").performClick()
         compose.onNodeWithTag("profile-name").performTextInput("测试服务器")
         compose.onNodeWithTag("server-host").performTextInput("127.0.0.1")
+        compose.onNodeWithTag("server-port").performTextReplacement("9")
         compose.onNodeWithTag("server-user").performTextInput("tester")
         compose.onNodeWithText("密码",useUnmergedTree=true).performScrollTo().performClick()
         compose.onNodeWithTag("server-secret").performScrollTo().performTextInput("NEVER_PERSIST_SECRET")
         compose.onNodeWithTag("save-server").performClick()
         val store=ServerProfiles(compose.activity)
+        compose.waitUntil(30000) { compose.onAllNodesWithTag("save-server-anyway").fetchSemanticsNodes().isNotEmpty() }
+        assertTrue(store.all().isEmpty())
+        compose.onNodeWithTag("save-server-anyway").performClick()
         compose.waitUntil(10000) { store.all().size==1 }
         val profile=store.all().single()
         assertFalse(compose.activity.getSharedPreferences("server-profiles",0).all.values.joinToString().contains("NEVER_PERSIST_SECRET"))
@@ -1222,7 +1244,10 @@ class TerminalUiTest {
             compose.onNodeWithText("relay@198.51.100.2:2202").performScrollTo().assertIsDisplayed()
             saveScreenshot("editor-folder-saved-jumps")
             compose.onNodeWithTag("save-server").performClick()
-            compose.waitForIdle()
+            compose.waitUntil(30000) { compose.onAllNodesWithTag("save-server-anyway").fetchSemanticsNodes().isNotEmpty() }
+            assertTrue(store.all().none { it.name=="新服务器" })
+            compose.onNodeWithTag("save-server-anyway").performClick()
+            compose.waitUntil(10000) { store.all().any { it.name=="新服务器" } }
             val created=store.all().single { it.name=="新服务器" }
             assertEquals(folder.id,organization.folderOf(created.id))
             assertEquals(listOf("bastion@198.51.100.1:2201","relay@198.51.100.2:2202"),created.jumps.map { "${it.user}@${it.host}:${it.port}" })

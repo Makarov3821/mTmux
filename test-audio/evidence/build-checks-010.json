@@ -1,0 +1,11 @@
+{
+  "unitTests": 7,
+  "unitFailures": 0,
+  "lintErrors": 0,
+  "lintWarnings": 10,
+  "desktopSherpaWeightsDecoded": 5,
+  "desktopWhisperWeightsDecoded": 3,
+  "androidFullMatrixPassed": false,
+  "physicalArm64DeviceTested": false,
+  "androidNotes": "Software emulator startup ANR, then x86 CVTPS2PD page-edge fault in Whisper mel normalization. Debug de-vectorization workaround added. Subsequent native matrix runs did not finish; emulator stopped. No Android matrix success claimed."
+}

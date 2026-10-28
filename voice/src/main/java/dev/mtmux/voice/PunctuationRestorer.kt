@@ -85,9 +85,8 @@ class PunctuationRestorer(private val context: Context) {
                                             for (j in 0 until length) {
                                                 val margin = minOf(j, length - 1 - j)
                                                 if (margin <= margins[start + j]) continue
-                                                var best = 0
-                                                for (k in 1 until labels.size) if (scores[j * labels.size + k] > scores[j * labels.size + best]) best = k
-                                                predictions[start + j] = labels[best]
+                                                predictions[start + j] = PunctuationPrediction.choose(scores, j * labels.size, labels,
+                                                    conservative = srf, terminal = start + j == tokens.lastIndex)
                                                 margins[start + j] = margin
                                             }
                                         }

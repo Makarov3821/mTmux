@@ -1,0 +1,24 @@
+{
+  "purpose": "Host CPU decoder/model compatibility; not Android performance",
+  "runtime": "whisper.cpp 1.9.5",
+  "greedyBestOf": 1,
+  "threads": 4,
+  "language": "zh",
+  "records": [
+    {
+      "group": "base-q8",
+      "raw": "欢迎大家来体验打模院推出的云石别模型",
+      "desktopTotalMs": 1267
+    },
+    {
+      "group": "base-q5",
+      "raw": "欢迎大家来体验打模院推出的与您识别模型",
+      "desktopTotalMs": 1618
+    },
+    {
+      "group": "tiny-q8",
+      "raw": "欢迎大家来体验打摩院推出的银石边模型",
+      "desktopTotalMs": 667
+    }
+  ]
+}

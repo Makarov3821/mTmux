@@ -26,7 +26,7 @@ class Login(
 
 data class ExecResult(val status: Int, val output: String, val error: String)
 
-class SshClient(private val pins: PinStore) : AutoCloseable {
+class SshClient(private val pins: PinStore, private val confirmUnknownHost: ((HostKeyChallenge) -> Boolean)? = null) : AutoCloseable {
     @Volatile private var session: Session? = null
     @Volatile private var terminal: com.jcraft.jsch.Channel? = null
     private var output: OutputStream? = null
@@ -93,7 +93,7 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
                 checkActive()
                 val scoped = Login(hop.host, hop.port, hop.user, hop.password, hop.privateKey, hop.passphrase, hops.take(index))
                 val jsch = JSch()
-                val verifier = PinnedHostKeys(scoped.trustEndpoint, pins)
+                val verifier = PinnedHostKeys(scoped.trustEndpoint, pins, confirmUnknownHost)
                 jsch.hostKeyRepository = verifier
                 val hopNumber = if (index < hops.lastIndex) index + 1 else 0
                 try {
@@ -209,6 +209,9 @@ class SshClient(private val pins: PinStore) : AutoCloseable {
         ensure(result.status == 0, if (result.status == 2) ErrorCode.TMUX_MOUSE_FAILED else ErrorCode.TASK_GONE)
         return TmuxPreparation.parse(result.output, session, expected)
     }
+
+    fun createTmuxSession(name: String, path: String): TmuxSessionCreation.Created =
+        TmuxSessionCreation.parse(exec(TmuxSessionCreation.command(name, path)))
 
     fun openTerminal(command: String?, cols: Int, rows: Int): Long = measured(ConnectionPhase.TERMINAL_OPEN) {
         checkActive()

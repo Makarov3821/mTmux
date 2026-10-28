@@ -1,0 +1,59 @@
+{
+  "coreWithLoopbackSsh": {
+    "tests": 61,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "standardUnit": {
+    "tests": 29,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "voiceUnit": {
+    "tests": 29,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "standardDebugLint": {
+    "Error": 0,
+    "Warning": 79
+  },
+  "voiceDebugLint": {
+    "Error": 0,
+    "Warning": 51
+  },
+  "standardDebugBuild": "passed",
+  "voiceDebugBuild": "passed",
+  "standardAndroidTestCompilation": "passed",
+  "androidInstrumentationExecuted": false,
+  "sshFixture": "loopback temporary sshd/keys/tmux socket; sandbox PTY probe failed, permitted outside-sandbox run passed",
+  "existingVoiceExperimentPreserved": true,
+  "refreshPolicyCorrection": {
+    "standardUnit": {
+      "tests": 33,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "voiceUnit": {
+      "tests": 33,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "standardDebugLint": {
+      "Error": 0,
+      "Warning": 79
+    },
+    "voiceDebugLint": {
+      "Error": 0,
+      "Warning": 51
+    },
+    "standardAndroidTestCompilation": "passed",
+    "androidInstrumentationExecuted": false,
+    "policy": "Only returning server bypasses interval; automatic refresh respects collapsed folders; interval is five minutes."
+  }
+}

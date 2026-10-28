@@ -20,6 +20,92 @@ class SshIntegrationTest {
         override fun get(endpoint: String) = System.getenv("MTMUX_TEST_HOST_KEY")
     })
 
+    @Test fun `interactive verification authenticates in one chain and leaves pins provisional`() {
+        val original = login()
+        val saved = mutableMapOf<String,String>()
+        val staged = StagedHostKeys(object : PinStore { override fun get(endpoint:String) = saved[endpoint] })
+        var prompts = 0
+        val handshakes = java.util.concurrent.atomic.AtomicInteger()
+        SshClient(staged) { prompts++; staged.approve(it) }.use { client ->
+            client.observe { if (it.phase == ConnectionPhase.TCP_CONNECT && it.result == TraceResult.OK) handshakes.incrementAndGet() }
+            client.connect(original)
+            assertEquals("verified", client.exec("printf verified").output)
+            assertEquals(1, prompts)
+            assertEquals(1, handshakes.get())
+            assertTrue(saved.isEmpty())
+            assertEquals(1, staged.accepted().size)
+        }
+    }
+
+    @Test fun `fingerprint review can outlast the socket timeout before authentication continues`() {
+        val original = login()
+        val staged = StagedHostKeys(object : PinStore { override fun get(endpoint:String):String? = null })
+        SshClient(staged) { Thread.sleep(16_000); staged.approve(it) }.use { client ->
+            client.connect(original)
+            assertEquals("reviewed", client.exec("printf reviewed").output)
+        }
+    }
+
+    @Test fun `a confirmed fingerprint followed by wrong credentials remains an authentication failure`() {
+        val original = login()
+        val staged = StagedHostKeys(object : PinStore { override fun get(endpoint:String):String? = null })
+        SshClient(staged) { staged.approve(it) }.use { client ->
+            val failure = assertFailsWith<ConnectionFailure> {
+                client.connect(Login(original.host,original.port,original.user,"fixture-wrong-password"))
+            }
+            assertEquals(FailureReason.AUTH, failure.reason)
+            assertEquals(1, staged.accepted().size)
+        }
+    }
+
+    @Test fun `new independent sessions preserve literal names and reject exact duplicates`() {
+        val original = login()
+        val path = System.getenv("MTMUX_TEST_TMUX")
+        val prefix = "created-" + java.util.UUID.randomUUID().toString().take(8)
+        val marker = File("/tmp/mtmux-create-marker-" + java.util.UUID.randomUUID().toString().take(8))
+        val names = listOf(prefix + "-long", prefix, prefix + "-#{pid}", prefix + "-中文'\$(touch " + marker.path + ");")
+        trusted().use { client ->
+            client.connect(original)
+            val sessions = mutableListOf<String>()
+            try {
+                for (name in names) {
+                    val created = client.createTmuxSession(name,path)
+                    sessions += created.binding.session
+                    val panes = client.discoverPanes(path,created.binding.session)
+                    assertEquals(1,panes.size)
+                    assertEquals(name,panes.single().sessionName)
+                    assertEquals(name,panes.single().windowName)
+                    client.verifyResume(created.binding,path)
+                    assertEquals(ErrorCode.TMUX_SESSION_EXISTS, assertFailsWith<MtmuxException> { client.createTmuxSession(name,path) }.code)
+                }
+                assertFalse(marker.exists(), "session names must not execute a shell substitution")
+            } finally {
+                for (session in sessions) client.exec(Tmux.quote(path) + " -u kill-session -t " + Tmux.quote(session))
+                marker.delete()
+            }
+        }
+    }
+
+    @Test fun `concurrent creation has exactly one winner and one duplicate`() {
+        val original = login()
+        val path = System.getenv("MTMUX_TEST_TMUX")
+        val name = "race-" + java.util.UUID.randomUUID().toString().take(8)
+        trusted().use { first -> trusted().use { second ->
+            first.connect(original); second.connect(original)
+            val start = CountDownLatch(1)
+            val results = java.util.concurrent.CopyOnWriteArrayList<Result<TmuxSessionCreation.Created>>()
+            val workers = listOf(first,second).map { client -> thread {
+                start.await(); results.add(runCatching { client.createTmuxSession(name,path) })
+            } }
+            try {
+                start.countDown(); workers.forEach { it.join(15_000) }
+                assertTrue(workers.none { it.isAlive })
+                assertEquals(1,results.count { it.isSuccess })
+                assertEquals(ErrorCode.TMUX_SESSION_EXISTS,(results.single { it.isFailure }.exceptionOrNull() as MtmuxException).code)
+            } finally { first.exec(Tmux.quote(path) + " -u kill-session -t " + Tmux.quote("=$name")) }
+        } }
+    }
+
     @Test fun `pump reports exit status for a normal exit and -1 when the connection drops`() {
         for ((command, expected) in listOf("printf done; exit 3" to 3, "printf done; kill -9 \$PPID" to -1)) {
             trusted().use { client ->

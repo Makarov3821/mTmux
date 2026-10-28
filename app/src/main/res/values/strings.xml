@@ -366,4 +366,24 @@
     <string name="terminal_send_short">Send ⏎</string>
     <string name="keys_modifier_pending">%1$s · press a key</string>
     <string name="keys_modifier_unsupported">This key has no traditional terminal encoding with the selected modifiers.</string>
+    <string name="editor_pin_changed">The saved host key changed during verification. Verify again.</string>
+    <string name="editor_verifying_title">Verify and save server</string>
+    <string name="editor_checking">Connecting to verify the server…</string>
+    <string name="editor_check_failed">Server check failed; nothing has been saved</string>
+    <string name="editor_save_anyway">Save anyway</string>
+    <string name="editor_save_anyway_hint">Save the configuration without verification. No new fingerprint will be trusted; the usual fingerprint check still applies when connecting.</string>
+    <string name="editor_retry_verification">Retry verification</string>
+    <string name="editor_trust_declined">Fingerprint was not confirmed. The server has not been saved.</string>
+    <string name="editor_saving">Verified. Saving server…</string>
+    <string name="home_new_tmux">New tmux terminal</string>
+    <string name="home_verify_host">Verify fingerprint</string>
+    <string name="tmux_create_title">New tmux terminal</string>
+    <string name="tmux_name_label">Session name</string>
+    <string name="tmux_name_hint">Creates an independent session and initial window with this name, then opens it.</string>
+    <string name="tmux_name_invalid">Use 1–128 UTF-8 bytes, without dots, colons or control characters.</string>
+    <string name="tmux_name_exists">A tmux session with this exact name already exists. Choose another name.</string>
+    <string name="tmux_create_failed">Could not create the tmux session. Refresh the list to check the result before retrying.</string>
+    <string name="tmux_creating">Creating tmux session…</string>
+    <string name="tmux_create">Create and open</string>
+    <string name="home_saved_unverified">Configuration saved without verification. Use Verify fingerprint or connect when ready.</string>
 </resources>

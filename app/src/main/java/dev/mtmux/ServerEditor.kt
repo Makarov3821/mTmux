@@ -18,6 +18,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import dev.mtmux.core.Login
 import dev.mtmux.core.Tmux
+import dev.mtmux.core.SshClient
+import dev.mtmux.core.WarmConnectionPool
 import java.util.UUID
 
 private class AuthFields(host: String = "", port: Int = 22, user: String = "", key: Boolean = true, secret: SavedCredentials? = null, val id: String = UUID.randomUUID().toString()) {
@@ -96,7 +98,7 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
 }
 
 @OptIn(ExperimentalLayoutApi::class)
-@Composable fun ServerEditor(store: ServerProfiles, initial: ServerProfile?, onClose: () -> Unit, onSaved: () -> Unit) {
+@Composable fun ServerEditor(store: ServerProfiles, initial: ServerProfile?, warmConnections: WarmConnectionPool<SshClient>, onClose: () -> Unit, onSaved: (ServerProfile, ServerSaveOutcome) -> Unit) {
     ProtectSensitiveContent()
     val loaded = remember { runCatching { initial?.let { store.credentials(it) } } }
     val target = remember { AuthFields(initial?.host.orEmpty(), initial?.port ?: 22, initial?.user.orEmpty(), initial?.keyAuthentication ?: true, loaded.getOrNull()) }
@@ -126,6 +128,7 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
         return true
     }
     var error by remember { mutableStateOf(if (loaded.isFailure) R.string.editor_err_credentials_unreadable else null) }
+    var verification by remember { mutableStateOf<ServerDraft?>(null) }
     fun close() { if (dirty) abandon = true else onClose() }
     BackHandler { close() }
     Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(horizontal = 16.dp)) {
@@ -141,10 +144,14 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
                     val profile = ServerProfile(initial?.id ?: UUID.randomUUID().toString(), name.trim(),
                         target.host.trim(), target.port.toInt(), target.user.trim(), path, target.key, mouse,
                         if (jumpsEnabled) hops.map { JumpHost(it.id,it.host.trim(),it.port.toInt(),it.user.trim(),it.key) } else emptyList())
-                    store.save(profile,SavedCredentials(target.password,target.privateKey,target.passphrase,
-                        if (jumpsEnabled) hops.associate { it.id to it.secret() } else emptyMap()))
-                    if (folderId != (initial?.let { organization.folderOf(it.id) })) runCatching { organization.move(profile.id, folderId) }
-                    onSaved()
+                    val credentials = SavedCredentials(target.password,target.privateKey,target.passphrase,
+                        if (jumpsEnabled) hops.associate { it.id to it.secret() } else emptyMap())
+                    if (needsServerVerification(initial, profile, loaded.getOrNull(), credentials)) verification = ServerDraft(profile, credentials)
+                    else {
+                        store.save(profile, credentials)
+                        if (folderId != organization.folderOf(profile.id)) runCatching { organization.move(profile.id, folderId) }
+                        onSaved(profile, ServerSaveOutcome.LOCAL)
+                    }
                 }.onFailure { error = R.string.editor_err_save }
             }, modifier = Modifier.testTag("save-server")) { Text(stringResource(R.string.common_save)) }
         }
@@ -202,12 +209,19 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
                         OutlinedButton(onClick = { pickJump = true }, modifier = Modifier.weight(1f).testTag("jump-from-saved")) { Text(stringResource(R.string.editor_jump_from_saved)) }
                     }
                 }
-                OutlinedTextField(path, { path = it; dirty = true }, label = { Text(stringResource(R.string.editor_tmux_path)) }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(path, { path = it; dirty = true }, label = { Text(stringResource(R.string.editor_tmux_path)) }, modifier = Modifier.fillMaxWidth().testTag("server-tmux-path"))
                 Row(verticalAlignment = Alignment.CenterVertically) { Switch(mouse, { mouse = it; dirty = true }); Text(stringResource(R.string.editor_tmux_mouse), style = MaterialTheme.typography.bodyMedium) }
             }
             }
             Spacer(Modifier.height(24.dp))
         }
+    }
+    verification?.let { draft ->
+        ServerVerification(draft, store, warmConnections, onDismiss = { verification = null }, onSaved = { profile, outcome ->
+            if (folderId != (initial?.let { organization.folderOf(it.id) })) runCatching { organization.move(profile.id, folderId) }
+            verification = null
+            onSaved(profile, outcome)
+        })
     }
     if (pickJump) {
         val privacy = remember { PrivacyDisplay(context) }

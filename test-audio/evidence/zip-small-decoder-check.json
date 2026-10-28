@@ -1,0 +1,17 @@
+{
+  "purpose": "Desktop compatibility diagnosis; single public sample, not an accuracy benchmark",
+  "runtime": "sherpa-onnx 1.13.8 Linux x86_64 CPU 4 threads",
+  "encoder": "encoder-epoch-99-avg-1.int8.onnx",
+  "audioSource": "mTmux pinned public_zh.wav",
+  "results": [
+    {"decoder": "INT8", "joiner": "INT8", "tailSeconds": 1, "text": "欢迎大家"},
+    {"decoder": "INT8", "joiner": "INT8", "tailSeconds": 3, "text": "欢迎大家"},
+    {"decoder": "INT8", "joiner": "FP32", "tailSeconds": 1, "text": "欢迎大家"},
+    {"decoder": "INT8", "joiner": "FP32", "tailSeconds": 3, "text": "欢迎大家"},
+    {"decoder": "FP32", "joiner": "INT8", "tailSeconds": 1, "text": "欢迎大家来体验打磨苑推出的语音识别模型"},
+    {"decoder": "FP32", "joiner": "INT8", "tailSeconds": 3, "text": "欢迎大家来体验打磨苑推出的语音识别模型"},
+    {"decoder": "FP32", "joiner": "FP32", "tailSeconds": 1, "text": "欢迎大家来体验打磨苑推出的语音识别模型"},
+    {"decoder": "FP32", "joiner": "FP32", "tailSeconds": 3, "text": "欢迎大家来体验打磨苑推出的语音识别模型"}
+  ],
+  "chosen": "INT8 encoder and joiner, FP32 decoder"
+}

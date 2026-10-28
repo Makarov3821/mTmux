@@ -35,15 +35,17 @@ import kotlinx.coroutines.sync.withPermit
 
 private data class HomeRow(val snapshot: ServerSnapshot? = null, val refreshing: Boolean = false,
                            val progress: UiText = uiText(R.string.home_refreshing), val error: UiText? = null, val challenge: HostKeyChallenge? = null)
+private data class PendingHomeRefresh(val profile: ServerProfile, val automatic: Boolean, val verifyFingerprint: Boolean, val forceInterval: Boolean)
 
 private class HomeRefresh {
     val opening = java.util.concurrent.atomic.AtomicBoolean(false)
     val finished = CompletableDeferred<Unit>()
     var key: String? = null
     var handedOff: SshClient? = null // Main-thread ownership after all probe workers have drained.
+    var verifyFingerprint = false
 }
 
-@Composable fun ServerHome(warmConnections: WarmConnectionPool<SshClient>, openSettings: Boolean = false, privacyDisplay: Boolean, onPrivacyDisplay: (Boolean) -> Unit, refreshOnEntry: Boolean, onEntryHandled: () -> Unit, onOpen: (ServerProfile, RecentTask?, SshClient?) -> Unit,
+@Composable fun ServerHome(warmConnections: WarmConnectionPool<SshClient>, openSettings: Boolean = false, privacyDisplay: Boolean, onPrivacyDisplay: (Boolean) -> Unit, refreshOnEntry: Boolean, refreshProfileOnEntry: String? = null, onEntryHandled: () -> Unit, onOpen: (ServerProfile, RecentTask?, SshClient?) -> Unit,
                           onPreferences: (Int,Float,Boolean) -> Unit,
                           appearance: AppAppearance, onAppearance: (AppAppearance) -> Unit, palette: AppPalette, onPalette: (AppPalette) -> Unit) {
     val context = LocalContext.current
@@ -71,6 +73,8 @@ private class HomeRefresh {
     val collapsed = remember { mutableStateMapOf<String, Boolean>() }
     val expandedWindows = remember { mutableStateMapOf<String, Boolean>() }
     val scope = rememberCoroutineScope(); val limit = remember { Semaphore(2) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val pendingRefreshes = remember { linkedMapOf<String, PendingHomeRefresh>() }
     val clients = remember { mutableSetOf<SshClient>() }
     val jobs = remember { mutableMapOf<String, Job>() }
     val revisions = remember { mutableMapOf<String, Int>() }
@@ -84,20 +88,34 @@ private class HomeRefresh {
     var menu by remember { mutableStateOf<String?>(null) }
     var delete by remember { mutableStateOf<ServerProfile?>(null) }
     var trust by remember { mutableStateOf<Pair<ServerProfile,HostKeyChallenge>?>(null) }
+    var creatingTmux by remember { mutableStateOf<ServerProfile?>(null) }
     val currentPage by rememberUpdatedState(page)
     var message by remember { mutableStateOf<UiText?>(null) }
     var font by remember { mutableIntStateOf(settings.getInt("fontSize",14)) }
     var speed by remember { mutableFloatStateOf(savedScrollSpeed(settings)) }
     var touch by remember { mutableStateOf(settings.getBoolean("remoteTouch",true)) }
     fun preferences() { settings.edit().putInt("fontSize",font).putFloat("scrollSensitivity",speed).putBoolean("remoteTouch",touch).apply(); onPreferences(font,speed,touch) }
-    fun refresh(profile: ServerProfile, automatic: Boolean = false) {
-        if (automatic && (!cache.shouldRefresh(profile) || organization.folderOf(profile.id)?.let { organization.collapsed(it) } == true)) return
-        if (rows[profile.id]?.refreshing == true) return
+    fun refresh(profile: ServerProfile, automatic: Boolean = false, verifyFingerprint: Boolean = false, forceInterval: Boolean = false) {
+        if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            val previous = pendingRefreshes[profile.id]?.takeIf { it.profile == profile }
+            pendingRefreshes[profile.id] = PendingHomeRefresh(profile,
+                automatic && (previous?.automatic ?: true), verifyFingerprint || previous?.verifyFingerprint == true,
+                forceInterval || previous?.forceInterval == true)
+            return
+        }
+        if (automatic && !AutomaticRefreshPolicy.allowsRefresh(
+                folderCollapsed = organization.folderOf(profile.id)?.let { organization.collapsed(it) } == true,
+                intervalElapsed = cache.shouldRefresh(profile), forceInterval = forceInterval)) return
+        if (rows[profile.id]?.refreshing == true) {
+            if (verifyFingerprint) refreshes[profile.id]?.verifyFingerprint = true
+            return
+        }
         rows[profile.id] = HomeRow(rows[profile.id]?.snapshot ?: cache.read(profile), refreshing = true)
         val revision = (revisions[profile.id] ?: 0) + 1
         revisions[profile.id] = revision
         val traceAttempt = DebugLog.nextAttempt()
         val refresh = HomeRefresh()
+        refresh.verifyFingerprint = verifyFingerprint
         refreshes[profile.id] = refresh
         jobs[profile.id] = scope.launch {
             try {
@@ -167,6 +185,7 @@ private class HomeRefresh {
                         if (revisions[profile.id] != revision) return@withPermit
                         DebugLog.event(DebugLog.Event.REFRESH_FAILED,profile.id.hashCode(),error=error)
                         val challenge = (error as? HostKeyRejected)?.challenge
+                        if (refresh.verifyFingerprint && challenge != null && currentPage == "home") trust = profile to challenge
                         rows[profile.id] = HomeRow(runCatching {cache.clearTaskStates(profile)}.getOrNull() ?: rows[profile.id]?.snapshot, error = when {
                             challenge != null -> uiText(if (challenge.changed) R.string.home_host_key_changed else R.string.home_needs_fingerprint)
                             else -> errorText(error)
@@ -226,13 +245,22 @@ private class HomeRefresh {
         clients.toList().forEach { it.cancel() }
         refreshes.values.forEach { it.handedOff?.close(); it.handedOff = null }
     } }
-    fun refreshVisibleFolders() { store.all().forEach { refresh(it, automatic = true) } }
-    val refreshOnResume by rememberUpdatedState({ if (currentPage == "home") refreshVisibleFolders() })
+    fun refreshVisibleFolders(returnedProfileId: String? = null) {
+        store.all().forEach { refresh(it, automatic = true, forceInterval = it.id == returnedProfileId) }
+    }
+    val refreshOnResume by rememberUpdatedState({ if (currentPage == "home") {
+        refreshVisibleFolders()
+        val pending = pendingRefreshes.values.toList()
+        pendingRefreshes.clear()
+        val current = store.all()
+        pending.filter { it.profile in current }.forEach { refresh(it.profile,it.automatic,it.verifyFingerprint,it.forceInterval) }
+    } })
     LaunchedEffect(Unit) {
-        if (refreshOnEntry) refreshVisibleFolders()
+        if (refreshOnEntry) {
+            refreshVisibleFolders(refreshProfileOnEntry)
+        }
         onEntryHandled()
     }
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
     val statusClock by produceState(System.currentTimeMillis(),page,lifecycle) {
         if(page=="home") lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while(true) { value=System.currentTimeMillis(); delay(60_000) }
@@ -242,7 +270,7 @@ private class HomeRefresh {
         var stopped = false
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) { stopped = true; openingJob?.cancel(); jobs.values.toList().forEach { it.cancel() }; clients.toList().forEach { it.cancel() }; refreshes.values.forEach { it.handedOff?.close(); it.handedOff = null }; rows.keys.toList().forEach { id -> rows[id]?.let { rows[id] = it.copy(refreshing=false) } } }
-            if (event == Lifecycle.Event.ON_RESUME && stopped) { stopped = false; refreshOnResume() }
+            if (event == Lifecycle.Event.ON_RESUME && (stopped || pendingRefreshes.isNotEmpty())) { stopped = false; refreshOnResume() }
         }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
@@ -253,8 +281,21 @@ private class HomeRefresh {
     }
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (page) {
-            "edit" -> ServerEditor(store, edit, onClose = { page = "home" }, onSaved = {
-                profiles = store.all(); organizationRevision++; rows.clear(); message = null; page = "home"
+            "edit" -> ServerEditor(store, edit, warmConnections, onClose = { page = "home" }, onSaved = { saved, outcome ->
+                jobs.remove(saved.id)?.cancel()
+                revisions[saved.id] = (revisions[saved.id] ?: 0) + 1
+                profiles = store.all(); organizationRevision++; rows.remove(saved.id); message = null; page = "home"
+                when (outcome) {
+                    ServerSaveOutcome.VERIFIED -> refresh(saved)
+                    ServerSaveOutcome.LOCAL -> refresh(saved, automatic = true)
+                    ServerSaveOutcome.UNVERIFIED -> {
+                        val snapshot = runCatching { cache.clearTaskStates(saved) }.getOrNull() ?: cache.read(saved)
+                        rows[saved.id] = HomeRow(snapshot, error = uiText(R.string.home_saved_unverified))
+                        // Respect the user's offline save: retry only through an explicit action
+                        // or the normal later refresh policy, not immediately after closing the editor.
+                        runCatching { cache.markAttempt(saved) }
+                    }
+                }
             })
             "settings" -> {
                 BackHandler { page = "home" }
@@ -360,12 +401,15 @@ private class HomeRefresh {
                                     }
                                 }
                                 AppIconButton(UiSymbol.TERMINAL,openSshLabel,{open(profile,null)},Modifier.testTag("ssh-${profile.id}"))
+                                AppIconButton(UiSymbol.PLUS,stringResource(R.string.home_new_tmux),{creatingTmux=profile},Modifier.testTag("new-tmux-${profile.id}"))
                                 TextButton(onClick={refresh(profile)},enabled=!state.refreshing,contentPadding=PaddingValues(0.dp),modifier=Modifier.sizeIn(minWidth=44.dp,minHeight=48.dp).semantics{contentDescription=refreshServerLabel}.testTag("refresh-${profile.id}")){
                                     if(state.refreshing) CircularProgressIndicator(Modifier.size(16.dp),strokeWidth=2.dp) else AppIcon(UiSymbol.REFRESH)
                                 }
                                 Box {
                                     AppIconButton(UiSymbol.MORE,moreLabel,{menu=profile.id},Modifier.testTag("more-${profile.id}"))
                                     DropdownMenu(expanded=menu==profile.id,onDismissRequest={menu=null}) {
+                                        DropdownMenuItem(text={Text(stringResource(R.string.home_new_tmux))},onClick={menu=null;creatingTmux=profile})
+                                        DropdownMenuItem(text={Text(stringResource(R.string.home_verify_host))},onClick={menu=null;state.challenge?.let { trust=profile to it } ?: refresh(profile,verifyFingerprint=true)},modifier=Modifier.testTag("verify-host-${profile.id}"))
                                         DropdownMenuItem(text={Text(stringResource(R.string.home_edit_server))},onClick={menu=null;edit=profile;page="edit"})
                                         DropdownMenuItem(text={Text(stringResource(R.string.home_move_to_folder))},onClick={menu=null;movingServer=profile})
                                         DropdownMenuItem(text={Text(stringResource(R.string.home_delete_server))},onClick={menu=null;delete=profile})
@@ -421,6 +465,8 @@ private class HomeRefresh {
     delete?.let { profile -> AlertDialog(onDismissRequest={delete=null},title={Text(stringResource(R.string.delete_server_title, privacySettings.label(profile, privacyDisplay)))},text={Text(stringResource(R.string.delete_server_body))},confirmButton={TextButton(onClick={
         runCatching { store.delete(profile.id);revisions[profile.id]=(revisions[profile.id] ?: 0)+1;jobs.remove(profile.id)?.cancel();profiles=store.all();rows.remove(profile.id);delete=null }.onFailure { message=uiText(R.string.delete_server_failed) }
     }){Text(stringResource(R.string.common_delete))}},dismissButton={TextButton(onClick={delete=null}){Text(stringResource(R.string.common_cancel))}}) }
+    creatingTmux?.let { profile -> NewTmuxDialog(profile, warmConnections, onDismiss={mayHaveChanged -> creatingTmux=null;if(mayHaveChanged) refresh(profile)},
+        onTrustRequired={trust=profile to it},onCreated={task,client -> creatingTmux=null;onOpen(profile,task,client)}) }
     trust?.let { (profile, item) -> ProtectSensitiveContent(); AlertDialog(icon={AppIcon(UiSymbol.SHIELD,modifier=Modifier.size(28.dp),tint=if(item.changed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)},properties=protectedDialogProperties,onDismissRequest={trust=null},title={Text(stringResource(if(item.changed) R.string.trust_changed_title else R.string.trust_verify_title))},text={Text("${item.endpoint.substringBefore("|via:")}\n${item.fingerprint}\n${stringResource(R.string.trust_verify_hint)}")},confirmButton={if(!item.changed) TextButton(onClick={pins.edit().putString(item.endpoint,item.key).apply();trust=null;refresh(profile)}){Text(stringResource(R.string.host_key_trust))}},dismissButton={TextButton(onClick={trust=null}){Text(stringResource(R.string.common_close))}}) }
 }
 

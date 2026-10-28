@@ -92,6 +92,9 @@ fun progressText(progress: ConnectProgress): UiText = uiText(when (progress.stag
     ErrorCode.STATUS_PARSE_FAILED -> R.string.err_status_parse_failed
     ErrorCode.PRIVATE_KEY_TOO_LARGE -> R.string.err_private_key_too_large
     ErrorCode.PRIVATE_KEY_INVALID -> R.string.err_private_key_invalid
+    ErrorCode.TMUX_SESSION_NAME_INVALID -> R.string.tmux_name_invalid
+    ErrorCode.TMUX_SESSION_EXISTS -> R.string.tmux_name_exists
+    ErrorCode.TMUX_CREATE_FAILED -> R.string.tmux_create_failed
 }
 
 /** Never display arbitrary exception text: it can contain private paths or data. */

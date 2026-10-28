@@ -1,0 +1,39 @@
+{
+  "runtime": "sherpa-onnx 1.13.8 desktop Linux x86_64",
+  "purpose": "Model/API compatibility only; not Android performance or accuracy evaluation",
+  "audioSha256": "a1bd32dc78493c123f9625a66deee562aed2895f53fbc39f2cca3be7e6f4f20f",
+  "samples": 88747,
+  "sampleRate": 16000,
+  "records": [
+    {
+      "id": "paraformer-srf",
+      "raw": "欢迎大家来体验达摩院推出的语音识别模型",
+      "desktopLoadMs": 1404,
+      "desktopDecodeMs": 73
+    },
+    {
+      "id": "zip-offline-srf",
+      "raw": "欢迎大家来体验达末院推出的语音识别模型",
+      "desktopLoadMs": 932,
+      "desktopDecodeMs": 100
+    },
+    {
+      "id": "zip-small-srf",
+      "raw": "欢迎大家来体验打磨苑推出的语音识别模型",
+      "desktopLoadMs": 473,
+      "desktopDecodeMs": 202
+    },
+    {
+      "id": "x-asr",
+      "raw": "欢迎大家来体验达摩院推出的语音识别模型",
+      "desktopLoadMs": 2059,
+      "desktopDecodeMs": 455
+    },
+    {
+      "id": "sensevoice",
+      "raw": "欢迎大家来体验达摩院推出的语音识别模型",
+      "desktopLoadMs": 1078,
+      "desktopDecodeMs": 175
+    }
+  ]
+}

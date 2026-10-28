@@ -1,0 +1,334 @@
+{
+  "formatVersion": 2,
+  "created": "2026-10-27",
+  "whisperCommit": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+  "punctuationBaseline": "14fb48b4cee8431801edfadc9ca2ec3375be42a2",
+  "sources": [
+    {
+      "id": "base-q8",
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base-q8_0.bin?download=true",
+      "bytes": 81768585,
+      "sha256": "c577b9a86e7e048a0b7eada054f4dd79a56bbfa911fbdacf900ac5b567cbb7d9",
+      "archive": false,
+      "files": [
+        {
+          "path": "base-q8/ggml-base-q8_0.bin",
+          "bytes": 81768585,
+          "sha256": "c577b9a86e7e048a0b7eada054f4dd79a56bbfa911fbdacf900ac5b567cbb7d9",
+          "member": ""
+        }
+      ]
+    },
+    {
+      "id": "base-q5",
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base-q5_1.bin?download=true",
+      "bytes": 59707625,
+      "sha256": "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898",
+      "archive": false,
+      "files": [
+        {
+          "path": "base-q5/ggml-base-q5_1.bin",
+          "bytes": 59707625,
+          "sha256": "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898",
+          "member": ""
+        }
+      ]
+    },
+    {
+      "id": "tiny-q8",
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-tiny-q8_0.bin?download=true",
+      "bytes": 43537433,
+      "sha256": "c2085835d3f50733e2ff6e4b41ae8a2b8d8110461e18821b09a15c40c42d1cca",
+      "archive": false,
+      "files": [
+        {
+          "path": "tiny-q8/ggml-tiny-q8_0.bin",
+          "bytes": 43537433,
+          "sha256": "c2085835d3f50733e2ff6e4b41ae8a2b8d8110461e18821b09a15c40c42d1cca",
+          "member": ""
+        }
+      ]
+    },
+    {
+      "id": "srf",
+      "url": "https://huggingface.co/rkingzhong/srf-punctuation/resolve/055df91f8f14696f93bb4eb4b56245ba51a6fcde/punctuation_int8.onnx?download=true",
+      "bytes": 2243714,
+      "sha256": "650eb96762e2b6cfe12a3f1b44ddcab0a3f790e11a98afab3895f863d5eaec62",
+      "archive": false,
+      "files": [
+        {
+          "path": "srf/srf-punct-int8.onnx",
+          "bytes": 2243714,
+          "sha256": "650eb96762e2b6cfe12a3f1b44ddcab0a3f790e11a98afab3895f863d5eaec62",
+          "member": ""
+        }
+      ]
+    },
+    {
+      "id": "srf-vocab",
+      "url": "https://raw.githubusercontent.com/ximeiorg/srf-punctuation/e4814e794e807965fe79e15d55c6d699c87c0569/web/public/vocab.json",
+      "bytes": 119104,
+      "sha256": "76684d3d381bed15057f19e6b22972a00ec79e72fa4bfd5682afde4fdcc5a3a2",
+      "archive": false,
+      "files": [
+        {
+          "path": "srf-vocab/srf-vocab.json",
+          "bytes": 119104,
+          "sha256": "76684d3d381bed15057f19e6b22972a00ec79e72fa4bfd5682afde4fdcc5a3a2",
+          "member": ""
+        }
+      ]
+    },
+    {
+      "id": "paraformer",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-small-2024-03-09.tar.bz2",
+      "bytes": 77920048,
+      "sha256": "da92b3db5218c5be53aad53e57d1b6e63e7fc98a0e054fbdd6dbe18e9c6b1450",
+      "archive": true,
+      "files": [
+        {
+          "path": "paraformer/tokens.txt",
+          "bytes": 75352,
+          "sha256": "4b2d964e18b9cf139b473003b6698fb2ed9a2a5ec55b93daa677b28f578897aa",
+          "member": "sherpa-onnx-paraformer-zh-small-2024-03-09/tokens.txt"
+        },
+        {
+          "path": "paraformer/model.int8.onnx",
+          "bytes": 81828675,
+          "sha256": "3ef6c19369b912f7caf3cef8e545c5ccd1a33d9d7ec792a46668dc41c4b229ec",
+          "member": "sherpa-onnx-paraformer-zh-small-2024-03-09/model.int8.onnx"
+        }
+      ]
+    },
+    {
+      "id": "zip-offline",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-zipformer-zh-en-2023-11-22.tar.bz2",
+      "bytes": 312398028,
+      "sha256": "0c3f2b9c884335a6931b8ccee6ede30e8dd3f89efc289ff64cd79d530a3bcf91",
+      "archive": true,
+      "files": [
+        {
+          "path": "zip-offline/tokens.txt",
+          "bytes": 25645,
+          "sha256": "2d5d6245197582cea396b23fa29d592705be31bac9a97bb74a8d1bca3ca6a0e0",
+          "member": "sherpa-onnx-zipformer-zh-en-2023-11-22/tokens.txt"
+        },
+        {
+          "path": "zip-offline/decoder-epoch-34-avg-19.onnx",
+          "bytes": 5165101,
+          "sha256": "110dc19143f0731ce0f64513e524d7d8f729e37107e1392da790f66d6c936a0b",
+          "member": "sherpa-onnx-zipformer-zh-en-2023-11-22/decoder-epoch-34-avg-19.onnx"
+        },
+        {
+          "path": "zip-offline/joiner-epoch-34-avg-19.int8.onnx",
+          "bytes": 1033479,
+          "sha256": "498861ff0963ecbbff101a940ed533a715e5d68ee96431a3b092d0ca00c3ba38",
+          "member": "sherpa-onnx-zipformer-zh-en-2023-11-22/joiner-epoch-34-avg-19.int8.onnx"
+        },
+        {
+          "path": "zip-offline/encoder-epoch-34-avg-19.int8.onnx",
+          "bytes": 69037476,
+          "sha256": "28780a73b0fc5a05ec579ad4dbbc7d8fcd09fed5e6c431f84dcaab8f8170d9bf",
+          "member": "sherpa-onnx-zipformer-zh-en-2023-11-22/encoder-epoch-34-avg-19.int8.onnx"
+        }
+      ]
+    },
+    {
+      "id": "zip-small",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-small-bilingual-zh-en-2023-02-16.tar.bz2",
+      "bytes": 458187351,
+      "sha256": "2b7c63322b32e5e0f2526043a1103366119ca58dd615cd7105a37c01db9553d7",
+      "archive": true,
+      "files": [
+        {
+          "path": "zip-small/decoder-epoch-99-avg-1.onnx",
+          "bytes": 13877276,
+          "sha256": "89be509a83175261695bdef5fd1c7b9ab1129a663d1284e7ba9f8507b21e0906",
+          "member": "sherpa-onnx-streaming-zipformer-small-bilingual-zh-en-2023-02-16/decoder-epoch-99-avg-1.onnx"
+        },
+        {
+          "path": "zip-small/joiner-epoch-99-avg-1.int8.onnx",
+          "bytes": 3228485,
+          "sha256": "bdda356d6f9b8c2d7cee9ee0e26075fa537490f7fd06520be408d287073667b9",
+          "member": "sherpa-onnx-streaming-zipformer-small-bilingual-zh-en-2023-02-16/joiner-epoch-99-avg-1.int8.onnx"
+        },
+        {
+          "path": "zip-small/encoder-epoch-99-avg-1.int8.onnx",
+          "bytes": 42980793,
+          "sha256": "db6f51551762e40e549166fe041ea3e45464370b595e9ad23f06478ec3794fbb",
+          "member": "sherpa-onnx-streaming-zipformer-small-bilingual-zh-en-2023-02-16/encoder-epoch-99-avg-1.int8.onnx"
+        },
+        {
+          "path": "zip-small/tokens.txt",
+          "bytes": 56317,
+          "sha256": "a8e0e4ec53810e433789b54a5c0134a7eaa2ffca595a6334d54c00da858841d3",
+          "member": "sherpa-onnx-streaming-zipformer-small-bilingual-zh-en-2023-02-16/tokens.txt"
+        }
+      ]
+    },
+    {
+      "id": "x-asr",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-x-asr-480ms-streaming-zipformer-transducer-zh-en-punct-int8-2026-06-05.tar.bz2",
+      "bytes": 133895136,
+      "sha256": "fa5f63d618e5a01526e275a358bb7772e403f84808a4769fba52cffd8160bf74",
+      "archive": true,
+      "files": [
+        {
+          "path": "x-asr/decoder.onnx",
+          "bytes": 11309084,
+          "sha256": "a1cbc9eac2d5e3fb6617a218c67ad6daaa7f4e0fd225f08b2c22ab0413c8c257",
+          "member": "sherpa-onnx-x-asr-480ms-streaming-zipformer-transducer-zh-en-punct-int8-2026-06-05/decoder.onnx"
+        },
+        {
+          "path": "x-asr/encoder.int8.onnx",
+          "bytes": 155278641,
+          "sha256": "908596dcc137a73b95be908ca55e88caa1b3dbbe8027c171615f4b0609c5eb1e",
+          "member": "sherpa-onnx-x-asr-480ms-streaming-zipformer-transducer-zh-en-punct-int8-2026-06-05/encoder.int8.onnx"
+        },
+        {
+          "path": "x-asr/tokens.txt",
+          "bytes": 58806,
+          "sha256": "b818a60878b9aae978cbb8ad594acbd403d76d1af2e31ef4197c84e2dbdba27c",
+          "member": "sherpa-onnx-x-asr-480ms-streaming-zipformer-transducer-zh-en-punct-int8-2026-06-05/tokens.txt"
+        },
+        {
+          "path": "x-asr/joiner.int8.onnx",
+          "bytes": 2581422,
+          "sha256": "aedb7fa697b2ab43f20499826fff7c997eea7d67db77be97769aeeeb726e63b3",
+          "member": "sherpa-onnx-x-asr-480ms-streaming-zipformer-transducer-zh-en-punct-int8-2026-06-05/joiner.int8.onnx"
+        }
+      ]
+    },
+    {
+      "id": "sensevoice",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2025-09-09.tar.bz2",
+      "bytes": 165783878,
+      "sha256": "7305f7905bfcf77fa0b39388a313f3da35c68d971661a65475b56fb2162c8e63",
+      "archive": true,
+      "files": [
+        {
+          "path": "sensevoice/tokens.txt",
+          "bytes": 315894,
+          "sha256": "f449eb28dc567533d7fa59be34e2abca8784f771850c78a47fb731a31429a1dc",
+          "member": "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2025-09-09/tokens.txt"
+        },
+        {
+          "path": "sensevoice/model.int8.onnx",
+          "bytes": 237115547,
+          "sha256": "12ca1a2ae7ecf3e0019ef2822307ee0b5cadc9196569e379b4c4026f8205276d",
+          "member": "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2025-09-09/model.int8.onnx"
+        }
+      ]
+    },
+    {
+      "id": "ct",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/punctuation-models/sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12-int8.tar.bz2",
+      "bytes": 64717756,
+      "sha256": "c0d5aa5f8eeb686032345e180bedf39319dc2e0556781c6264bcadba8328a6e1",
+      "archive": true,
+      "files": [
+        {
+          "path": "ct/ct-punct-int8.onnx",
+          "bytes": 75519198,
+          "sha256": "65a3fb9f5ad7bfb96bf69e0dc4481df97f6ee60513c1d94ce981ba6effd524b1",
+          "member": "sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12-int8/model.int8.onnx"
+        }
+      ]
+    }
+  ],
+  "schemes": [
+    {
+      "id": "x-asr",
+      "title": "X-ASR INT8 · 原生标点",
+      "engine": "online",
+      "group": "x-asr",
+      "punctuation": "none",
+      "note": "主力候选，480ms 版，原生标点与大小写",
+      "focused": true
+    },
+    {
+      "id": "paraformer-ct",
+      "title": "Paraformer Small INT8 · CT 语义标点",
+      "engine": "paraformer",
+      "group": "paraformer",
+      "punctuation": "ct",
+      "note": "本轮新增，整段优先 / 最多 512 token 上下文，只插标点",
+      "focused": true,
+      "punctuationWindow": 512
+    },
+    {
+      "id": "paraformer-srf",
+      "title": "Paraformer Small INT8 · SRF 旧版对照",
+      "engine": "paraformer",
+      "group": "paraformer",
+      "punctuation": "srf",
+      "note": "相同 ASR 原文，保留旧标点行为作对照",
+      "focused": true
+    },
+    {
+      "id": "baseline-ct",
+      "title": "01 · Whisper Base Q8 + CT",
+      "engine": "whisper",
+      "group": "base-q8",
+      "punctuation": "ct",
+      "note": "现有 CT 基线"
+    },
+    {
+      "id": "baseline-srf",
+      "title": "02 · Whisper Base Q8 + SRF",
+      "engine": "whisper",
+      "group": "base-q8",
+      "punctuation": "srf",
+      "note": "已发布 SRF 规则"
+    },
+    {
+      "id": "zip-offline-srf",
+      "title": "04 · Zipformer zh-en INT8 + SRF",
+      "engine": "transducer",
+      "group": "zip-offline",
+      "punctuation": "srf",
+      "note": "2023-11-22，离线"
+    },
+    {
+      "id": "zip-small-srf",
+      "title": "05 · Zipformer Small INT8 + SRF",
+      "engine": "online",
+      "group": "zip-small",
+      "punctuation": "srf",
+      "note": "INT8 编码器与连接器 / FP32 解码器，流式收尾"
+    },
+    {
+      "id": "whisper-q5",
+      "title": "06 · Whisper Base Q5 原始输出",
+      "engine": "whisper",
+      "group": "base-q5",
+      "punctuation": "none",
+      "note": "较小量化，不外挂标点"
+    },
+    {
+      "id": "whisper-q8",
+      "title": "07 · Whisper Base Q8 原始输出",
+      "engine": "whisper",
+      "group": "base-q8",
+      "punctuation": "none",
+      "note": "分离 ASR 与标点问题"
+    },
+    {
+      "id": "whisper-tiny",
+      "title": "08 · Whisper Tiny Q8 原始输出",
+      "engine": "whisper",
+      "group": "tiny-q8",
+      "punctuation": "none",
+      "note": "小模型速度对照"
+    },
+    {
+      "id": "sensevoice",
+      "title": "10 · SenseVoice Small INT8",
+      "engine": "sensevoice",
+      "group": "sensevoice",
+      "punctuation": "none",
+      "note": "2025-09-09，ITN 开启，体积上限对照"
+    }
+  ],
+  "updated": "2026-10-28"
+}

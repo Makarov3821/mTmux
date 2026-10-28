@@ -1,0 +1,27 @@
+{
+  "apk": {
+    "bytes": 55137176,
+    "sha256": "424cfd2c797b834fa25dba3687358ed4e39cab44182da6bbcdaa7e14da8f429a",
+    "abis": [
+      "arm64-v8a"
+    ],
+    "uncompressedNativeLibraries": {
+      "libandroidx.graphics.path.so": 10096,
+      "libaudiolab_whisper.so": 2714040,
+      "libonnxruntime.so": 19347616,
+      "libonnxruntime4j_jni.so": 75752,
+      "libsherpa-onnx-jni.so": 24169352
+    }
+  },
+  "schemeCount": 11,
+  "focusedSchemeCount": 3,
+  "uniqueWeightFiles": 22,
+  "deploymentBytes": 886863652,
+  "offlinePackVerified": true,
+  "version": "0.2.0",
+  "nativeElf16KiBCompatible": true,
+  "zipalign16KiBVerified": true,
+  "apkSignatureVerified": true,
+  "upgradeFrom010Verified": true,
+  "legacyModelPackCompatible": true
+}

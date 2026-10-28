@@ -360,4 +360,24 @@
     <string name="terminal_send_short">发送 ↵</string>
     <string name="keys_modifier_pending">%1$s · 等待按键</string>
     <string name="keys_modifier_unsupported">所选组合不支持传统终端按键编码。</string>
+    <string name="editor_pin_changed">验证期间主机指纹记录发生变化，请重新验证</string>
+    <string name="editor_verifying_title">验证并保存服务器</string>
+    <string name="editor_checking">正在连接并验证服务器…</string>
+    <string name="editor_check_failed">服务器验证失败，尚未保存</string>
+    <string name="editor_save_anyway">仍然保存（Save anyway）</string>
+    <string name="editor_save_anyway_hint">不加验证地保存配置，不信任本次获取的新指纹；连接时仍会进行原有指纹验证。</string>
+    <string name="editor_retry_verification">重新验证</string>
+    <string name="editor_trust_declined">指纹未确认，服务器尚未保存</string>
+    <string name="editor_saving">验证成功，正在保存服务器…</string>
+    <string name="home_new_tmux">新开 tmux 终端</string>
+    <string name="home_verify_host">验证指纹</string>
+    <string name="tmux_create_title">新开 tmux 终端</string>
+    <string name="tmux_name_label">会话名称</string>
+    <string name="tmux_name_hint">创建同名的独立会话和首个窗口，然后进入终端。</string>
+    <string name="tmux_name_invalid">名称为 1～128 个 UTF-8 字节，不能包含英文句点、冒号或控制字符</string>
+    <string name="tmux_name_exists">已存在同名 tmux 会话，请使用其他名称</string>
+    <string name="tmux_create_failed">无法确认 tmux 会话创建结果，请刷新列表检查后重试</string>
+    <string name="tmux_creating">正在创建 tmux 会话…</string>
+    <string name="tmux_create">创建并进入</string>
+    <string name="home_saved_unverified">配置已保存，连接尚未验证。可通过“验证指纹”或连接按钮重试。</string>
 </resources>

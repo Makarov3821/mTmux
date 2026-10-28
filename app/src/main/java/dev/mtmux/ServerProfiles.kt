@@ -70,7 +70,8 @@ class ServerProfiles(context: Context) {
                 hops?.keys()?.asSequence()?.associateWith { decode(hops.getJSONObject(it)) } ?: emptyMap())
         } finally { bytes.fill(0) }
     }
-    fun save(profile: ServerProfile, credentials: SavedCredentials? = null) {
+    fun save(profile: ServerProfile, credentials: SavedCredentials? = null, verifiedPins: Map<String, String> = emptyMap()) {
+        require(profile.trustEndpoints().containsAll(verifiedPins.keys))
         // Encryption must succeed before changing metadata. One commit stores both.
         val encrypted = credentials?.let {
             require(!profile.keyAuthentication || it.privateKey != null) { "private key required" }
@@ -94,7 +95,19 @@ class ServerProfiles(context: Context) {
         if (previous != null && (previous.host != profile.host || previous.port != profile.port ||
                 previous.user != profile.user || previous.path != profile.path || previous.routeContext() != profile.routeContext())) editor.remove("probe:${profile.id}").remove("cache:${profile.id}").putString("recent-tasks", encodeTasks(recent().filterNot { it.profileId == profile.id }))
         if (encrypted != null) editor.putString("credential:${profile.id}", encrypted)
-        check(editor.commit()) { "profile commit failed" }
+        // Local encryption and validation finish before any trust record is written.
+        val added = verifiedPins.filter { (endpoint, key) ->
+            val current = pins.getString(endpoint, null)
+            if (current != null && current != key) throw AppError(R.string.editor_pin_changed)
+            current == null
+        }
+        if (added.isNotEmpty()) check(pins.edit().also { e -> added.forEach { (endpoint, key) -> e.putString(endpoint, key) } }.commit()) { "pin commit failed" }
+        try { check(editor.commit()) { "profile commit failed" } }
+        catch (error: Exception) {
+            // Roll back only keys this save introduced; never remove another operation's pin.
+            pins.edit().also { e -> added.forEach { (endpoint, key) -> if (pins.getString(endpoint, null) == key) e.remove(endpoint) } }.commit()
+            throw error
+        }
     }
     fun delete(id: String) {
         val profiles = all()

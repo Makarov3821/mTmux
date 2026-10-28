@@ -86,6 +86,7 @@ class MainActivity : AppCompatActivity() {
     private var activeProfile: ServerProfile? = null
     private var showConfig by mutableStateOf(true)
     private var initialHomeRefresh = true
+    private var homeRefreshProfileId: String? = null
     private var reopenSettings = false
     private val pins by lazy { getSharedPreferences("host-pins", MODE_PRIVATE) }
 
@@ -325,6 +326,7 @@ class MainActivity : AppCompatActivity() {
                             // read, so go back to the server list. Drops without an exit status keep history.
                             DebugLog.event(DebugLog.Event.REMOTE_EXIT,attempt.toInt(),exitStatus.coerceIn(0,255))
                             disconnect(TerminalStatus(uiText(R.string.status_remote_exited)), clear = true)
+                            initialHomeRefresh = true; homeRefreshProfileId = profile?.id
                             showConfig = true
                         } else disconnect(TerminalStatus(uiText(R.string.status_terminal_closed)))
                     }
@@ -455,6 +457,7 @@ class MainActivity : AppCompatActivity() {
         }
         fun home() {
             disconnect(TerminalStatus(uiText(R.string.status_returned_home)))
+            initialHomeRefresh = true; homeRefreshProfileId = activeProfile?.id
             focusManager.clearFocus(force = true); keyboard?.hide(); showConfig = true
         }
         BackHandler(enabled = !showConfig) { home() }
@@ -615,7 +618,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 }
                 if (showConfig) {
-                    ServerHome(warmConnections=warmConnections, openSettings=reopenSettings, privacyDisplay=privacyDisplay, onPrivacyDisplay=::changePrivacyDisplay, refreshOnEntry = initialHomeRefresh, onEntryHandled = { initialHomeRefresh = false; reopenSettings = false }, onOpen = { profile, task, handedOff ->
+                    ServerHome(warmConnections=warmConnections, openSettings=reopenSettings, privacyDisplay=privacyDisplay, onPrivacyDisplay=::changePrivacyDisplay, refreshOnEntry = initialHomeRefresh, refreshProfileOnEntry = homeRefreshProfileId, onEntryHandled = { initialHomeRefresh = false; homeRefreshProfileId = null; reopenSettings = false }, onOpen = { profile, task, handedOff ->
                         openTask(profile, task, handedOff)
                     }, appearance=appearance,onAppearance={appearance=it;terminalPreferences.edit {putString("appearance",it.name)}},
                         palette=palette,onPalette={palette=it;terminalPreferences.edit {putString("palette",it.name)}},

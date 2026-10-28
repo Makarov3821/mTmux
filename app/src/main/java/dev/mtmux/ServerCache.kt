@@ -46,7 +46,7 @@ class ServerCache(context: Context) {
         val attempt = runCatching { JSONObject(prefs.getString("probe:${profile.id}", null) ?: return true) }.getOrNull() ?: return true
         if (attempt.optString("context") != context(profile)) return true
         val last = attempt.optLong("time", 0)
-        return last <= 0 || now < last || now - last >= 30 * 60 * 1000L
+        return AutomaticRefreshPolicy.intervalElapsed(last, now)
     }
     fun markAttempt(profile: ServerProfile, now: Long = System.currentTimeMillis()) {
         check(prefs.edit().putString("probe:${profile.id}", JSONObject().put("context", context(profile)).put("time", now).toString()).commit()) { "probe time commit failed" }
