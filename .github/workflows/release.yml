@@ -133,7 +133,7 @@ jobs:
           - Punctuation model SHA-256: \`65a3fb9f5ad7bfb96bf69e0dc4481df97f6ee60513c1d94ce981ba6effd524b1\`
           - Certificate SHA-256: \`$certificate\`
 
-          Voice audio and transcription stay on device. Recognition only fills an editable draft and never sends automatically.
+          Voice audio and transcription stay on device. Recognition opens an editable card; inserting text into the terminal requires confirmation and never presses Enter automatically.
           EOF
           version_notes="docs/releases/${GITHUB_REF_NAME#v}.md"
           if [ -f "$version_notes" ]; then

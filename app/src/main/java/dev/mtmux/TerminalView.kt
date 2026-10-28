@@ -37,7 +37,8 @@ class TerminalView(
     private val onPasteFinished: (String) -> Unit,
     private val onNotice: (TerminalStatus) -> Unit,
     private val onReading: (Boolean) -> Unit = {},
-    private val onBinaryInput: (String, ByteArray) -> Unit = { _, _ -> }
+    private val onBinaryInput: (String, ByteArray) -> Unit = { _, _ -> },
+    private val onFocusInput: () -> Unit = {}
 ) : WebView(context) {
     private val acknowledgements = ConcurrentHashMap<String, CountDownLatch>()
     private val sequence = AtomicLong()
@@ -123,6 +124,8 @@ class TerminalView(
         js("if(typeof setVisibleHeight === 'function') setVisibleHeight($height)")
     }
     fun latest() = js("scrollLatest()")
+    fun composition(text: String) = js("showComposition(${JSONObject.quote(text)})")
+    fun revealInput() = js("revealInputCursor()")
     fun remoteTouch(enabled: Boolean) = js("setRemoteTouch($enabled)")
     fun scrollSensitivity(value: Float) = js("setScrollSensitivity(${ScrollSpeed.normalize(value)})")
     private fun js(code: String) {
@@ -161,6 +164,7 @@ class TerminalView(
     }
 
     private inner class Bridge {
+        @JavascriptInterface fun focusInput() { post { if (!disposed && activeToken.isNotEmpty()) onFocusInput() } }
         @JavascriptInterface fun binaryInput(token: String, encoded: String) {
             if (encoded.length > 131072) return
             val data = runCatching { Base64.getDecoder().decode(encoded) }.getOrNull() ?: return

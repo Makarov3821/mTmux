@@ -1,0 +1,34 @@
+{
+  "versionName": "0.8.5",
+  "versionCode": 35,
+  "releaseLocalBuild": "passed",
+  "pinnedWhisperSourceAndModel": "verified",
+  "releasePayloadAndSize": "verified",
+  "webUnit": {
+    "tests": 5,
+    "failures": 0
+  },
+  "webBundledSource": "matches",
+  "androidPhysicalDeviceTested": false,
+  "signing": "local release APKs unsigned; GitHub signs and verifies original certificate before publishing",
+  "standardUnit": {
+    "tests": 40,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "voiceUnit": {
+    "tests": 40,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "standardUnsignedRelease": {
+    "bytes": 12285155,
+    "sha256": "e55f1e45d37aebdde7e1abddbd1ff67e3f02864d71bfe734642961547715ef4a"
+  },
+  "voiceUnsignedRelease": {
+    "bytes": 196597618,
+    "sha256": "35a7a0fbcc03738eab91ecfe5393f9a163b0422daf4b47dd4a549e11dc6d867b"
+  }
+}

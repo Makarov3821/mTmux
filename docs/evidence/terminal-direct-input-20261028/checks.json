@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-28",
+  "baseCommit": "d36c197",
+  "newChangesCommitted": false,
+  "keyboardInput": "native IME commit, local composing overlay, existing bound-pane input validation",
+  "voiceInput": "editable card; explicit insert without Enter",
+  "webUnit": {
+    "tests": 5,
+    "failures": 0
+  },
+  "webBrowser": "passed via file URL fallback; sandbox denied loopback HTTP navigation",
+  "androidImeTests": {
+    "compiled": 5,
+    "executed": false
+  },
+  "androidSshUiTest": "updated and compiled, not executed",
+  "androidLimitations": "Software Android 35 emulators had unstable system package/activity services; installation/instrumentation could not complete. No app-level or physical IME success claimed. Owned emulators stopped.",
+  "reportedBackspaceIssue": "Root cause unconfirmed; actual IME and field location not supplied.",
+  "standardUnit": {
+    "tests": 40,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "voiceUnit": {
+    "tests": 40,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "standardDebugLint": {
+    "Error": 0,
+    "Warning": 85
+  },
+  "standardDebugApk": {
+    "built": true,
+    "bytes": 16595263,
+    "sha256": "cb77d2ee06a09e1cce871fae4f02a6a1113424e9a9aa289c96e790cb45475782",
+    "signing": "local debug; cannot update official GitHub certificate builds"
+  },
+  "voiceDebugLint": {
+    "Error": 0,
+    "Warning": 57
+  },
+  "voiceDebugApk": {
+    "built": true,
+    "bytes": 202810155,
+    "sha256": "fdc790f5a0954f1126a4bbc6f208decf83f3cd3529b70d94fee52f99782eaafb",
+    "signing": "local debug; cannot update official GitHub certificate builds"
+  }
+}

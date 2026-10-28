@@ -21,6 +21,33 @@ function cancelGesture() {
   scrollFrame = 0;
 }
 terminal.textarea?.setAttribute("inputmode", "none");
+// The Android IME owns composing text. Never write a local echo into the remote screen.
+const composing = document.createElement('div');
+Object.assign(composing.style, {position:'absolute', zIndex:'7', pointerEvents:'none',
+  display:'none', whiteSpace:'pre', maxWidth:'95%', overflow:'hidden',
+  borderBottom:'2px solid currentColor', background:'var(--composition-bg, #263b32)',
+  color:'inherit', padding:'1px 3px', borderRadius:'3px'});
+terminal.element.appendChild(composing);
+window.showComposition = text => {
+  composing.textContent = text;
+  composing.style.display = text ? 'block' : 'none';
+  positionComposition();
+};
+function positionComposition() {
+  const screen = terminal.element.querySelector('.xterm-screen');
+  if (!screen || !composing.textContent) return;
+  const buffer = terminal.buffer.active;
+  const cellWidth = screen.clientWidth / terminal.cols;
+  const cellHeight = screen.clientHeight / terminal.rows;
+  composing.style.left = `${Math.max(0, Math.min(buffer.cursorX * cellWidth, screen.clientWidth - composing.offsetWidth))}px`;
+  composing.style.top = `${Math.max(0, Math.min((buffer.baseY + buffer.cursorY - buffer.viewportY) * cellHeight, screen.clientHeight - cellHeight))}px`;
+  composing.style.fontSize = `${terminal.options.fontSize}px`;
+  composing.style.lineHeight = `${cellHeight}px`;
+  composing.style.background = terminal.options.theme.background;
+  composing.style.color = terminal.options.theme.foreground;
+}
+terminal.onCursorMove(positionComposition);
+terminal.onResize(positionComposition);
 terminal.onData(data => {
   if (draftData !== null) { draftData.push(data); return; }
   if (connected) NativeTerminal.input(connectionToken, data);
@@ -38,6 +65,7 @@ window.receive = (base64, id, token = connectionToken) => {
 };
 window.setConnection = token => {
   cancelGesture();
+  window.showComposition('');
   connected = token !== '';
   revealBottom = false;
   updateVisibleArea();
@@ -87,6 +115,14 @@ window.setVisibleHeight = height => {
   updateVisibleArea();
 };
 window.scrollLatest = () => { terminal.scrollToBottom(); revealBottom = true; updateVisibleArea(); };
+window.revealInputCursor = () => {
+  const buffer = terminal.buffer.active;
+  if (buffer.viewportY < buffer.baseY) return;
+  const screen = terminal.element.querySelector('.xterm-screen');
+  if (screen && (buffer.cursorY + 1) * screen.clientHeight / terminal.rows > visibleHeight) {
+    revealBottom = true; updateVisibleArea();
+  }
+};
 window.resetTerminal = () => { writes = writes.then(() => terminal.reset()); };
 // Let xterm encode the currently negotiated mouse protocol (SGR, legacy, etc.).
 // Never substitute arrow keys when the application has not requested a mouse.
@@ -191,6 +227,8 @@ container.addEventListener('touchend', event => {
     mouse('mousedown', gesture.x, gesture.y, button);
     mouse('mouseup', gesture.x, gesture.y, button);
   }
+  if (gesture && !gesture.moved && gesture.token === connectionToken && connected && performance.now() - gesture.started < 550)
+    NativeTerminal.focusInput?.();
   cancelGesture();
   event.preventDefault();
   event.stopImmediatePropagation();

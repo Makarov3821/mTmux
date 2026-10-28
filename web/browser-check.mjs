@@ -23,7 +23,7 @@ try {
   page.on('pageerror', e => errors.push(e.message));
   await page.addInitScript(() => {
     window.events = [];
-    window.NativeTerminal = Object.fromEntries(['ready','resize','input','draftInput','notice','ack','copy','pasteFinished','binaryInput'].map(name => [name, (...args) => events.push([name, ...args])]));
+    window.NativeTerminal = Object.fromEntries(['ready','resize','input','draftInput','notice','ack','copy','pasteFinished','binaryInput','focusInput'].map(name => [name, (...args) => events.push([name, ...args])]));
   });
   await page.goto(process.env.TERMINAL_TEST_FILE ? pathToFileURL(resolve(root,'index.html')).href : `http://127.0.0.1:${server.address().port}/`);
   await page.waitForFunction(() => events.some(e => e[0] === 'ready'));
@@ -36,6 +36,13 @@ try {
   await page.evaluate(() => { setConnection('session-a'); pasteDraft('你好', 'session-a'); });
   assert.deepEqual(await page.evaluate(() => events.filter(e => e[0] === 'input').at(-1)), ['input', 'session-a', '你好']);
   assert.deepEqual(await page.evaluate(() => events.at(-1)), ['pasteFinished', 'session-a']);
+  const beforeComposition = await page.evaluate(() => terminal.buffer.active.getLine(0).translateToString(true));
+  await page.evaluate(() => showComposition('nihao <script>中文'));
+  assert.equal(await page.evaluate(() => composing.textContent), 'nihao <script>中文');
+  assert.equal(await page.evaluate(() => terminal.buffer.active.getLine(0).translateToString(true)), beforeComposition);
+  assert.equal(await page.evaluate(() => composing.querySelector('script')), null);
+  await page.evaluate(() => showComposition(''));
+  assert.equal(await page.evaluate(() => composing.style.display), 'none');
   // A visible Send action is a single ordered native write, not a bare Enter.
   await page.evaluate(() => sendDraft('pwd', 'session-a', 'draft-1', true));
   assert.deepEqual(await page.evaluate(() => events.at(-1)), ['draftInput', 'session-a', 'draft-1', 'pwd\r']);

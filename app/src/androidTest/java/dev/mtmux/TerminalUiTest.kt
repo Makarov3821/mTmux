@@ -126,6 +126,34 @@ class TerminalUiTest {
         fail("Buffer contains text but Android terminal pixels are blank ($greenPixels green pixels); screenshot: $folder/$name.png")
     }
 
+    private fun closeEditor() {
+        if(compose.onAllNodesWithTag("close-text-editor").fetchSemanticsNodes().isNotEmpty()) {
+            compose.onNodeWithTag("close-text-editor").performClick()
+            compose.waitForIdle()
+        }
+    }
+    private fun draftNode(): androidx.compose.ui.test.SemanticsNodeInteraction {
+        if(compose.onAllNodesWithTag("command-input").fetchSemanticsNodes().isEmpty())
+            compose.onNodeWithTag("terminal-editor").performClick()
+        return compose.onNodeWithTag("command-input")
+    }
+    private fun openReplies() {closeEditor();compose.onNodeWithTag("quick-replies").performClick()}
+    private fun openTools() {closeEditor();compose.onNodeWithText("工具").performClick()}
+    private fun sendEditor() {
+        compose.onNodeWithTag("insert-terminal").performClick()
+        compose.waitUntil(30000) {
+            var pending=true
+            compose.runOnUiThread {
+                val field=MainActivity::class.java.getDeclaredField("pastePending\$delegate").apply {isAccessible=true}
+                @Suppress("UNCHECKED_CAST")
+                pending=(field.get(compose.activity) as androidx.compose.runtime.MutableState<Boolean>).value
+            }
+            !pending
+        }
+        if(compose.onAllNodesWithTag("command-input").fetchSemanticsNodes().isEmpty())
+            compose.onNodeWithTag("terminal-key-Enter").performClick()
+    }
+
     private fun disconnectFixture() {
         // Disconnect is no longer a product button; still exercise stale-output protection.
         compose.runOnUiThread {
@@ -177,7 +205,7 @@ class TerminalUiTest {
             compose.runOnUiThread { view.connection("theme-test") }
             view.render("浅色终端 Light terminal\r\n\u001b[31mError red\u001b[0m / \u001b[32mSuccess green\u001b[0m".toByteArray(),"theme-test")
             saveScreenshot("terminal-light")
-            compose.onNodeWithText("工具").performClick()
+            openTools()
             compose.onNodeWithTag("select-terminal-text").performScrollTo().performClick()
             compose.onNodeWithText("选择复制").assertExists()
             compose.runOnUiThread {
@@ -394,20 +422,19 @@ class TerminalUiTest {
             compose.onNodeWithTag("hide-keyboard").assertDoesNotExist()
             val toolsButton=compose.onNodeWithTag("terminal-tools").fetchSemanticsNode().boundsInRoot
             val repliesButton=compose.onNodeWithTag("quick-replies").fetchSemanticsNode().boundsInRoot
-            val sendButton=compose.onNodeWithTag("send-enter").fetchSemanticsNode().boundsInRoot
+            compose.onNodeWithTag("command-input").assertDoesNotExist()
             assertTrue(toolsButton.right<=repliesButton.left)
-            assertTrue(sendButton.bottom<=repliesButton.top)
             assertEquals(toolsButton.center.y,repliesButton.center.y,1f)
             saveScreenshot("terminal-bottom-replies")
-            compose.onNodeWithTag("quick-replies").performClick()
+            openReplies()
             compose.onNodeWithTag("quick-reply-0").performClick()
-            compose.onNodeWithTag("command-input").assertTextContains("继续")
-            compose.onNodeWithTag("quick-replies").performClick()
+            draftNode().assertTextContains("继续")
+            openReplies()
             compose.onNodeWithTag("quick-reply-1").performClick()
             compose.onNodeWithText("保留已有草稿？").assertExists()
             compose.onNodeWithTag("append-quick-reply").performClick()
-            compose.onNodeWithTag("command-input").assertTextContains("继续\n请总结当前进展和剩余问题。")
-            compose.onNodeWithTag("quick-replies").performClick()
+            draftNode().assertTextContains("继续\n请总结当前进展和剩余问题。")
+            openReplies()
             compose.onNodeWithTag("edit-quick-reply-0").performClick()
             compose.onNodeWithTag("quick-reply-editor").performTextReplacement("我的常用回复")
             compose.onNodeWithTag("save-quick-reply").performClick()
@@ -415,12 +442,12 @@ class TerminalUiTest {
             saveScreenshot("quick-replies")
             compose.onNodeWithTag("quick-reply-0").performClick()
             compose.onNodeWithTag("replace-quick-reply").performClick()
-            compose.onNodeWithTag("command-input").assertTextContains("我的常用回复")
+            draftNode().assertTextContains("我的常用回复")
             assertEquals("[]",evaluate(view,"replyInputs"))
-            compose.onNodeWithTag("quick-replies").performClick()
+            openReplies()
             disconnectFixture()
             compose.onNodeWithTag("quick-reply-0").performClick()
-            compose.onNodeWithTag("command-input").assertTextContains("我的常用回复")
+            draftNode().assertTextContains("我的常用回复")
             compose.onNodeWithText("连接已改变；快捷回复未填入").assertExists()
         } finally {
             store.delete(profile.id)
@@ -466,7 +493,7 @@ class TerminalUiTest {
         compose.runOnUiThread { view.connection("copy-test") }
         view.render("中文选择 👋 copy words\r\n第二行 command --help".toByteArray(),"copy-test")
         evaluate(view,"window.copyInputs=[]; terminal.onData(d=>copyInputs.push(d));")
-        compose.onNodeWithText("工具").performClick()
+        openTools()
         compose.onNodeWithTag("select-terminal-text").performScrollTo().performClick()
         compose.onNodeWithText("选择复制").assertExists()
         var nativeText: android.widget.TextView? = null
@@ -644,7 +671,7 @@ class TerminalUiTest {
         showTerminalForFixture()
         assertSame("Opening settings must not recreate the terminal", view, terminal())
         assertPaintedGreenText(view, "after-settings")
-        compose.onNodeWithTag("command-input").performClick().performTextInput("pwd")
+        draftNode().performClick().performTextInput("pwd")
         compose.waitUntil(15000) {
             var visible = false
             compose.runOnUiThread {
@@ -654,14 +681,14 @@ class TerminalUiTest {
             visible
         }
         compose.waitForIdle()
-        compose.onNodeWithTag("command-input").assertTextContains("pwd")
+        draftNode().assertTextContains("pwd")
         compose.runOnUiThread { assertTrue("IME must not collapse WebView to zero", view.height >= 80 * view.resources.displayMetrics.density) }
         hideKeyboard()
         compose.onNodeWithTag("terminal-panel").assertIsDisplayed()
         compose.waitUntil(10000) { evaluate(view, "terminal.rows > 1") == "true" }
         assertPaintedGreenText(view, "after-keyboard")
     }
-    @Test fun sendButtonExecutesVisibleDraftAndClearsItOnlyAfterWrite() {
+    @Test fun directTypingAndEditedPasteUseRemoteInputWithoutAutomaticSubmit() {
         val args = InstrumentationRegistry.getArguments()
         assumeTrue("Use scripts/test_ssh.py --android", args.containsKey("fixturePort"))
         val port = args.getString("fixturePort")!!.toInt()
@@ -689,18 +716,34 @@ class TerminalUiTest {
         val outputScript = "Array.from({length:terminal.buffer.active.length},(_,i)=>terminal.buffer.active.getLine(i).translateToString(true)).join('\\n')"
         compose.waitUntil(30000) { evaluate(view, outputScript).contains("MTMUX_SSH_WELCOME") }
         assertPaintedGreenText(view, "ssh-welcome-before-input")
-        compose.onNodeWithTag("command-input").performTextInput("printf '\\115\\124\\115\\125\\130_READY\\n'")
-        compose.onNodeWithText("发送回车").performClick()
-        compose.waitUntil(30000) {
-            compose.onNodeWithTag("command-input").fetchSemanticsNode().config[
-                androidx.compose.ui.semantics.SemanticsProperties.EditableText].text.isEmpty()
+        compose.onNodeWithTag("command-input").assertDoesNotExist()
+        compose.runOnUiThread {
+            fun endpoint(root: View): DirectTerminalInput? {
+                if(root is DirectTerminalInput) return root
+                if(root is ViewGroup) for(i in 0 until root.childCount) endpoint(root.getChildAt(i))?.let {return it}
+                return null
+            }
+            val input=requireNotNull(endpoint(compose.activity.window.decorView))
+                .onCreateInputConnection(android.view.inputmethod.EditorInfo())!!
+            input.setComposingText("NEVER_COMMIT_PINYIN",1)
+            input.commitText("printf '\\104\\111\\122\\105\\103\\124_OK\\n'XXXX",1)
+            repeat(4) {repeat -> input.sendKeyEvent(android.view.KeyEvent(0,0,android.view.KeyEvent.ACTION_DOWN,android.view.KeyEvent.KEYCODE_DEL,repeat))}
+            input.performEditorAction(android.view.inputmethod.EditorInfo.IME_ACTION_NONE)
         }
+        compose.waitUntil(30000) {evaluate(view,outputScript).contains("DIRECT_OK")}
+        assertFalse(evaluate(view,outputScript).contains("NEVER_COMMIT_PINYIN"))
+        draftNode().performTextInput("printf '\\115\\124\\115\\125\\130_READY\\n'")
+        compose.onNodeWithTag("insert-terminal").performClick()
+        compose.waitUntil(30000) {compose.onAllNodesWithTag("command-input").fetchSemanticsNodes().isEmpty()}
+        assertFalse(evaluate(view,outputScript).contains("MTMUX_READY"))
+        compose.onNodeWithTag("terminal-key-Enter").performClick()
+        compose.waitUntil(30000) {compose.onAllNodesWithTag("command-input").fetchSemanticsNodes().isEmpty()}
         compose.waitUntil(30000) { evaluate(view, outputScript).contains("MTMUX_READY") }
         assertPaintedGreenText(view, "ssh-command-result")
-        compose.onNodeWithTag("command-input").performTextInput("keep this draft")
+        draftNode().performTextInput("keep this draft")
         disconnectFixture()
-        compose.onNodeWithTag("command-input").assertTextContains("keep this draft")
-        compose.onNodeWithText("发送回车").assertIsNotEnabled()
+        draftNode().assertTextContains("keep this draft")
+        compose.onNodeWithTag("insert-terminal").assertIsNotEnabled()
         compose.waitUntil(10000) { evaluate(view, outputScript).trim('"', '\n', ' ') == "" || !evaluate(view, outputScript).contains("MTMUX_READY") }
         compose.onNodeWithText("尚未连接 · 请查看上方提示\n可返回首页检查配置或重新连接。").assertIsDisplayed()
         view.render("LATE_STALE_OUTPUT".toByteArray(), "old-token")
@@ -730,7 +773,7 @@ class TerminalUiTest {
                 MainActivity::class.java.getDeclaredMethod("connect",Login::class.java,String::class.java,String::class.java,Boolean::class.javaPrimitiveType).apply {isAccessible=true}.invoke(compose.activity,login,path,session,false)
             }
             compose.waitUntil(30000) {evaluate(view,"connected")=="true"}
-            compose.onNodeWithTag("command-input").performTextInput("UNSENT_FUNCTION_DRAFT")
+            draftNode().performTextInput("UNSENT_FUNCTION_DRAFT");closeEditor()
             hideKeyboard()
             fun verifyWidth(labels:List<String>) {
                 val bounds=labels.map {compose.onNodeWithTag("terminal-key-$it").fetchSemanticsNode().boundsInRoot}
@@ -750,7 +793,7 @@ class TerminalUiTest {
             (7..12).forEach {compose.onNodeWithTag("terminal-key-F$it").performClick()}
             val expected="1b4f501b4f511b4f521b4f531b5b31357e1b5b31377e1b5b31387e1b5b31397e1b5b32307e1b5b32317e1b5b32337e1b5b32347e"
             compose.waitUntil(15000) {controller.exec(dev.mtmux.core.Tmux.history(binding.pane,path)).output.replace("\n","").replace("\r","").contains("KEY_BYTES="+expected)}
-            compose.onNodeWithTag("command-input").assertTextContains("UNSENT_FUNCTION_DRAFT")
+            draftNode().assertTextContains("UNSENT_FUNCTION_DRAFT");closeEditor()
             compose.onNodeWithTag("terminal-key-pages").performTouchInput {swipeLeft()}
             compose.onNodeWithTag("terminal-key-F1").assertIsDisplayed()
             disconnectFixture()
@@ -775,7 +818,7 @@ class TerminalUiTest {
             val before=evaluate(view,anchor)
             val top=IntArray(2);compose.runOnUiThread { view.getLocationOnScreen(top) }
             repeat(10) {
-                compose.onNodeWithTag("command-input").performClick()
+                draftNode().performClick()
                 compose.waitUntil(10000) { var open=false;compose.runOnUiThread {open=ViewCompat.getRootWindowInsets(view)?.isVisible(WindowInsetsCompat.Type.ime())==true};open }
                 Thread.sleep(250)
                 assertEquals(before,evaluate(view,anchor))
@@ -1058,8 +1101,8 @@ class TerminalUiTest {
             compose.onNodeWithTag("ssh-${profile.id}").performScrollTo().performClick()
             val view=terminal()
             compose.waitUntil(45000) { evaluate(view,"terminal.buffer.active.getLine(0).translateToString(true)").contains("MTMUX_SSH_WELCOME") }
-            compose.onNodeWithTag("command-input").performTextInput("printf 'JUMP_UI_OK\\n'")
-            compose.onNodeWithText("发送回车").performClick()
+            draftNode().performTextInput("printf 'JUMP_UI_OK\\n'")
+            sendEditor()
             compose.waitUntil(15000) { evaluate(view,"Array.from({length:terminal.buffer.active.length},(_,i)=>terminal.buffer.active.getLine(i).translateToString(true)).join('\\n')").contains("JUMP_UI_OK") }
             val beforeHome=ServerCache(compose.activity).read(profile)!!.updatedAt
             // A recent automatic probe must not suppress the explicit terminal-return refresh.
@@ -1073,7 +1116,7 @@ class TerminalUiTest {
             assertEquals(offlineProbe,probePrefs.getString("probe:${offline.id}",null))
             compose.onNodeWithTag("task-${profile.id}-%0").performScrollTo().performClick()
             compose.waitUntil(45000) { evaluate(view,"connected")=="true" }
-            compose.onNodeWithText("工具").performClick()
+            openTools()
             compose.onNodeWithTag("reply-target").assertTextEquals("回复目标 %0")
             compose.onNodeWithText("关闭").performClick()
             val organization=ServerOrganization(compose.activity)
@@ -1192,11 +1235,11 @@ class TerminalUiTest {
         assumeTrue(args.containsKey("fixturePort"))
         val view = connectFixtureShell(args)
         // Kill the per-session sshd process: the connection drops without an exit status.
-        compose.onNodeWithTag("command-input").performTextInput("printf 'REMOTE_DONE\\n'; kill -9 \$PPID")
-        compose.onNodeWithText("发送回车").performClick()
+        draftNode().performTextInput("printf 'REMOTE_DONE\\n'; kill -9 \$PPID")
+        sendEditor()
         compose.waitUntil(30000) { compose.onAllNodesWithTag("disconnected-history").fetchSemanticsNodes().isNotEmpty() }
         assertTrue(evaluate(view, "Array.from({length:terminal.buffer.active.length},(_,i)=>terminal.buffer.active.getLine(i).translateToString(true)).join('\\n')").contains("REMOTE_DONE"))
-        compose.onNodeWithText("发送回车").assertIsNotEnabled()
+        compose.onNodeWithTag("insert-terminal").assertIsNotEnabled()
         compose.onNodeWithTag("add-server").assertDoesNotExist() // stays on the terminal
         saveScreenshot("remote-disconnect-retained")
     }
@@ -1205,8 +1248,8 @@ class TerminalUiTest {
         val args = InstrumentationRegistry.getArguments()
         assumeTrue(args.containsKey("fixturePort"))
         connectFixtureShell(args)
-        compose.onNodeWithTag("command-input").performTextInput("exit")
-        compose.onNodeWithText("发送回车").performClick()
+        draftNode().performTextInput("exit")
+        sendEditor()
         compose.waitUntil(30000) { compose.onAllNodesWithTag("add-server").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("服务器").assertIsDisplayed()
         val field = MainActivity::class.java.getDeclaredField("wireToken\$delegate").apply { isAccessible = true }
@@ -1419,7 +1462,7 @@ class TerminalUiTest {
             var view = terminal()
             compose.waitUntil(30000) { evaluate(view,"connected") == "true" }
             val firstToken = evaluate(view,"connectionToken")
-            compose.onNodeWithTag("command-input").performTextInput("UNSENT_DRAFT")
+            draftNode().performTextInput("UNSENT_DRAFT");closeEditor()
             compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
             compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
             compose.waitUntil(10000) { evaluate(view,"connected") == "false" }
@@ -1428,7 +1471,7 @@ class TerminalUiTest {
             compose.waitUntil(30000) { evaluate(view,"connected") == "true" }
             assertNotEquals(firstToken,evaluate(view,"connectionToken"))
             assertEquals(original,control.bindPane(session,path))
-            compose.onNodeWithTag("command-input").assertTextContains("UNSENT_DRAFT")
+            draftNode().assertTextContains("UNSENT_DRAFT");closeEditor()
             assertFalse(control.exec(dev.mtmux.core.Tmux.history(original.pane,path)).output.contains("UNSENT_DRAFT"))
             evaluate(view,"sendDraft('STALE_REPLAY', $firstToken, 'old-request', true); true")
             Thread.sleep(150)
@@ -1444,7 +1487,7 @@ class TerminalUiTest {
             compose.onNodeWithTag("reconnect-recent").performClick()
             compose.waitUntil(30000) { compose.onAllNodesWithText("原任务已结束", substring=true).fetchSemanticsNodes().isNotEmpty() }
             assertEquals("false",evaluate(view,"connected"))
-            compose.onNodeWithTag("command-input").assertTextContains("UNSENT_DRAFT")
+            draftNode().assertTextContains("UNSENT_DRAFT");closeEditor()
             assertEquals(original.identity,store.recent().first { it.profileId==profile.id }.identity)
             saveScreenshot("recent-task-stale-blocked")
             compose.onNodeWithText("重新选择任务").performClick()
@@ -1528,34 +1571,34 @@ class TerminalUiTest {
             repeat(3) { view.render("\u001b[>c".toByteArray(),connectionToken) }
             compose.waitUntil(10000) { evaluate(view,"daReplies.filter(d=>d==='\\x1b[>0;276;0c').length").toInt()>=3 }
             // Flush the same writer queue with a legitimate bound input before checking capture.
-            compose.onNodeWithTag("command-input").performTextInput("DA_ROUTE_BARRIER")
-            compose.onNodeWithText("发送回车").performClick()
+            draftNode().performTextInput("DA_ROUTE_BARRIER")
+            sendEditor()
             compose.waitUntil(10000) { controller.exec(dev.mtmux.core.Tmux.history(bound.pane,path)).output.contains("DA_ROUTE_BARRIER") }
             assertFalse(controller.exec(dev.mtmux.core.Tmux.history(bound.pane,path)).output.contains("0;276;0c"))
-            compose.onNodeWithText("工具").performClick()
+            openTools()
             compose.onNodeWithTag("reply-target").assertTextEquals("回复目标 ${bound.pane}")
             compose.onNodeWithText("关闭").performClick()
-            compose.onNodeWithTag("command-input").performTextInput("PHONE_BOUND_REPLY")
+            draftNode().performTextInput("PHONE_BOUND_REPLY")
             val second = controller.exec("$tmux split-window -h -P -F '#{pane_id}' -t '${bound.pane}' 'stty -echo; cat'").output.trim()
             assertTrue("split pane failed: $second", second.matches(Regex("%[0-9]+")))
-            compose.onNodeWithText("发送回车").performClick()
+            sendEditor()
             compose.waitUntil(10000) { compose.onAllNodesWithText("未发送：", substring = true).fetchSemanticsNodes().isNotEmpty() }
-            compose.onNodeWithTag("command-input").assertTextContains("PHONE_BOUND_REPLY")
+            draftNode().assertTextContains("PHONE_BOUND_REPLY")
             fun capture(pane: String) = controller.exec(dev.mtmux.core.Tmux.history(pane, path)).output
             assertFalse(capture(second).contains("PHONE_BOUND_REPLY"))
             assertFalse(capture(bound.pane).contains("PHONE_BOUND_REPLY"))
             controller.exec("$tmux select-pane -t '${bound.pane}'")
-            compose.onNodeWithText("发送回车").performClick()
+            sendEditor()
             compose.waitUntil(10000) { capture(bound.pane).contains("PHONE_BOUND_REPLY") }
-            compose.onNodeWithTag("command-input").assert(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.EditableText, androidx.compose.ui.text.AnnotatedString("")))
+            compose.onNodeWithTag("command-input").assertDoesNotExist()
             assertFalse(capture(second).contains("PHONE_BOUND_REPLY"))
             controller.exec("$tmux select-pane -t '$second'")
-            compose.onNodeWithText("工具").performClick()
+            openTools()
             compose.onNodeWithText("使用当前 pane").performScrollTo().performClick()
             compose.waitUntil(10000) { compose.onAllNodesWithText("回复目标 $second").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("关闭").performClick()
-            compose.onNodeWithTag("command-input").performTextInput("EXPLICIT_NEW_TARGET")
-            compose.onNodeWithText("发送回车").performClick()
+            draftNode().performTextInput("EXPLICIT_NEW_TARGET")
+            sendEditor()
             compose.waitUntil(10000) { capture(second).contains("EXPLICIT_NEW_TARGET") }
             assertFalse(capture(bound.pane).contains("EXPLICIT_NEW_TARGET"))
             saveScreenshot("bound-pane-reply")
@@ -1636,7 +1679,7 @@ class TerminalUiTest {
             val tmuxAnchor=state("#{pane_width}:#{pane_height}:#{scroll_position}:#{pane_in_mode}")
             val topLine=evaluate(view,"terminal.buffer.active.getLine(terminal.buffer.active.viewportY).translateToString(true)")
             repeat(3) {
-                compose.onNodeWithTag("command-input").performClick()
+                draftNode().performClick()
                 compose.waitUntil(10000) { var open=false;compose.runOnUiThread {open=ViewCompat.getRootWindowInsets(view)?.isVisible(WindowInsetsCompat.Type.ime())==true};open }
                 Thread.sleep(300)
                 assertEquals(tmuxAnchor,state("#{pane_width}:#{pane_height}:#{scroll_position}:#{pane_in_mode}"))
@@ -1779,8 +1822,8 @@ class TerminalUiTest {
                 compose.onAllNodesWithTag("voice-transcribing").fetchSemanticsNodes().isEmpty() &&
                     (compose.onAllNodesWithTag("voice-error").fetchSemanticsNodes().isNotEmpty() ||
                      compose.onAllNodesWithTag("voice-result").fetchSemanticsNodes().isNotEmpty() ||
-                     compose.onNodeWithTag("command-input").fetchSemanticsNode().config
-                        .getOrElse(androidx.compose.ui.semantics.SemanticsProperties.EditableText){androidx.compose.ui.text.AnnotatedString("")}.text.isNotEmpty())
+                     compose.onAllNodesWithTag("command-input").fetchSemanticsNodes().any {node -> node.config
+                        .getOrElse(androidx.compose.ui.semantics.SemanticsProperties.EditableText){androidx.compose.ui.text.AnnotatedString("")}.text.isNotEmpty()})
             }
         }
         compose.runOnUiThread {

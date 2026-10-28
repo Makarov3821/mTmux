@@ -24,7 +24,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 
-enum class UiSymbol { BACK, DOWN, NEXT, PLUS, SETTINGS, FOLDER, SORT, REFRESH, MORE, TERMINAL, SEARCH, LATEST, COPY, MIC, STOP, CLOSE, CHECK, SHIELD, KEY, TOOLS, REPLY, SEND, KEYBOARD }
+enum class UiSymbol { BACK, DOWN, NEXT, PLUS, SETTINGS, FOLDER, SORT, REFRESH, MORE, TERMINAL, SEARCH, LATEST, COPY, MIC, STOP, CLOSE, CHECK, SHIELD, KEY, TOOLS, REPLY, SEND, KEYBOARD, EDIT }
 private val vectors = UiSymbol.entries.associateWith { symbol ->
     ImageVector.Builder(symbol.name,24.dp,24.dp,24f,24f,autoMirror = symbol in setOf(UiSymbol.BACK,UiSymbol.NEXT)).apply {
         path(fill = null, stroke = SolidColor(Color.Black), strokeLineWidth = 1.8f,
@@ -51,6 +51,7 @@ private val vectors = UiSymbol.entries.associateWith { symbol ->
                 UiSymbol.REPLY -> {moveTo(8f,5f);lineTo(2f,11f);lineTo(8f,17f);moveTo(3f,11f);lineTo(14f,11f);curveTo(19f,11f,21f,14f,21f,20f)}
                 UiSymbol.SEND -> {moveTo(3f,3f);lineTo(22f,12f);lineTo(3f,21f);lineTo(7f,12f);close();moveTo(7f,12f);lineTo(21f,12f)}
                 UiSymbol.KEYBOARD -> {moveTo(2f,5f);lineTo(22f,5f);lineTo(22f,19f);lineTo(2f,19f);close();moveTo(6f,9f);lineTo(6.1f,9f);moveTo(10f,9f);lineTo(10.1f,9f);moveTo(14f,9f);lineTo(14.1f,9f);moveTo(18f,9f);lineTo(18.1f,9f);moveTo(6f,14f);lineTo(18f,14f)}
+                UiSymbol.EDIT -> {moveTo(4f,16f);lineTo(15f,5f);lineTo(20f,10f);lineTo(9f,21f);lineTo(3f,22f);close();moveTo(13f,7f);lineTo(18f,12f);moveTo(16f,4f);lineTo(18f,2f);lineTo(23f,7f);lineTo(21f,9f)}
                 UiSymbol.TOOLS -> {moveTo(14f,3f);curveTo(20f,1f,23f,8f,19f,12f);lineTo(9f,22f);lineTo(3f,16f);lineTo(13f,6f);lineTo(14f,3f);lineTo(17f,7f);lineTo(20f,4f)}
                 UiSymbol.SETTINGS -> {moveTo(9f,3f);lineTo(15f,3f);lineTo(16f,6f);lineTo(20f,7f);lineTo(22f,12f);lineTo(19f,15f);lineTo(19f,19f);lineTo(14f,22f);lineTo(11f,19f);lineTo(7f,19f);lineTo(3f,15f);lineTo(5f,11f);lineTo(4f,7f);lineTo(8f,6f);close();moveTo(15f,12f);curveTo(15f,16f,9f,16f,9f,12f);curveTo(9f,8f,15f,8f,15f,12f)}
             }

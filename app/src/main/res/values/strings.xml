@@ -328,7 +328,7 @@
     <string name="voice_transcribing">Transcribing locally with Whisper base…</string>
     <string name="voice_result_help">The text will only be added to the draft. It is never sent automatically.</string>
     <string name="voice_stop">Stop</string>
-    <string name="voice_inserted">Voice text added to the draft; edit it before sending.</string>
+    <string name="voice_inserted">Voice text is ready in the editor; review it before inserting.</string>
     <string name="voice_error_permission">Microphone permission was denied. You can continue typing.</string>
     <string name="voice_error_audio">Cannot start or read the microphone. Check whether another app is using it.</string>
     <string name="voice_error_too_short">Recording is too short. Speak for at least 0.1 seconds.</string>
@@ -386,4 +386,8 @@
     <string name="tmux_creating">Creating tmux session…</string>
     <string name="tmux_create">Create and open</string>
     <string name="home_saved_unverified">Configuration saved without verification. Use Verify fingerprint or connect when ready.</string>
+    <string name="terminal_direct_keyboard">Type in terminal</string>
+    <string name="terminal_edit_text">Edit text</string>
+    <string name="terminal_editor_help">Edit locally, then insert at the remote cursor. Inserting does not press Enter.</string>
+    <string name="terminal_insert_text">Insert into terminal</string>
 </resources>

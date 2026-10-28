@@ -322,7 +322,7 @@
     <string name="voice_transcribing">正在使用 Whisper base 在本机转写…</string>
     <string name="voice_result_help">文字只会加入草稿，绝不会自动发送。</string>
     <string name="voice_stop">停止</string>
-    <string name="voice_inserted">语音文字已加入草稿，请编辑后再发送。</string>
+    <string name="voice_inserted">语音文字已放入编辑卡片，请检查后插入终端。</string>
     <string name="voice_error_permission">麦克风权限被拒绝，仍可继续键盘输入。</string>
     <string name="voice_error_audio">无法启动或读取麦克风，请检查是否被其他应用占用。</string>
     <string name="voice_error_too_short">录音太短，请至少说 0.1 秒。</string>
@@ -380,4 +380,8 @@
     <string name="tmux_creating">正在创建 tmux 会话…</string>
     <string name="tmux_create">创建并进入</string>
     <string name="home_saved_unverified">配置已保存，连接尚未验证。可通过“验证指纹”或连接按钮重试。</string>
+    <string name="terminal_direct_keyboard">在终端中输入</string>
+    <string name="terminal_edit_text">编辑文本</string>
+    <string name="terminal_editor_help">在这里修改后插入远端当前光标位置，插入不会自动回车。</string>
+    <string name="terminal_insert_text">插入终端</string>
 </resources>
