@@ -1,0 +1,11 @@
+{
+  "name": "dev.mtmux.core.TmuxDoctorTest",
+  "tests": "1",
+  "failures": "0",
+  "errors": "0",
+  "skipped": "0",
+  "time": "0.257",
+  "version": "tmux 3.2a",
+  "binarySha256": "48b68de20c626621f832b297264a55fca235ccfb3e3f5590fbad9e6f4893ea0f",
+  "case": "real tmux default bindings and format capabilities are diagnosed without changing them"
+}

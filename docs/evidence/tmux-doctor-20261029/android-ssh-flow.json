@@ -1,0 +1,14 @@
+{
+  "name": "dev.mtmux.TmuxDoctorUiTest",
+  "tests": "1",
+  "failures": "0",
+  "errors": "0",
+  "skipped": "0",
+  "time": "162.616",
+  "cases": [
+    {
+      "name": "verifiedSaveOffersDoctorAndReusesItsAuthenticatedChain",
+      "seconds": "140.432"
+    }
+  ]
+}

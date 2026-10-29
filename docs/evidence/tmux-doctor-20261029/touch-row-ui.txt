@@ -1,0 +1,8 @@
+
+dev.mtmux.TmuxDoctorUiTest:.
+
+Time: 34.205
+
+OK (1 test)
+
+

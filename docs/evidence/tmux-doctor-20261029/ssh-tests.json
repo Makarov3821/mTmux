@@ -1,0 +1,17 @@
+{
+  "suite": "dev.mtmux.core.SshIntegrationTest",
+  "tests": 2,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "cases": [
+    {
+      "name": "doctor reads tmux over the authenticated chain without another SSH handshake",
+      "seconds": 0.458
+    },
+    {
+      "name": "doctor command budget stops a slow command and leaves no active channel",
+      "seconds": 0.216
+    }
+  ]
+}

@@ -143,7 +143,9 @@ class SshClient(private val pins: PinStore, private val confirmUnknownHost: ((Ho
         }
     }
 
-    fun exec(command: String, stdin: ByteArray? = null, phase: ConnectionPhase = ConnectionPhase.REMOTE_EXEC): ExecResult = measured(phase) {
+    fun exec(command: String, stdin: ByteArray? = null, phase: ConnectionPhase = ConnectionPhase.REMOTE_EXEC, timeoutMs: Long? = null): ExecResult = measured(phase) {
+        require(timeoutMs == null || timeoutMs in 1..60_000)
+        val overallDeadline = timeoutMs?.let {System.nanoTime() + java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(it)}
         checkActive()
         val connection = session ?: fail(ErrorCode.NOT_CONNECTED)
         val channel = connection.openChannel("exec") as ChannelExec
@@ -155,10 +157,10 @@ class SshClient(private val pins: PinStore, private val confirmUnknownHost: ((Ho
         channel.setErrStream(stderr)
         ownChannel(channel)
         try {
-            measured(ConnectionPhase.CHANNEL_OPEN) { channel.connect(10_000); checkActive() }
+            measured(ConnectionPhase.CHANNEL_OPEN) { channel.connect(timeoutMs?.toInt() ?: 10_000); checkActive() }
             val wait = trace.span(ConnectionPhase.COMMAND_WAIT)
             try {
-                val deadline = System.nanoTime() + 10_000_000_000L
+                val deadline = overallDeadline ?: (System.nanoTime() + 10_000_000_000L)
                 while (!channel.isClosed) {
                     checkActive()
                     ensure(System.nanoTime() < deadline, ErrorCode.REMOTE_TIMEOUT)

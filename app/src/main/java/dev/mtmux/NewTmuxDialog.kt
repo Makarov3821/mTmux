@@ -23,6 +23,7 @@ import kotlinx.coroutines.*
     val context = LocalContext.current
     val store = remember { ServerProfiles(context) }
     val pins = remember { context.getSharedPreferences("host-pins", 0) }
+    val doctorCache = remember { TmuxDoctorStore(context) }
     val scope = rememberCoroutineScope()
     var name by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<UiText?>(null) }
@@ -75,6 +76,14 @@ import kotlinx.coroutines.*
                         mutationStarted.set(true)
                         val created = client.createTmuxSession(requested, profile.path)
                         if (store.all().firstOrNull { it.id == profile.id } != profile || store.connectionRevision(profile) != revision) throw AppError(R.string.err_profile_changed)
+                        doctorCache.save(profile.id,revision!!,TmuxDoctorReport(mapOf("path.status" to "ok","server.status" to "ready")),false)
+                        // Only the first session after a Doctor initialization needs a full post-create check.
+                        if(doctorCache.receipt(profile.id,revision!!)!=null && doctorCache.report(profile.id,revision!!)?.report?.get("server.status")=="none") {
+                            runCatching {
+                                val report=TmuxEnvironmentProbe.parse(client.exec(TmuxEnvironmentProbe.command(profile.path),phase=ConnectionPhase.TMUX_DOCTOR,timeoutMs=3000))
+                                if(store.connectionRevision(profile)==revision) doctorCache.save(profile.id,revision!!,report,true)
+                            }
+                        }
                         val hostKey = pins.getString(profile.trustEndpoint(), null) ?: throw AppError(R.string.home_verify_fingerprint)
                         RecentTask(profile.id, profile.host, profile.port, profile.user, profile.path, hostKey,
                             created.binding.identity, requested, "${created.windowIndex} · $requested", route = profile.routeContext())
@@ -88,6 +97,9 @@ import kotlinx.coroutines.*
                 } catch (failure: Exception) {
                     if (failure is CancellationException || owner.cancelled) throw CancellationException("creation cancelled", failure)
                     DebugLog.event(DebugLog.Event.TMUX_CREATE_FAILED, profile.id.hashCode(), error = failure)
+                    if(failure is CodedError && failure.code==ErrorCode.TMUX_UNAVAILABLE && revision!=null && store.connectionRevision(profile)==revision) {
+                        doctorCache.save(profile.id,revision!!,TmuxDoctorReport(mapOf("path.status" to "failed")),false)
+                    }
                     if (failure is HostKeyRejected) {
                         error = uiText(if (failure.challenge.changed) R.string.home_host_key_changed else R.string.home_verify_fingerprint)
                         onTrustRequired(failure.challenge)

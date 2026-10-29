@@ -76,6 +76,8 @@ class ServerManagementUiTest {
             compose.waitUntil(30000) { store.all().any { it.name == name } }
             val profile=store.all().single { it.name == name }
             assertEquals(key,pins.getString(endpoint,null))
+            compose.onNodeWithTag("run-tmux-doctor").assertExists()
+            compose.onNodeWithTag("skip-tmux-doctor").performClick()
             compose.onNodeWithTag("profile-${profile.id}").assertExists()
             compose.onNodeWithTag("terminal-home").assertDoesNotExist()
         } finally { store.all().filter { it.name == name }.forEach { store.delete(it.id) }; pins.edit().putString(endpoint,old).commit() }
@@ -92,12 +94,14 @@ class ServerManagementUiTest {
         try {
             control.connect(store.login(profile));compose.activityRule.scenario.recreate()
             compose.onNodeWithTag("new-tmux-${profile.id}").performScrollTo().performClick()
+            compose.waitUntil(30000) {present("new-tmux-name")}
             compose.onNodeWithTag("new-tmux-name").performTextInput(name)
             compose.onNodeWithTag("create-tmux").performClick()
             compose.waitUntil(30000) { store.recent().any { it.profileId==profile.id && it.sessionName==name } }
             compose.onNodeWithTag("terminal-home").assertExists().performClick()
             compose.waitUntil(30000) { ServerCache(compose.activity).read(profile)?.tasks?.any { it.sessionName==name } == true }
             compose.onNodeWithTag("new-tmux-${profile.id}").performScrollTo().performClick()
+            compose.waitUntil(30000) {present("new-tmux-name")}
             compose.onNodeWithTag("new-tmux-name").performTextInput(name)
             compose.onNodeWithTag("create-tmux").performClick()
             compose.waitUntil(30000) { present("new-tmux-error") }

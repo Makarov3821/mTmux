@@ -1,0 +1,16 @@
+{
+  "variant": "debug",
+  "version": "0.8.5 + unreleased Doctor",
+  "files": [
+    {
+      "path": "app/build/outputs/apk/standard/debug/app-standard-debug.apk",
+      "bytes": 16660135,
+      "sha256": "d81a61f3f5155ef9a5bd520f54224f17fdcd5fface1788b3af0fa28ce4b6cda4"
+    },
+    {
+      "path": "app/build/outputs/apk/voice/debug/app-voice-debug.apk",
+      "bytes": 202874431,
+      "sha256": "b02292e2de302da74eb8a183e3aa6e0a0219a1ff563f25ec4d3d44d2602cd205"
+    }
+  ]
+}

@@ -14,6 +14,7 @@ data class ServerProfile(
 
 class ServerProfiles(context: Context) {
     private val preferences = context.getSharedPreferences("server-profiles", Context.MODE_PRIVATE)
+    private val doctorPreferences = context.getSharedPreferences("tmux-doctor", Context.MODE_PRIVATE)
     private val cipher = CredentialCipher()
     private val pins = context.getSharedPreferences("host-pins", Context.MODE_PRIVATE)
     fun all(): List<ServerProfile> {
@@ -116,6 +117,7 @@ class ServerProfiles(context: Context) {
         check(preferences.edit().putString("profiles", encode(profiles.filterNot { it.id == id }))
             .putString("last", last()?.takeUnless { it == id }).remove("folder-of:$id").remove("used:$id").remove("credential:$id").remove("cache:$id").remove("probe:$id").remove("collapsed:$id").putString("recent-tasks", encodeTasks(recent().filterNot { it.profileId == id })).commit()) { "profile delete failed" }
         pins.edit().also { editor -> unusedPins.forEach { editor.remove(it) } }.apply()
+        doctorPreferences.edit().remove("report:$id").remove("availability:$id").remove("receipt:$id").apply()
     }
     private fun encode(profiles: List<ServerProfile>): String {
         val array = JSONArray()

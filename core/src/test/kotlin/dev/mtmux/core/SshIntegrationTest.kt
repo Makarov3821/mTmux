@@ -10,6 +10,30 @@ import kotlin.test.*
 
 /** Opt-in: scripts/test_ssh.py creates a loopback-only, disposable OpenSSH fixture. */
 class SshIntegrationTest {
+    @Test fun `doctor reads tmux over the authenticated chain without another SSH handshake`() {
+        val path=System.getenv("MTMUX_TEST_TMUX")
+        val original=login()
+        val handshakes=java.util.concurrent.atomic.AtomicInteger()
+        trusted().use {client->
+            client.observe {if(it.phase==ConnectionPhase.TCP_CONNECT && it.result==TraceResult.OK) handshakes.incrementAndGet()}
+            client.connect(original)
+            val report=TmuxEnvironmentProbe.parse(client.exec(TmuxEnvironmentProbe.command(path),phase=ConnectionPhase.TMUX_DOCTOR,timeoutMs=5000))
+            assertEquals(TmuxAvailability.AVAILABLE,report.availability)
+            assertEquals(DoctorGrade.PASS,report.findings().single {it.check==DoctorCheck.PROTOCOL}.grade)
+            assertEquals(1,handshakes.get())
+            assertEquals("still-connected",client.exec("printf still-connected").output)
+        }
+    }
+    @Test fun `doctor command budget stops a slow command and leaves no active channel`() {
+        trusted().use {client->
+            client.connect(login())
+            val start=System.nanoTime()
+            val failure=assertFailsWith<MtmuxException> {client.exec("sleep 2",timeoutMs=150)}
+            assertEquals(ErrorCode.REMOTE_TIMEOUT,failure.code)
+            assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-start)<1500)
+            assertEquals("ready",client.exec("printf ready").output)
+        }
+    }
     private fun login(encrypted: Boolean = false): Login {
         assumeTrue("Run scripts/test_ssh.py to provision the fixture", System.getenv("MTMUX_TEST_PORT") != null)
         return Login("127.0.0.1", System.getenv("MTMUX_TEST_PORT").toInt(), System.getenv("MTMUX_TEST_USER"), "",

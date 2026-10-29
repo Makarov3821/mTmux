@@ -51,6 +51,8 @@ private class HomeRefresh {
     val context = LocalContext.current
     val privacySettings = remember { PrivacyDisplay(context) }
     val store = remember { ServerProfiles(context) }; val cache = remember { ServerCache(context) }
+    val doctorCache = remember { TmuxDoctorStore(context) }
+    var doctorRevision by remember { mutableIntStateOf(0) }
     val organization = remember { ServerOrganization(context) }
     var folders by remember { mutableStateOf(organization.folders()) }
     var query by rememberSaveable { mutableStateOf("") }
@@ -89,6 +91,9 @@ private class HomeRefresh {
     var delete by remember { mutableStateOf<ServerProfile?>(null) }
     var trust by remember { mutableStateOf<Pair<ServerProfile,HostKeyChallenge>?>(null) }
     var creatingTmux by remember { mutableStateOf<ServerProfile?>(null) }
+    var doctorInvitation by remember { mutableStateOf<ServerProfile?>(null) }
+    var doctorProfile by remember { mutableStateOf<ServerProfile?>(null) }
+    var doctorForCreate by remember { mutableStateOf(false) }
     val currentPage by rememberUpdatedState(page)
     var message by remember { mutableStateOf<UiText?>(null) }
     var font by remember { mutableIntStateOf(settings.getInt("fontSize",14)) }
@@ -96,6 +101,8 @@ private class HomeRefresh {
     var touch by remember { mutableStateOf(settings.getBoolean("remoteTouch",true)) }
     fun preferences() { settings.edit().putInt("fontSize",font).putFloat("scrollSensitivity",speed).putBoolean("remoteTouch",touch).apply(); onPreferences(font,speed,touch) }
     fun refresh(profile: ServerProfile, automatic: Boolean = false, verifyFingerprint: Boolean = false, forceInterval: Boolean = false) {
+        if (automatic && (doctorInvitation?.id == profile.id || doctorProfile?.id == profile.id)) return
+        if (automatic && doctorCache.blocked(profile.id,store.connectionRevision(profile),System.currentTimeMillis())) return
         if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
             val previous = pendingRefreshes[profile.id]?.takeIf { it.profile == profile }
             pendingRefreshes[profile.id] = PendingHomeRefresh(profile,
@@ -175,6 +182,10 @@ private class HomeRefresh {
                         if (store.all().firstOrNull { it.id == profile.id } == profile) {
                             DebugLog.event(DebugLog.Event.REFRESH_DONE,profile.id.hashCode(),discovered.tasks.size)
                             rows[profile.id] = HomeRow(cache.write(profile,discovered))
+                            if(store.connectionRevision(profile)==connectionKey) {
+                                doctorCache.save(profile.id,connectionKey,TmuxDoctorReport(mapOf("path.status" to "ok")),false)
+                                doctorRevision++
+                            }
                             retain = store.connectionRevision(profile) == connectionKey
                         } else { rows.remove(profile.id) }
                     } catch (error: Exception) {
@@ -184,6 +195,10 @@ private class HomeRefresh {
                         }
                         if (revisions[profile.id] != revision) return@withPermit
                         DebugLog.event(DebugLog.Event.REFRESH_FAILED,profile.id.hashCode(),error=error)
+                        if(error is CodedError && error.code==ErrorCode.TMUX_UNAVAILABLE && store.connectionRevision(profile)==connectionKey) {
+                            doctorCache.save(profile.id,connectionKey,TmuxDoctorReport(mapOf("path.status" to "failed")),false)
+                            doctorRevision++
+                        }
                         val challenge = (error as? HostKeyRejected)?.challenge
                         if (refresh.verifyFingerprint && challenge != null && currentPage == "home") trust = profile to challenge
                         rows[profile.id] = HomeRow(runCatching {cache.clearTaskStates(profile)}.getOrNull() ?: rows[profile.id]?.snapshot, error = when {
@@ -266,6 +281,23 @@ private class HomeRefresh {
             while(true) { value=System.currentTimeMillis(); delay(60_000) }
         }
     }
+    // Expiry changes only local presentation; it never launches background SSH diagnostics.
+    val doctorClock by produceState(System.currentTimeMillis(),doctorRevision,profiles,page,lifecycle) {
+        if(page=="home") lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while(true) {
+                val now=System.currentTimeMillis();value=now
+                val next=profiles.map {doctorCache.expiresAt(it.id)}.filter {it>now}.minOrNull()
+                delay((next?.minus(now) ?: 60_000L).coerceAtLeast(1))
+            }
+        }
+    }
+    fun requestNewTmux(profile: ServerProfile) {
+        when(doctorCache.availability(profile.id,store.connectionRevision(profile),System.currentTimeMillis())) {
+            TmuxAvailability.UNAVAILABLE -> message=uiText(R.string.doctor_blocked_help)
+            TmuxAvailability.AVAILABLE -> creatingTmux=profile
+            TmuxAvailability.UNKNOWN -> {doctorForCreate=true;doctorProfile=profile}
+        }
+    }
     DisposableEffect(lifecycle) {
         var stopped = false
         val observer = LifecycleEventObserver { _, event ->
@@ -282,11 +314,12 @@ private class HomeRefresh {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         when (page) {
             "edit" -> ServerEditor(store, edit, warmConnections, onClose = { page = "home" }, onSaved = { saved, outcome ->
+                val newlyAdded=edit==null
                 jobs.remove(saved.id)?.cancel()
                 revisions[saved.id] = (revisions[saved.id] ?: 0) + 1
                 profiles = store.all(); organizationRevision++; rows.remove(saved.id); message = null; page = "home"
                 when (outcome) {
-                    ServerSaveOutcome.VERIFIED -> refresh(saved)
+                    ServerSaveOutcome.VERIFIED -> if(newlyAdded) doctorInvitation=saved else refresh(saved,automatic=true)
                     ServerSaveOutcome.LOCAL -> refresh(saved, automatic = true)
                     ServerSaveOutcome.UNVERIFIED -> {
                         val snapshot = runCatching { cache.clearTaskStates(saved) }.getOrNull() ?: cache.read(saved)
@@ -378,6 +411,7 @@ private class HomeRefresh {
                             if(!folderFolded) members.forEach { profile -> key(profile.id) {
 
                         val state = rows[profile.id] ?: HomeRow(cache.read(profile))
+                        val tmuxBlocked=doctorCache.blocked(profile.id,store.connectionRevision(profile),doctorClock)
                         // The minute tick invalidates expired colors; a new snapshot must use NOW,
                         // not the previous tick (which predates the snapshot and made it gray for up to 60s).
                         val stateNow = remember(statusClock, state.snapshot) { System.currentTimeMillis() }
@@ -401,14 +435,15 @@ private class HomeRefresh {
                                     }
                                 }
                                 AppIconButton(UiSymbol.TERMINAL,openSshLabel,{open(profile,null)},Modifier.testTag("ssh-${profile.id}"))
-                                AppIconButton(UiSymbol.PLUS,stringResource(R.string.home_new_tmux),{creatingTmux=profile},Modifier.testTag("new-tmux-${profile.id}"))
+                                AppIconButton(UiSymbol.PLUS,stringResource(R.string.home_new_tmux),{requestNewTmux(profile)},Modifier.testTag("new-tmux-${profile.id}"),enabled=!tmuxBlocked)
                                 TextButton(onClick={refresh(profile)},enabled=!state.refreshing,contentPadding=PaddingValues(0.dp),modifier=Modifier.sizeIn(minWidth=44.dp,minHeight=48.dp).semantics{contentDescription=refreshServerLabel}.testTag("refresh-${profile.id}")){
                                     if(state.refreshing) CircularProgressIndicator(Modifier.size(16.dp),strokeWidth=2.dp) else AppIcon(UiSymbol.REFRESH)
                                 }
                                 Box {
                                     AppIconButton(UiSymbol.MORE,moreLabel,{menu=profile.id},Modifier.testTag("more-${profile.id}"))
                                     DropdownMenu(expanded=menu==profile.id,onDismissRequest={menu=null}) {
-                                        DropdownMenuItem(text={Text(stringResource(R.string.home_new_tmux))},onClick={menu=null;creatingTmux=profile})
+                                        DropdownMenuItem(text={Text(stringResource(R.string.home_new_tmux))},enabled=!tmuxBlocked,onClick={menu=null;requestNewTmux(profile)})
+                                        DropdownMenuItem(text={Text(stringResource(R.string.doctor_title))},onClick={menu=null;doctorForCreate=false;doctorProfile=profile},modifier=Modifier.testTag("doctor-${profile.id}"))
                                         DropdownMenuItem(text={Text(stringResource(R.string.home_verify_host))},onClick={menu=null;state.challenge?.let { trust=profile to it } ?: refresh(profile,verifyFingerprint=true)},modifier=Modifier.testTag("verify-host-${profile.id}"))
                                         DropdownMenuItem(text={Text(stringResource(R.string.home_edit_server))},onClick={menu=null;edit=profile;page="edit"})
                                         DropdownMenuItem(text={Text(stringResource(R.string.home_move_to_folder))},onClick={menu=null;movingServer=profile})
@@ -416,6 +451,7 @@ private class HomeRefresh {
                                     }
                                 }
                             }
+                            if(tmuxBlocked) Text(stringResource(R.string.doctor_unavailable),Modifier.padding(vertical=4.dp).clickable {doctorForCreate=false;doctorProfile=profile}.testTag("tmux-unavailable-${profile.id}"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.error)
                             val note = when { opening == profile.id -> stringResource(R.string.home_opening_task); state.refreshing -> state.progress.string(); state.error != null -> state.error.string() + if(state.snapshot!=null) stringResource(R.string.home_showing_cache) else "";state.snapshot==null -> stringResource(R.string.home_no_cache);else -> null }
                             if (opening == profile.id) TextButton(onClick = { openingJob?.cancel() }) { Text(stringResource(R.string.common_cancel)) }
                             if (note != null) Surface(Modifier.fillMaxWidth().padding(vertical=6.dp).clickable(enabled=state.challenge!=null){trust=profile to state.challenge!!},
@@ -465,8 +501,16 @@ private class HomeRefresh {
     delete?.let { profile -> AlertDialog(onDismissRequest={delete=null},title={Text(stringResource(R.string.delete_server_title, privacySettings.label(profile, privacyDisplay)))},text={Text(stringResource(R.string.delete_server_body))},confirmButton={TextButton(onClick={
         runCatching { store.delete(profile.id);revisions[profile.id]=(revisions[profile.id] ?: 0)+1;jobs.remove(profile.id)?.cancel();profiles=store.all();rows.remove(profile.id);delete=null }.onFailure { message=uiText(R.string.delete_server_failed) }
     }){Text(stringResource(R.string.common_delete))}},dismissButton={TextButton(onClick={delete=null}){Text(stringResource(R.string.common_cancel))}}) }
-    creatingTmux?.let { profile -> NewTmuxDialog(profile, warmConnections, onDismiss={mayHaveChanged -> creatingTmux=null;if(mayHaveChanged) refresh(profile)},
-        onTrustRequired={trust=profile to it},onCreated={task,client -> creatingTmux=null;onOpen(profile,task,client)}) }
+    doctorInvitation?.let { profile -> TmuxDoctorInvitation(
+        onRun={doctorInvitation=null;doctorForCreate=false;doctorProfile=profile},
+        onSkip={doctorInvitation=null;refresh(profile,automatic=true)}) }
+    doctorProfile?.let { profile -> key(profile.id) {TmuxDoctorDialog(profile,warmConnections,doctorForCreate,
+        remoteTouch=touch,onEnableTouch={touch=true;preferences()},
+        beforeConnect={refreshes[profile.id]?.finished?.await()},onChanged={doctorRevision++},
+        onDismiss={doctorProfile=null;doctorRevision++;refresh(profile,automatic=true)},
+        onCreateReady={doctorProfile=null;doctorRevision++;creatingTmux=profile})} }
+    creatingTmux?.let { profile -> NewTmuxDialog(profile, warmConnections, onDismiss={mayHaveChanged -> creatingTmux=null;doctorRevision++;if(mayHaveChanged) refresh(profile)},
+        onTrustRequired={trust=profile to it},onCreated={task,client -> creatingTmux=null;doctorRevision++;onOpen(profile,task,client)}) }
     trust?.let { (profile, item) -> ProtectSensitiveContent(); AlertDialog(icon={AppIcon(UiSymbol.SHIELD,modifier=Modifier.size(28.dp),tint=if(item.changed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)},properties=protectedDialogProperties,onDismissRequest={trust=null},title={Text(stringResource(if(item.changed) R.string.trust_changed_title else R.string.trust_verify_title))},text={Text("${item.endpoint.substringBefore("|via:")}\n${item.fingerprint}\n${stringResource(R.string.trust_verify_hint)}")},confirmButton={if(!item.changed) TextButton(onClick={pins.edit().putString(item.endpoint,item.key).apply();trust=null;refresh(profile)}){Text(stringResource(R.string.host_key_trust))}},dismissButton={TextButton(onClick={trust=null}){Text(stringResource(R.string.common_close))}}) }
 }
 
