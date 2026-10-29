@@ -10,7 +10,7 @@
 
 声波图标原文件已移至 [voice.svg](../design/assets/voice.svg)，等形转换为 voice flavor 专用的 `app/src/voice/res/drawable/ic_voice_input.xml`，无位图拉伸或运行时 SVG 解析。可用按钮的圆底使用主题 `primary`，图标使用 `onPrimary`；不可用时使用主题的弱化底色和图标色。
 
-当前布局的 [效果图 PNG](../design/mockups/terminal-dock-v3.png) / [HTML 预览](../design/mockups/terminal-dock-v3.html) 展示标准版与深浅色语音版。按当前代码的尺寸和主题色绘制，使用原声波 SVG 路径；属于设计示意，不计入下面的 Android 设备截图或测试证据。
+当前布局的 效果图 PNG（历史截图已清理） / [HTML 预览](../design/mockups/terminal-dock-v3.html) 展示标准版与深浅色语音版。按当前代码的尺寸和主题色绘制，使用原声波 SVG 路径；属于设计示意，不计入下面的 Android 设备截图或测试证据。
 
 快捷键共四页：常用键、F1～F6、F7～F12、Ctrl / Shift / Alt / 左 / 右 / 退格。右滑进入下一页，第四页继续右滑回到第一页；第一页左滑进入第四页。翻页保留待用组合键。
 
@@ -39,6 +39,6 @@
 
 | 无边底栏 | Ctrl + Shift 等待下一次按键 |
 | --- | --- |
-| ![无边底栏](../evidence/terminal-keyboard/dock-borderless.png) | ![组合键高亮](../evidence/terminal-keyboard/dock-sticky-ctrl-shift.png) |
+| 无边底栏（历史截图已清理） | 组合键高亮（历史截图已清理） |
 
 已运行的 Android 检查针对 standard 的共享输入组件，voice 验证构建、单元测试及 lint；没有把它计为完整 SSH / WebView 界面或所有输入法、屏幕尺寸的真机验收。

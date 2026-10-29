@@ -8,9 +8,11 @@ Android 上的 SSH + tmux Agent 控制端。目标是离开电脑后，打开手
 
 版本功能清单见 [CHANGELOG.md](CHANGELOG.md)；详细记录见 [0.8.5](docs/releases/0.8.5.md)。
 
-0.8.4 终端底栏：发送合入输入框，工具与快捷回复在各自区域内居中，voice 版中央使用主题配色的圆形声波按钮；快捷键新增 Ctrl / Shift / Alt，点击高亮后作用于下一次按键并释放，四页双向循环。详见 [键盘验证](docs/testing/terminal-keyboard.md) 和 [底栏效果图](docs/design/mockups/terminal-dock-v3.png)（布局示意，非实机截图）。
+0.8.4 终端底栏：发送合入输入框，工具与快捷回复在各自区域内居中，voice 版中央使用主题配色的圆形声波按钮；快捷键新增 Ctrl / Shift / Alt，点击高亮后作用于下一次按键并释放，四页双向循环。详见 [键盘验证](docs/testing/terminal-keyboard.md) 和 底栏效果图（历史截图已清理）（布局示意，非实机截图）。
 
 0.8.3 UI 改版：服务器卡片与多 pane 层级、六套浅深主题、分组设置和统一终端工具/弹窗；远端滚动倍率提供 1×～10× 十档。默认 1×，设置与工具抽屉同步保存；通过增加真实滚轮事件加速，无需修改 tmux 配置。详见 [实现与验证](docs/testing/ui-refresh-report.md)。
+
+当前界面：[完整图集](docs/screenshots/current/index.html) · [截图目录与采集说明](docs/screenshots/current/README.md)。
 
 ## 原型能做什么
 

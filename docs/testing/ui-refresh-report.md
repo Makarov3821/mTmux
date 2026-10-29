@@ -43,7 +43,7 @@ ANDROID_USER_HOME="$PWD/.tools/android-user" \
 
 新增 `UiRefreshTest` 覆盖卡片/多 pane、六套主题选中与持久化、两处倍率入口及终端键盘开关保持逻辑网格，并生成截图。既有测试更新固定设置栏返回按钮与终端短文案定位，主题回归明确选择 Emerald。
 
-Android 35 ATD、360×800 dp、软件模拟器：已取得并人工检查 [首页](../evidence/ui-refresh/home-tokyo.png)、[多 pane 展开](../evidence/ui-refresh/home-panes-tokyo.png)、[深色设置](../evidence/ui-refresh/settings-tokyo.png)，未发现文字或操作溢出。
+Android 35 ATD、360×800 dp、软件模拟器：已取得并人工检查 首页（历史截图已清理）、多 pane 展开（历史截图已清理）、深色设置（历史截图已清理），未发现文字或操作溢出。
 
 ATD 默认 `debug.hwui.drawing_enabled=0` 会输出纯黑图；改为 1 后才取得上述真实截图，黑图已丢弃。首轮整组 UI 测试被系统 WebView 124 渲染进程 SIGTRAP 中断；开启绘制后的主题用例和单独的终端用例也未能完整结束，均未计为通过。终端用例尝试在模拟器中临时关闭 WebView JIT/GPU 后仍异常退出；这些调试开关已清理，应用代码不包含这些开关。新增截图检查会拒绝纯黑图片。
 

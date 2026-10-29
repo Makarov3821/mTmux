@@ -2,5 +2,6 @@
     <application>
         <!-- Isolated Compose tests run without launching an SSH terminal or WebView. -->
         <activity android:name="androidx.activity.ComponentActivity" android:exported="false" />
+        <activity android:name=".UiCatalogActivity" android:exported="false" />
     </application>
 </manifest>

@@ -4,7 +4,7 @@
 
 0.8.4 的终端底栏调整：取消键帽底色、输入框描边、分隔线和收起键盘按钮，发送合入输入区；标准版工具、快捷回复均分底栏并各自居中，voice 版中央放置跟随主题的圆形声波按钮、两项操作在两侧空间内居中；新增一次性 Ctrl / Shift / Alt 组合与首尾循环翻页。当前改动及截图见 [终端组合键与循环翻页](../testing/terminal-keyboard.md)。下文保留 0.8.3 原方案。
 
-最新底栏布局效果图：[PNG](mockups/terminal-dock-v3.png) / [HTML 预览](mockups/terminal-dock-v3.html)。并排展示标准版、Tokyo Night 深色语音版与 Paper 浅色语音版，使用提供的声波图标及当前代码的配色、156 dp 底栏、52 dp 圆形按钮；这是浏览器绘制的布局示意，非 Android 实机截图。HTML 可点击 Ctrl / Shift / Alt 查看高亮。
+最新底栏布局效果图：PNG（历史截图已清理） / [HTML 预览](mockups/terminal-dock-v3.html)。并排展示标准版、Tokyo Night 深色语音版与 Paper 浅色语音版，使用提供的声波图标及当前代码的配色、156 dp 底栏、52 dp 圆形按钮；这是浏览器绘制的布局示意，非 Android 实机截图。HTML 可点击 Ctrl / Shift / Alt 查看高亮。
 
 ## 设计方向
 

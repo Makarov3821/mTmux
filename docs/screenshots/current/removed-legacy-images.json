@@ -1,0 +1,586 @@
+{
+  "recoverFromCommit": "c6a672b",
+  "count": 116,
+  "files": [
+    {
+      "path": "docs/evidence/ui-020/ui-server-editor.png",
+      "bytes": 71130,
+      "sha256": "19dad996909eb89d33a2e6ee9f0fd276e8c8e39123ccd10f8d8d4ed1cd644a26"
+    },
+    {
+      "path": "docs/evidence/ui-020/ui-jump-hosts.png",
+      "bytes": 92454,
+      "sha256": "1d49103f4664f18ebb7e6314bc870d72ee6b83e3971615952750d64ec6fa5d64"
+    },
+    {
+      "path": "docs/evidence/ui-020/ui-settings.png",
+      "bytes": 64337,
+      "sha256": "a3ef74baf1c68e3c12554849ce80dfd297f7d9ff25d7b28e52736b87546bf8dc"
+    },
+    {
+      "path": "docs/evidence/ui-020/ui-server-home.png",
+      "bytes": 74320,
+      "sha256": "9317ff8c4a59f35d5649fcf4dfd719b09f9a0438aa95ca8b29f8e26b7c87e648"
+    },
+    {
+      "path": "docs/evidence/ui-040/home-folder-search.png",
+      "bytes": 91208,
+      "sha256": "f92a8bb125da45c27c864df4bbece03d87336e481ea32eb904188eefbf8a15d7"
+    },
+    {
+      "path": "docs/evidence/ui-040/home-folders-sort.png",
+      "bytes": 73138,
+      "sha256": "fe06a099cbad971ef8c397211d2942ec0c516718d977f51997b53612022eb480"
+    },
+    {
+      "path": "docs/evidence/terminal-keyboard/dock-borderless.png",
+      "bytes": 11045,
+      "sha256": "794510d0978d1d12ee3fa5689cccead6d9102e2da4ffd0747f3adac7d1605387"
+    },
+    {
+      "path": "docs/evidence/terminal-keyboard/dock-sticky-ctrl-shift.png",
+      "bytes": 23239,
+      "sha256": "311f75fb35e35f33ed86b975005cbea52c479cd53776ef2afe68380b55670684"
+    },
+    {
+      "path": "docs/evidence/ui-032/terminal-keys-f1-f6.png",
+      "bytes": 44646,
+      "sha256": "e3785a58b25215660f12176df3699890338221c444945a70e5e8e3dabcc23b79"
+    },
+    {
+      "path": "docs/evidence/ui-032/terminal-keys-f7-f12.png",
+      "bytes": 44754,
+      "sha256": "b8814ac358077daa231af2fd99790ed490e0ac2c25fba1ee383ff9f1dbdd4306"
+    },
+    {
+      "path": "docs/evidence/ui-060/quick-replies.png",
+      "bytes": 97392,
+      "sha256": "12ef15a57ada78a25f3c972531816017fc5bac8c09c599955646fe44cb30465b"
+    },
+    {
+      "path": "docs/evidence/ui-060/copy-light.png",
+      "bytes": 67288,
+      "sha256": "40b3e0d4129192cac6ea6985e63f222ef8d7cc7c3e7287e18b21cc1dc0a8b30f"
+    },
+    {
+      "path": "docs/evidence/ui-060/home-light.png",
+      "bytes": 49788,
+      "sha256": "fe91fc2023d2eb2d535d0d3e49e35beed5134cc5ca6b35328885a671412be87f"
+    },
+    {
+      "path": "docs/evidence/ui-060/settings-light.png",
+      "bytes": 99716,
+      "sha256": "5d7f0cda0703fb5961509186fa8189432873f396c07b74afab6be040c3045684"
+    },
+    {
+      "path": "docs/evidence/ui-060/terminal-light.png",
+      "bytes": 55085,
+      "sha256": "e7dd423d1cce9eebd15c2594068db12d813de443eab24cc203bf067a6eef47f9"
+    },
+    {
+      "path": "docs/evidence/ui-060/agent-confirmation.png",
+      "bytes": 53228,
+      "sha256": "1942cf6b4f8bb6bc84f39c71c3336f0d135aac6c91c3652e4508dd7caeef0c99"
+    },
+    {
+      "path": "docs/evidence/ui-050/terminal-copy-selection.png",
+      "bytes": 52918,
+      "sha256": "549ee13c924e9d01822a818de4f41e1bd4cab57d82dc60bb58b1f6aa1f87e6d2"
+    },
+    {
+      "path": "docs/evidence/ui-050/connection-auth-error.png",
+      "bytes": 79241,
+      "sha256": "2dfab03c74ef26962d1089c08e95e8fbe0d28a6fb8ca6f2874324491302bcc6f"
+    },
+    {
+      "path": "docs/evidence/ui-050/terminal-native-copy.png",
+      "bytes": 89684,
+      "sha256": "e0a1eaecb16a91d6233d7f18a303a613e0f7269e00ea474918f47b68abad03af"
+    },
+    {
+      "path": "docs/evidence/ui-050/connection-jump-error.png",
+      "bytes": 73191,
+      "sha256": "866f7e2c514267490b8790edf12f5c90602717da5d24ca5cd0055d51ccfae154"
+    },
+    {
+      "path": "docs/evidence/p1-014/recent-task-stale-blocked.png",
+      "bytes": 100831,
+      "sha256": "862c40abb381f9f1bcef35777a0db45b0c05fbeb29f1937bf498aa3a9b169532"
+    },
+    {
+      "path": "docs/evidence/p1-014/recent-task-entry.png",
+      "bytes": 147424,
+      "sha256": "e35dc84321e0619e33bf5b91a5083973e605eac8fcf78d8ae3955e88cc9aaada"
+    },
+    {
+      "path": "docs/evidence/ui-066/right-edge-13.png",
+      "bytes": 59308,
+      "sha256": "d8eae81422476554bd59117c2560a8b0423759f958a655fcd778a5afc28169f5"
+    },
+    {
+      "path": "docs/evidence/ui-066/right-edge-20.png",
+      "bytes": 66605,
+      "sha256": "2c19b92bc31bcbe8e8e55b5ae1f513ac001950c5483b214115ded72f753845a8"
+    },
+    {
+      "path": "docs/evidence/ui-066/right-edge-14.png",
+      "bytes": 73405,
+      "sha256": "a21aec18fd55dadedef044735214c6b15c5167dea66f0fa98f3a0ded7fc2c059"
+    },
+    {
+      "path": "docs/evidence/ui-066/right-edge-17.png",
+      "bytes": 63986,
+      "sha256": "f17e63524119d6ee028c1c94a6ff91bfecd718fc24baadb7d23bf2adf1ba760a"
+    },
+    {
+      "path": "docs/evidence/0.7.0/english-home.png",
+      "bytes": 32250,
+      "sha256": "f500c7dd9986dc86ad2c33d48a74b1fd7185ea239d13f75c8e9315e6e518ce15"
+    },
+    {
+      "path": "docs/evidence/0.7.0/english-settings.png",
+      "bytes": 108531,
+      "sha256": "4f4ab8bd2f32eed21b56e755865a4200633be3829fbcd22f989979a14b4fbfa9"
+    },
+    {
+      "path": "docs/evidence/0.7.0/language-switched-chinese.png",
+      "bytes": 112537,
+      "sha256": "a1188ff5668fc2eef5bde4589bd5207481d24c20c2ba36b11fa1194f594bf8fc"
+    },
+    {
+      "path": "docs/evidence/0.7.0/english-terminal-error.png",
+      "bytes": 53901,
+      "sha256": "b7e7781aa9963fca594ed9ae72f3feb35b7d38bf55d6cadf82d52efafd7ef1d7"
+    },
+    {
+      "path": "docs/evidence/ui-030/terminal-history-keyboard.png",
+      "bytes": 121598,
+      "sha256": "2af1cb6189db18e8b1b857c6bb7b85ecc889b70a61a7e652cd3d84e5bcb7061d"
+    },
+    {
+      "path": "docs/evidence/ui-030/terminal-tmux-keyboard-anchor.png",
+      "bytes": 124123,
+      "sha256": "73706bf568e7f261838e62581c631914f3fdce58318807cafb4ef9aa55554ca8"
+    },
+    {
+      "path": "docs/evidence/ui-030/ssh-welcome-before-input.png",
+      "bytes": 45092,
+      "sha256": "13b35675479a314c4ce94689beea1f7ba5f1fa69fedec91d4728c712369d5222"
+    },
+    {
+      "path": "docs/evidence/ui-030/terminal-keyboard-hidden.png",
+      "bytes": 40382,
+      "sha256": "ebb709a855c1b8f46891f93a934eaf87c2aac6e17c30fc072beed95e26151281"
+    },
+    {
+      "path": "docs/evidence/ui-030/live-tmux-touch-history.png",
+      "bytes": 137590,
+      "sha256": "767c12d6a4eaf3774eb10370574165f7030c4ed171509888db8b9f7207f1d5b0"
+    },
+    {
+      "path": "docs/evidence/ui-030/terminal-alternate-keyboard.png",
+      "bytes": 84661,
+      "sha256": "ab47a28fe5b964b2afdc967fdfed57ce68f52c01e3ba67b97c9d70a7b0b6043a"
+    },
+    {
+      "path": "docs/evidence/ui-refresh/home-panes-tokyo.png",
+      "bytes": 33954,
+      "sha256": "659ccfebfcf41dd4b7395d11e02e681801e6b3f4e96d27d2d2d38cbd9397f6ac"
+    },
+    {
+      "path": "docs/evidence/ui-refresh/home-tokyo.png",
+      "bytes": 30210,
+      "sha256": "802f06f8e60a32232a726ba054d03cb097b69825ef6154ff84217a77e5b6caee"
+    },
+    {
+      "path": "docs/evidence/ui-refresh/settings-tokyo.png",
+      "bytes": 59084,
+      "sha256": "0054be1fdcf3c6ed6174845869423f8f55f1523bbcbd2f43b61a7ce8d2e5caba"
+    },
+    {
+      "path": "docs/evidence/ui-062/home-status-immediate.png",
+      "bytes": 49477,
+      "sha256": "7f35c1964647bf3657ca800adee4d0be177fe902ab540e6511bed85cecc366e8"
+    },
+    {
+      "path": "docs/evidence/scroll-012/live-tmux-touch-history.png",
+      "bytes": 157565,
+      "sha256": "159f916178491c891009d6dbbc5d057f864a4afe6b95c52418331131e5655b5b"
+    },
+    {
+      "path": "docs/evidence/scroll-012/live-tmux-tap-pane.png",
+      "bytes": 152756,
+      "sha256": "5171b91969667ff5682a457d26ce9be3b54036f387dd9f19ee6009a3040cf706"
+    },
+    {
+      "path": "docs/evidence/ui-041/home-folder-refresh.png",
+      "bytes": 126083,
+      "sha256": "c7158f4ae73f3fe7ae29f44a6c6dd95101edcca4f7f67948a3f51bedaa6038e3"
+    },
+    {
+      "path": "docs/evidence/ui-021/ui-server-home.png",
+      "bytes": 61259,
+      "sha256": "a6905b91234acbebd2ef53411789326532a1fe8d39471007a2b2681bfe7ee4d6"
+    },
+    {
+      "path": "docs/evidence/ui-067/after-keyboard.png",
+      "bytes": 38914,
+      "sha256": "1d518f9606d25780f1a32d1d2d585c48c5b3e86fce06518a3e3fb329505bb4c3"
+    },
+    {
+      "path": "docs/evidence/ui-067/privacy-home.png",
+      "bytes": 40185,
+      "sha256": "16bb9733778de28e543e15b261bb83f0f902fe41434143df65e6a52f489478ad"
+    },
+    {
+      "path": "docs/evidence/ui-067/local-terminal-output.png",
+      "bytes": 43979,
+      "sha256": "f06bbfca07e7280a1cb4a398c8b4b3f4ed2d6f910030da59a698900b231c2f42"
+    },
+    {
+      "path": "docs/evidence/ui-064/private-key-auth.png",
+      "bytes": 71550,
+      "sha256": "3f9effead400250c26c00f158ac90c0bce4d5790b0147791593f53e9d19cdb5f"
+    },
+    {
+      "path": "docs/evidence/ui-064/debug-log-settings.png",
+      "bytes": 116224,
+      "sha256": "a56ad7e6d8e67a27d90a442cb173d29e6c50b0790f41c8c8810ffc66c56766f4"
+    },
+    {
+      "path": "docs/evidence/p1-013/bound-pane-reply.png",
+      "bytes": 102558,
+      "sha256": "a783ae0aedcd6cd311c1bafb378721d5816e677030a64c0e9836aea70bfc919d"
+    },
+    {
+      "path": "docs/evidence/ui-061/settings-light.png",
+      "bytes": 113843,
+      "sha256": "068a0217f33a280079241e3d49723a0ed776cd0398990a83a121b2eb103b871d"
+    },
+    {
+      "path": "docs/evidence/ui-061/terminal-light.png",
+      "bytes": 49607,
+      "sha256": "f1ba90bfb58dad0753a6e80376ad4194bb0b6742b09c88786616b84d5c1e3b64"
+    },
+    {
+      "path": "docs/evidence/ui-061/home-task-lights.png",
+      "bytes": 84843,
+      "sha256": "6c28724c23fc3d84e49d4ecddfdd0d99324ed77dd2645a7e674a020b5f242446"
+    },
+    {
+      "path": "docs/evidence/ui-061/terminal-bottom-replies.png",
+      "bytes": 46651,
+      "sha256": "5f18424a536449ef9f770196a930d92db73e1a56f57d5e095cf5fe6fc5b36c77"
+    },
+    {
+      "path": "docs/evidence/ui-063/codex-home-status.png",
+      "bytes": 49868,
+      "sha256": "ba69636ed634648ac72cc9de98365b3f006aba25ac485c159f60840dd1749fc0"
+    },
+    {
+      "path": "docs/evidence/p1-android15/480dp/shell-touch-history.png",
+      "bytes": 46102,
+      "sha256": "c439a37b428abb8ead22fbf67f35808ef865e9c60258c9a32c592e52345a8e9a"
+    },
+    {
+      "path": "docs/evidence/p1-android15/480dp/manual-disconnect-cleared.png",
+      "bytes": 57001,
+      "sha256": "113ceb9d1093681a9fd7499c49bdb143ecc4275928a3496b3447bb7a2acb52d9"
+    },
+    {
+      "path": "docs/evidence/p1-android15/480dp/ssh-welcome-before-input.png",
+      "bytes": 36927,
+      "sha256": "30bc8b11ed28e6da293e93c29918f90ae1da956f9c00584d863653e065072a85"
+    },
+    {
+      "path": "docs/evidence/p1-android15/480dp/after-keyboard.png",
+      "bytes": 39418,
+      "sha256": "412b98a576fcf17baac8297164dd354d8beb31643dbc921bd8842c8be3420849"
+    },
+    {
+      "path": "docs/evidence/p1-android15/480dp/tmux-before-attach-history.png",
+      "bytes": 67272,
+      "sha256": "e1c524b38f0b068be7929bdca3fc5a62e0517969287224e702a044d39894764c"
+    },
+    {
+      "path": "docs/evidence/p1-android15/480dp/after-settings.png",
+      "bytes": 39560,
+      "sha256": "766a4a19c8df05e2eab94b244f3f4076de861e2ab227e3900fdcc6dd83923271"
+    },
+    {
+      "path": "docs/evidence/p1-android15/480dp/ssh-command-result.png",
+      "bytes": 42482,
+      "sha256": "869db0ae5e09aa6eeaaf8fb87937a3062f0a0091c5aa80613a29978f491296dd"
+    },
+    {
+      "path": "docs/evidence/p1-android15/480dp/remote-disconnect-retained.png",
+      "bytes": 46495,
+      "sha256": "8894e496492fd216fcf8daecdb09e981fabd6454c39402272dece612185b4a26"
+    },
+    {
+      "path": "docs/evidence/p1-android15/480dp/local-terminal-output.png",
+      "bytes": 39560,
+      "sha256": "766a4a19c8df05e2eab94b244f3f4076de861e2ab227e3900fdcc6dd83923271"
+    },
+    {
+      "path": "docs/evidence/p1-android15/480dp/tmux-readable-names.png",
+      "bytes": 68493,
+      "sha256": "b9a76a006609dc93f3f24c4fb4bfae29c50bc86d7f4c755c06ba394db31b2809"
+    },
+    {
+      "path": "docs/evidence/p1-android15/360dp/shell-touch-history.png",
+      "bytes": 124060,
+      "sha256": "40967a5edc74b716b4aa8ba1945216431a6f42124a8b137c15645018c00bdd7b"
+    },
+    {
+      "path": "docs/evidence/p1-android15/360dp/manual-disconnect-cleared.png",
+      "bytes": 110491,
+      "sha256": "732bf8a86bea94c68994e712154ed32542b8a2530e4b881e90246840cd4c2bc1"
+    },
+    {
+      "path": "docs/evidence/p1-android15/360dp/ssh-welcome-before-input.png",
+      "bytes": 78657,
+      "sha256": "6f8813ac2ddca35f593c84ca51906604bf6a1215fca7e12f841195906c5ea7d2"
+    },
+    {
+      "path": "docs/evidence/p1-android15/360dp/after-keyboard.png",
+      "bytes": 83729,
+      "sha256": "e521fca0e35cab64c56c5a7bd8713a16bdac69d7732e582cd25faf10a316bca6"
+    },
+    {
+      "path": "docs/evidence/p1-android15/360dp/tmux-before-attach-history.png",
+      "bytes": 147456,
+      "sha256": "960479a1f33591ed1178e864e9e6485642a3c04dac941f0cefc30af46e627867"
+    },
+    {
+      "path": "docs/evidence/p1-android15/360dp/after-settings.png",
+      "bytes": 83840,
+      "sha256": "6b806ac3c9554db8af19ddc957bf37c1429ed24f998082169b464ed64dd1ea0b"
+    },
+    {
+      "path": "docs/evidence/p1-android15/360dp/ssh-command-result.png",
+      "bytes": 93460,
+      "sha256": "652413addc9a79adf63c97a380efceca3e1cea027c1f9b9e4d1c8feea51334c0"
+    },
+    {
+      "path": "docs/evidence/p1-android15/360dp/remote-disconnect-retained.png",
+      "bytes": 99599,
+      "sha256": "53f4322e52ca715c77977cad39700bdf0ac558a20d2bb405ac6641409a95e16e"
+    },
+    {
+      "path": "docs/evidence/p1-android15/360dp/local-terminal-output.png",
+      "bytes": 83840,
+      "sha256": "6b806ac3c9554db8af19ddc957bf37c1429ed24f998082169b464ed64dd1ea0b"
+    },
+    {
+      "path": "docs/evidence/p1-android15/360dp/tmux-readable-names.png",
+      "bytes": 135840,
+      "sha256": "48c56f31cce1a242bea8a671363684aa43e8f43e5c95c4ad17f6ddd217a1c945"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-default/shell-touch-history.png",
+      "bytes": 123207,
+      "sha256": "03d0e1fc21290881be3638456bd076111964af452d67217a89bf896758c81114"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-default/mouse-inside-fullscreen-tui.png",
+      "bytes": 97358,
+      "sha256": "d28eb0f1c8ce47d0a5218d531617713ce063bb0eed645d5d6200dea5065b6278"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-default/manual-disconnect-cleared.png",
+      "bytes": 109377,
+      "sha256": "6d9e1db1b6419e5e1488109cb49598bbef5a69c0b8e646a2f9d09ac2523ddbc3"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-default/ssh-welcome-before-input.png",
+      "bytes": 77756,
+      "sha256": "16ce64bb5d25a6e9d34cffb4d2404ea97c7afc24ab89b122ea73375b23a4d039"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-default/after-keyboard.png",
+      "bytes": 82800,
+      "sha256": "7fa5a1af53c28c6a7dafed4938efc76c3bfde450ed5267ecd55c9ba4ea69b505"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-default/tmux-before-attach-history.png",
+      "bytes": 145124,
+      "sha256": "f0cd9b21f4cd4bb54583631e3c1c9bf8b4e97e6c4d3bdebe098255d335295f01"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-default/after-settings.png",
+      "bytes": 82900,
+      "sha256": "67e42ebaae5038ce05aec76be1e2f435d8045843b4e0dcc479d45b6b7b42ee97"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-default/ssh-command-result.png",
+      "bytes": 92149,
+      "sha256": "ee9ab4f62ea10941141192c47ecd78e47ca59f7164ea17120fcf31e9bbe56c16"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-default/live-tmux-touch-history.png",
+      "bytes": 163148,
+      "sha256": "68cc765e3eeeefb74388d345e55c316f3a416e9d235445dcbda53f2c6ced2a61"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-default/live-tmux-tap-pane.png",
+      "bytes": 152983,
+      "sha256": "d2512455a3beaa46047fd1ff535c6af195f5f6a9e720f877477cfa910545277c"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-default/remote-disconnect-retained.png",
+      "bytes": 98372,
+      "sha256": "18d7b5fc3b4a70f91318db61fe1d502d12f5b1de9a584f1df484234356a24183"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-default/local-terminal-output.png",
+      "bytes": 82900,
+      "sha256": "67e42ebaae5038ce05aec76be1e2f435d8045843b4e0dcc479d45b6b7b42ee97"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-default/tmux-readable-names.png",
+      "bytes": 136252,
+      "sha256": "a856122ab8e494a43670eabdb63792c424d94b7aca8b22d21935e90f29e8a709"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-user-config/shell-touch-history.png",
+      "bytes": 123379,
+      "sha256": "2954176ba13cce3c1aaa56952e1b24ee406f461378aae62336e61c5d71c3fc0b"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-user-config/mouse-inside-fullscreen-tui.png",
+      "bytes": 97302,
+      "sha256": "0d52cb14877f1acb97aaec7bfc5489099da1fa9afbb52024ccce5d851faccc77"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-user-config/manual-disconnect-cleared.png",
+      "bytes": 109643,
+      "sha256": "9146500eec1300af596de883d659474ff9094f2690a25f24d6761502df0b798d"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-user-config/ssh-welcome-before-input.png",
+      "bytes": 77849,
+      "sha256": "c32f48d667bf9b557b8d7bad39d2da44b564220b34f314e93101326121f78660"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-user-config/after-keyboard.png",
+      "bytes": 82927,
+      "sha256": "70fad273bd43e3538916c7137853da1ef91b95c56c6217fa13f0a6ec555fc239"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-user-config/tmux-before-attach-history.png",
+      "bytes": 145151,
+      "sha256": "145752360897b9109a0d37f46e90bb67ae8dcfb54853cce89f3b6eba2c29a571"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-user-config/after-settings.png",
+      "bytes": 83032,
+      "sha256": "1a9abe26203489d443f3f8789f3df489813a2fe17c19b3f5f94ab96dac1ee647"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-user-config/ssh-command-result.png",
+      "bytes": 92333,
+      "sha256": "c5bc5d3bfc0a66a617f68ddc9e812487248b9b710b974e688e91edd06c62b395"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-user-config/live-tmux-touch-history.png",
+      "bytes": 163126,
+      "sha256": "5805104a46723b5c6dc5748d5dfd2bf2f93d5da393c8fa0cc41ae83f5a7dd1af"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-user-config/live-tmux-tap-pane.png",
+      "bytes": 152922,
+      "sha256": "2eb9965e48bc8d8e95ed594d892cd527526313bea98d947b2ffd86aea67d943d"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-user-config/remote-disconnect-retained.png",
+      "bytes": 98559,
+      "sha256": "8a25de6e67155de1a95659a0a85bf2142bfa603314d4a43532e45172ecf8625f"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-user-config/local-terminal-output.png",
+      "bytes": 83032,
+      "sha256": "1a9abe26203489d443f3f8789f3df489813a2fe17c19b3f5f94ab96dac1ee647"
+    },
+    {
+      "path": "docs/evidence/p1-011/android15-user-config/tmux-readable-names.png",
+      "bytes": 136296,
+      "sha256": "1ba0f5d3b5d7c0c420a958f7543330de8aa9cf1dce05faa283c5b17715967206"
+    },
+    {
+      "path": "docs/evidence/terminal-android15/480dp/ssh-welcome-before-input.png",
+      "bytes": 35163,
+      "sha256": "00bdd7aef4d333016d0aa97e7c90ebddec22a047376eae5381369121e628f6e4"
+    },
+    {
+      "path": "docs/evidence/terminal-android15/480dp/after-keyboard.png",
+      "bytes": 34117,
+      "sha256": "54a469519147293b62a82e5a691a7beaa8de9ef817172f33a2169d6b401e6b3c"
+    },
+    {
+      "path": "docs/evidence/terminal-android15/480dp/after-settings.png",
+      "bytes": 34258,
+      "sha256": "2b57711bcfe238f3d37d3c7aab9c657190cb7bcfaf17f3cf7479af8ec9182517"
+    },
+    {
+      "path": "docs/evidence/terminal-android15/480dp/ssh-command-result.png",
+      "bytes": 40674,
+      "sha256": "09e00d2f1b99aaa2448895e5b4e72d92b9d4c337b72f38b33f20f361264822a0"
+    },
+    {
+      "path": "docs/evidence/terminal-android15/480dp/local-terminal-output.png",
+      "bytes": 34258,
+      "sha256": "2b57711bcfe238f3d37d3c7aab9c657190cb7bcfaf17f3cf7479af8ec9182517"
+    },
+    {
+      "path": "docs/evidence/terminal-android15/360dp/ssh-welcome-before-input.png",
+      "bytes": 74458,
+      "sha256": "0d25b2b404df8125ba64981244227fdfe276b97ca6a6a325987ebf16a181add7"
+    },
+    {
+      "path": "docs/evidence/terminal-android15/360dp/after-keyboard.png",
+      "bytes": 72930,
+      "sha256": "bf6d81cf84d0512149e31a67c00b772ef8c6afe023b878fdbab26fe6fade4562"
+    },
+    {
+      "path": "docs/evidence/terminal-android15/360dp/after-settings.png",
+      "bytes": 73039,
+      "sha256": "0ce7a2ec187c387c377230ede7fe6486b367f93c86ea3030c47f02203e3647c7"
+    },
+    {
+      "path": "docs/evidence/terminal-android15/360dp/ssh-command-result.png",
+      "bytes": 88696,
+      "sha256": "e9aac7c941094a8939d4982707ce0f1b5b86246cccaead88082c49937ef92292"
+    },
+    {
+      "path": "docs/evidence/terminal-android15/360dp/local-terminal-output.png",
+      "bytes": 73039,
+      "sha256": "0ce7a2ec187c387c377230ede7fe6486b367f93c86ea3030c47f02203e3647c7"
+    },
+    {
+      "path": "docs/design/mockups/ui-overview-v1.png",
+      "bytes": 477564,
+      "sha256": "77bc1995c2770cfa87de797c4b571c633a7597092b1b99ec4d5ff88042697dd2"
+    },
+    {
+      "path": "docs/design/mockups/terminal-v2.png",
+      "bytes": 331633,
+      "sha256": "88bdb26bb0db2e9fcdae49fa439585aa7a26108c5dc39b9e1f84965e5d48f6f2"
+    },
+    {
+      "path": "docs/design/mockups/terminal-dock-v3.png",
+      "bytes": 295680,
+      "sha256": "27790ed92c9cad7342df7d5e1baf74e8d85067c91a4ec1220082ef2958d06152"
+    },
+    {
+      "path": "docs/design/mockups/voice-hold-demo-v1.png",
+      "bytes": 365953,
+      "sha256": "0f030471eb5e0b0587f69b8cf14e8b2192af31c0b8e226117216ac5663ce18a5"
+    },
+    {
+      "path": "docs/design/mockups/voice-hold-states-v1.png",
+      "bytes": 671619,
+      "sha256": "177f3f63658ad5ec0d2b52badb9f12cedeb1954269de7a944e3197eec0de5dc8"
+    }
+  ]
+}
