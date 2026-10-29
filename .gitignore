@@ -13,7 +13,7 @@ captures/
 # Downloaded tools and dependencies
 /.tools/
 /downloads/
-/.voice-benchmark/
+/.voice-models/
 node_modules/
 
 # IDE, editor and OS local files

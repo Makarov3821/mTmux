@@ -314,19 +314,17 @@
     <string name="editor_jump_pick_empty">没有其他已保存的服务器</string>
     <string name="editor_jump_pick_failed">无法读取该服务器的已保存凭据，请编辑后重新保存</string>
     <string name="voice_settings_title">语音输入</string>
-    <string name="voice_auto_language">自动检测语言</string>
-    <string name="voice_auto_language_help">开启：由 Whisper 检测语言。关闭：使用当前界面语言（更快）。</string>
     <string name="voice_button">语音输入</string>
     <string name="voice_title">离线语音输入</string>
     <string name="voice_recording">正在录音… %1$d 秒（最长 60 秒）</string>
-    <string name="voice_transcribing">正在使用 Whisper base 在本机转写…</string>
+    <string name="voice_transcribing">正在使用 X-ASR 在本机转写…</string>
     <string name="voice_result_help">文字只会加入草稿，绝不会自动发送。</string>
     <string name="voice_stop">停止</string>
     <string name="voice_inserted">语音文字已放入编辑卡片，请检查后插入终端。</string>
     <string name="voice_error_permission">麦克风权限被拒绝，仍可继续键盘输入。</string>
     <string name="voice_error_audio">无法启动或读取麦克风，请检查是否被其他应用占用。</string>
     <string name="voice_error_too_short">录音太短，请至少说 0.1 秒。</string>
-    <string name="voice_error_model">内置 Whisper 模型缺失或损坏，请重新安装 voice APK。</string>
+    <string name="voice_error_model">内置 X-ASR 模型缺失或损坏，请重新安装 voice APK。</string>
     <string name="voice_error_target_changed">连接或回复目标已改变，语音文字未填入。</string>
     <string name="voice_error_no_speech">未识别到语音，草稿没有改变。</string>
     <string name="voice_error_cancelled">语音转写已取消。</string>
@@ -343,8 +341,6 @@
     <string name="voice_preparing_short">准备中…</string>
     <string name="voice_tap_stop">点击按钮结束录音</string>
     <string name="voice_permission_ready">麦克风已授权，请重新按住语音按钮开始录音。</string>
-    <string name="voice_punctuation">自动补充标点</string>
-    <string name="voice_punctuation_help">识别后离线补充断句和标点，结果仍可编辑。</string>
     <string name="settings_palette">主题配色</string>
     <string name="settings_appearance_language">外观与语言</string>
     <string name="editor_target">目标服务器</string>
@@ -468,4 +464,5 @@
     <string name="doctor_touch_on">手指滑动可以向远端终端发送滚轮事件。</string>
     <string name="doctor_touch_off">应用已关闭远端触摸转发；即使 tmux 开启鼠标，手势也只浏览本地终端历史。</string>
     <string name="doctor_enable_touch">开启远端触摸转发</string>
+    <string name="voice_model_info">X-ASR INT8 · 离线中英识别，原生标点与大小写。</string>
 </resources>

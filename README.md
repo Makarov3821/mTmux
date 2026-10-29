@@ -2,11 +2,11 @@
 
 Android 上的 SSH + tmux Agent 控制端。目标是离开电脑后，打开手机查看远程 Agent 输出、回复并继续工作；不在服务器安装常驻服务。
 
-**0.8.5（versionCode 35，应用 ID `dev.mtmux`）：终端默认直接输入，语音和长文本使用按需编辑卡片；支持命名 tmux 会话、保存服务器时确认指纹，以及遵守折叠分组的 5 分钟自动刷新。voice 使用本机 Whisper base q8 + CT 标点，按住说话、上滑取消。** 本轮未完成 ARM 真机输入法与语音质量/性能验收；验证范围见 [0.8.5 发布记录](docs/releases/0.8.5.md)。
+**0.9.0（versionCode 36，应用 ID `dev.mtmux`）：voice 切换为离线 X-ASR 480ms INT8，自带中英识别、标点和大小写；新增可选 tmux Doctor，修复键盘唤起时输入区避让。** 按住说话、上滑取消和可编辑卡片继续保留。实现、升级与验证范围见 [0.9.0 发布记录](docs/releases/0.9.0.md)。
 
-发布提供 standard / voice 两份既有证书签名 APK，可覆盖 0.8.4、0.8.5-rc.1 和 rc.2 保留配置。语音模型对照与 APK 体积记录见 [模型记录](docs/testing/voice-models-20261023.md)；独立 [Audio Lab](test-audio/README.md) 用于继续比较 Paraformer 和 X-ASR，主应用本轮未切换这两套识别模型。
+发布提供 standard / voice 两份既有证书签名 APK，使用相同包名与递增版本，可覆盖旧正式版保留配置。X-ASR 的模型与包体检查见 [迁移记录](docs/testing/voice-xasr.md)；独立 [Audio Lab](test-audio/README.md) 保留历史模型对照，不参与主应用发布。
 
-版本功能清单见 [CHANGELOG.md](CHANGELOG.md)；详细记录见 [0.8.5](docs/releases/0.8.5.md)。
+版本功能清单见 [CHANGELOG.md](CHANGELOG.md)；详细记录见 [0.9.0](docs/releases/0.9.0.md)。
 
 0.8.4 终端底栏：发送合入输入框，工具与快捷回复在各自区域内居中，voice 版中央使用主题配色的圆形声波按钮；快捷键新增 Ctrl / Shift / Alt，点击高亮后作用于下一次按键并释放，四页双向循环。详见 [键盘验证](docs/testing/terminal-keyboard.md) 和 底栏效果图（历史截图已清理）（布局示意，非实机截图）。
 
@@ -50,14 +50,12 @@ printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
 # standard：无需 NDK/模型
 ./gradlew :core:test :app:assembleStandardDebug :app:lintStandardDebug
 
-# voice：固定源码、base q8 与标点模型（校验 SHA-256），需要 NDK 28.2/CMake 3.22.1
-python3 scripts/fetch_voice_benchmark.py deps
-python3 scripts/fetch_voice_benchmark.py base
-python3 scripts/fetch_voice_punctuation.py
+# voice：固定 X-ASR INT8 与 sherpa 运行时（校验 SHA-256），无需 NDK/CMake
+python3 scripts/fetch_voice.py
 ./gradlew :voice:testDebugUnitTest :app:assembleVoiceDebug :app:lintVoiceDebug
 ```
 
-APK 输出：`app/build/outputs/apk/standard/debug/app-standard-debug.apk` 与 `app/build/outputs/apk/voice/debug/app-voice-debug.apk`。0.8.4 已发布 voice 约 74.6 MB；当前未发布 q8 + CT 的未签名 Release 约 196.5 MB，SRF 对照约 136.7 MB，均含 arm64-v8a/x86_64；standard 约 12.2 MB。两个 flavor 使用同一应用 ID/版本/签名，只能安装一个，可相互覆盖并保留数据。
+APK 输出：`app/build/outputs/apk/standard/debug/app-standard-debug.apk` 与 `app/build/outputs/apk/voice/debug/app-voice-debug.apk`。voice 内置 X-ASR 权重/词表 169,227,953 bytes（161.39 MiB）和 arm64-v8a/x86_64 运行时；APK 实测及验收范围见 [X-ASR 迁移记录](docs/testing/voice-xasr.md)。两个 flavor 使用同一应用 ID/版本/签名，只能安装一个，可相互覆盖并保留数据。
 
 终端资产已经打包进源码，无需运行时联网下载。修改 `web/` 后使用 Node.js 22+ 重建并测试：
 
@@ -78,18 +76,9 @@ export GRADLE_USER_HOME="$PWD/.tools/gradle-home"
 ./gradlew :core:test :app:assembleStandardDebug :app:lintStandardDebug
 ```
 
-### 语音 V0 基准（不进入正式 APK）
+### 语音模型实验室
 
-独立 `:voice-benchmark` 模块固定 whisper.cpp 1.9.5，可比较 multilingual tiny q5、base q5/q8；当前运行脚本默认比较 base q5/q8。需要 Android NDK 28.2.13676358、CMake 3.22.1 和 arm64-v8a/x86_64 测试设备；源码、模型和 WAV 下载到被忽略的 `.voice-benchmark/`，不会提交或打进 mTmux APK：
-
-```bash
-python3 scripts/fetch_voice_benchmark.py all
-python3 scripts/fetch_voice_benchmark.py verify
-./gradlew :voice-benchmark:testReleaseUnitTest :voice-benchmark:assembleRelease :voice-benchmark:lintRelease
-python3 scripts/run_voice_benchmark.py --models tiny,base --language en --threads 4 --repeat 3
-```
-
-当前 x86_64 模拟器结果只证明 Android native 链路可用，不能替代 ARM 真机或中文质量判断；指标、固定 SHA-256 和限制见 [语音 V0 报告](docs/testing/voice-v0-report.md)。该 benchmark 无录音/网络权限，不修改产品终端。
+独立 [Audio Lab](test-audio/README.md) 保留模型对照和历史实验；不参与主应用的 Gradle、CI 或发布构建。主应用仅有 X-ASR 一个识别引擎，不再编译 Whisper、CT 或 SRF，也不再发布标点模型对照 APK。旧实验下载工具已移至 `test-audio/tools/`；历史报告中的旧构建命令仅适用于对应旧提交。
 
 ## 手机上怎么试
 
@@ -99,7 +88,7 @@ python3 scripts/run_voice_benchmark.py --models tiny,base --language en --thread
 4. 首页先显示缓存，冷启动或从后台回到首页，展开文件夹和未分组中的服务器距离上次嗅探至少 5 分钟才自动刷新（每台独立记录，失败也计入，重启保留）；右侧圆形箭头可随时单独刷新。有别名时只显示别名，更新时间放在名称旁；无别名显示用户名和地址。首次连接各级主机会显示“需确认主机指纹”，点击该提示，通过可信管理渠道核对指纹后信任；逐级继续刷新。变化的主机密钥会被拦截，不静默信任，也不绕过跳板。
 5. 点击服务器下的“会话 / 窗口”连接 tmux；窗口有多个 pane 时先展开选择。右侧 `>_` 打开普通 SSH shell，无需先发现 tmux；`⋮` 提供编辑、删除。点服务器名称可折叠/展开子项。首页搜索框右侧“▱＋”新建文件夹，服务器 `⋮ → 移动到文件夹` 分组；文件夹 `⋮` 重命名/删除。新服务器默认未分组。排序在各文件夹内生效，文件夹保持创建顺序、未分组排最后。搜索不发起网络请求，匹配缓存任务时临时展开，清除后恢复折叠状态。
 6. 点终端或顶部键盘按钮直接打字，键盘回车会发送 Enter，由远端程序决定提交或换行。中文组词阶段只在本地显示，选字确认后才发给远端。Ctrl / Shift / Alt 粘滞组合键和方向、功能键继续可用。
-voice 版按住底部麦克风录音，松手本机转写，上滑可取消；结果进入可编辑卡片，追加录音可继续补充。顶部编辑按钮或“工具 → 编辑文本”也可打开卡片，关闭时保留当前目标的草稿；“插入终端”写入后收起卡片，不自动回车。多行只在目标启用 bracketed paste 时允许；代码、控制字符和大小限制仍检查。设置“自动检测语言”默认关闭：关闭时使用当前界面语言，开启时由 Whisper 检测。
+voice 版按住底部麦克风录音，松手本机转写，上滑可取消；结果进入可编辑卡片，追加录音可继续补充。顶部编辑按钮或“工具 → 编辑文本”也可打开卡片，关闭时保留当前目标的草稿；“插入终端”写入后收起卡片，不自动回车。多行只在目标启用 bracketed paste 时允许；代码、控制字符和大小限制仍检查。X-ASR 同时处理中文、英文和中英混说，直接生成标点与大小写，无需选择识别语言或单独恢复标点。
 7. 终端滑动对应鼠标滚轮，轻点左键并唤起输入，长按松开右键；tmux 沿用服务器的滚轮绑定与历史上限。顶部提供返回、名称、键盘、文本编辑和“回到底端”。“工具”提供复制、编辑、回复目标/重新绑定、字号和滚动设置，偏好保存在本机。
 键盘和编辑卡片不改变终端逻辑网格，不因此触发远端 resize；键盘唤起时会随高度变化调整可见位置，避免遮住底部输入光标；浏览本地历史时不会强制跳回底部。旋转屏幕或修改字号仍会调整终端尺寸。
 
@@ -135,11 +124,11 @@ python3 scripts/test_ssh.py
 
 SSH 集成用例在普通 `:core:test` 中会明确跳过，只有 fixture 启动后才执行。`scripts/test_ssh.py` 测试未加密和加密 OpenSSH Ed25519 私钥、未知/变化主机密钥、命令 stdout/stderr/退出码、PTY 尺寸、中文输入、普通 shell 执行，以及无 UTF-8 locale 的 tmux 中文/特殊字符名称、链接窗口所属会话和连接前历史；还覆盖两级跳板、每级主机身份、跳板失败清理和不直连回退；密码认证仍需真机测试。测试脚本结束时清理自己创建的服务和密钥，不连接你的生产服务器。
 
-CI 配置见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，默认验证不带语音的 standard；[voice workflow](.github/workflows/voice-benchmark.yml) 获取固定 base 模型，构建 standard/voice 与 benchmark、检查权限/模型/体积/16 KiB 对齐；手动运行该 workflow 时另执行 Android 15 模型/UI smoke。本地测试结果不等于 CI 已实际运行，也不等于 Android 真机兼容性通过。
+CI 配置见 [.github/workflows/ci.yml](.github/workflows/ci.yml)，默认验证 standard；[voice workflow](.github/workflows/voice.yml) 获取固定 X-ASR/运行时，构建 standard/voice、校验模型和运行库哈希、权限隔离、体积与 16 KiB 对齐；手动运行另执行 Android 15 真实音频和取消测试。本地测试不等于远端 CI 已实际运行。
 
 ### 签名发布（GitHub Release）
 
-[.github/workflows/release.yml](.github/workflows/release.yml)：推送 `v*` 标签时获取固定 Whisper 源码/base 模型，用固定密钥签名并校验同证书/包名/版本，然后同时发布 `standard` 与 `voice` APK 及各自 checksum。带 `-` 后缀的标签（如 `v0.8.0-dev`、`v1.0.0-rc.1`）为 pre-release，`v0.8.0` 这类为正式 release。标签须与 `versionName` 一致，`MTMUX_CERT_SHA256` 必须存在且匹配；在 Actions 页手动运行只检查并上传 artifact，不发布。
+[.github/workflows/release.yml](.github/workflows/release.yml)：推送 `v*` 标签时获取固定 X-ASR 模型/sherpa 运行时，用固定密钥签名并校验同证书/包名/版本，然后同时发布 `standard` 与 `voice` APK 及各自 checksum。带 `-` 后缀的标签（如 `v0.8.0-dev`、`v1.0.0-rc.1`）为 pre-release，`v0.8.0` 这类为正式 release。标签须与 `versionName` 一致，`MTMUX_CERT_SHA256` 必须存在且匹配；在 Actions 页手动运行只检查并上传 artifact，不发布。
 
 ```bash
 # 一次性：生成密钥（离线备份，切勿提交），本地验证并取得公开证书指纹
@@ -184,10 +173,10 @@ python3 scripts/test_ssh.py --android
 app/       Compose 配置与输入界面、受限本地 WebView、显式主机信任
 core/      JVM 可测试的 SSH、tmux 命令/解析、连接代际与主机指纹校验
 web/       xterm.js 桥接与测试（不实现 SSH 或终端解析器）
-scripts/   隔离 tmux / OpenSSH 集成测试、语音 V0 获取/运行脚本
+scripts/   隔离 tmux / OpenSSH 集成测试、X-ASR 固定资源下载与 APK 校验
 docs/      版本详细记录、设计计划、P0/V0 报告与真机清单、测试证据（见 docs/README.md）
-voice/     voice flavor 的离线模型、JNI、AudioRecord 与草稿决策（standard 不依赖）
-voice-benchmark/  独立 whisper.cpp Android 基准，不被正式 app 依赖
+voice/     voice flavor 的 X-ASR/sherpa 接入、模型安装与 AudioRecord（standard 不依赖）
+test-audio/      独立语音模型对照实验室，不被正式 app 依赖
 ```
 
 - SSH 使用 JSch 维护分支；终端使用 xterm.js。终端页只加载本地资产，阻止外部资源和页面跳转；原始 SSH 字节经 Base64 传递给终端，不插入 HTML，不提前按字符串解码。
@@ -195,7 +184,7 @@ voice-benchmark/  独立 whisper.cpp Android 基准，不被正式 app 依赖
 - 界面文本在 `app/src/main/res/values/strings.xml`（英文，默认）与 `values-zh/strings.xml`；两份需同时修改。core 只输出错误代码与结构化进度，由界面层翻译；诊断日志字段保持英文且不随语言变化。
 - 主机密钥变化后没有“一键忽略”入口。先核对服务器变更，再通过 Android 设置清除本应用数据以重建信任；这会删除所有已信任主机记录。
 - 不支持设备专用 SSH 密钥生成、SSH config 导入、自定义 socket、后台保活、Agent 执行确认和自动重连。Agent 状态仅为首页刷新快照的启发式状态灯，不是实时事件。
-- 复制选区是用户显式操作；系统输入法、剪贴板有各自的数据处理行为。voice 内置 Whisper 路径离线运行，不调用系统/云语音服务；真实设备的速度、温升和识别质量仍待验证。
+- 复制选区是用户显式操作；系统输入法、剪贴板有各自的数据处理行为。voice 内置 X-ASR 路径离线运行，不调用系统/云语音服务；真实设备的速度、温升和识别质量仍待验证。
 - minSdk、tmux 最低版本、真实 Agent TUI、触摸选区与输入法体验仍需按设备清单验证。
 
 组件与许可证说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

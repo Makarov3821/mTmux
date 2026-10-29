@@ -1,0 +1,36 @@
+{
+  "device": "Android 15 AOSP_ATD x86_64, software TCG without KVM",
+  "attempts": [
+    {
+      "threads": 4,
+      "passed": [
+        "cancellationBeforeInferenceNeverReturnsText",
+        "upgradeRemovesOldModelsAndPreferencesButKeepsXasrAndDrafts",
+        "cancellationDuringInferenceStopsNativeWork",
+        "audioRecordCapturesOrFailsCleanlyAndReleases"
+      ],
+      "completedRecognition": false,
+      "stoppedByHarness": "Native Chinese decode remained slow; explicit am force-stop; English not run"
+    },
+    {
+      "threads": 1,
+      "passed": [
+        "cancellationBeforeInferenceNeverReturnsText",
+        "upgradeRemovesOldModelsAndPreferencesButKeepsXasrAndDrafts",
+        "cancellationDuringInferenceStopsNativeWork",
+        "audioRecordCapturesOrFailsCleanlyAndReleases",
+        "bundledXasrExtractsAndTranscribesChinese"
+      ],
+      "completedRecognition": {
+        "language": "zh",
+        "threads": 1,
+        "elapsedMs": 222749,
+        "text": "欢迎大家来体验达摩院推出的语音识别模型"
+      },
+      "stoppedByHarness": "Chinese completed before shutdown; English started but was explicitly stopped by am force-stop, no English result"
+    }
+  ],
+  "fullAndroidDecode": "Chinese passed; English incomplete",
+  "arm64Phone": "NOT RUN",
+  "emulator": "stopped"
+}

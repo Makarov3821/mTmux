@@ -45,8 +45,7 @@ if ! "$keytool" -list -keystore "$MTMUX_KEYSTORE" -storepass:env MTMUX_KEYSTORE_
 fi
 
 # Fetch only pinned, checksum-verified product inputs.
-python3 scripts/fetch_voice_benchmark.py deps
-python3 scripts/fetch_voice_benchmark.py base
+python3 scripts/fetch_voice.py
 
 # A wrong key password makes the signing task fail here.
 ./gradlew :app:assembleStandardRelease :app:assembleVoiceRelease --console=plain -q

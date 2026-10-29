@@ -2,7 +2,11 @@
 
 版本号不代表完整真机验收。每个版本的实现细节、验证结果、截图与 APK SHA-256 见对应的「详细记录」；测试证据在 [docs/evidence/](docs/evidence/)。文档目录说明见 [docs/README.md](docs/README.md)。
 
-## 未发布
+## [0.9.0] — 2026-10-30 · versionCode 36
+
+详细记录：[0.9.0](docs/releases/0.9.0.md)。
+
+- voice 统一切换为 Audio Lab 同版本 X-ASR 480ms INT8，中英识别与原生标点一次完成；移除 Whisper/ggml、CT/SRF 后处理及旧模型开关、独立 ONNX Java 依赖、旧主工程 benchmark 和对照发布流程。升级清理旧模型与偏好，保留录音取消和可编辑卡片；验证与包体见 [X-ASR 迁移记录](docs/testing/voice-xasr.md)。
 
 - 新增可选 tmux Doctor：服务器验证保存后邀请诊断，服务器菜单支持重查，逐项显示版本、滚动、历史与使用环境；固定 3.2a baseline，低版本仅在版本行提醒。已知不可用的 tmux 限制新建五分钟，过期或配置变更后可重新检查，普通 SSH 保留。符合条件的新用户可预览并排他创建最小配置，支持保留备份的撤销；复用现有 SSH，报告阅读不额外保活。见 [使用与验证说明](docs/testing/tmux-doctor.md)。
 - 点击终端或键盘按钮时立即记录输入焦点，并随键盘高度动画检查光标可见性；底部 Agent 输入区自动移到键盘上方，无需先输入字符。保持逻辑网格和本地历史浏览位置。

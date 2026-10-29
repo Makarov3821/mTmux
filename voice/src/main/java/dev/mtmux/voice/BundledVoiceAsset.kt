@@ -11,7 +11,7 @@ internal class BundledVoiceAsset(private val name: String, private val bytes: Lo
     @Synchronized fun file(context: Context): File {
         verified?.takeIf { it.isFile && it.length() == bytes }?.let { return it }
         val directory = File(context.noBackupFilesDir, "voice").apply { mkdirs() }
-        val target = File(directory, name)
+        val target = File(directory, name).also { it.parentFile!!.mkdirs() }
         if (!valid(target)) {
             target.delete()
             val temporary = File(directory, "$name.part").apply { delete() }
@@ -22,15 +22,6 @@ internal class BundledVoiceAsset(private val name: String, private val bytes: Lo
                 check(valid(temporary)) { "VOICE_MODEL_CHECKSUM" }
                 check(temporary.renameTo(target)) { "VOICE_MODEL_INSTALL" }
             } finally { temporary.delete() }
-        }
-        // Product APKs contain one Whisper variant; do not keep the replaced model on disk.
-        if (name.startsWith("ggml-base-")) for (old in listOf("ggml-base-q5_1.bin", "ggml-base-q8_0.bin")) {
-            if (old != name) File(directory, old).delete()
-        }
-        if (name in listOf("ct-punct-int8.onnx", "srf-punct-int8.onnx")) {
-            val old = if (name.startsWith("ct-")) "srf-punct-int8.onnx" else "ct-punct-int8.onnx"
-            File(directory, old).delete()
-            if (name.startsWith("ct-")) File(directory, "srf-vocab.json").delete()
         }
         verified = target
         return target

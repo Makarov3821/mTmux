@@ -1,5 +1,7 @@
 # q8 与离线标点模型试验
 
+> 历史记录：当前主应用已切换为 [X-ASR INT8](voice-xasr.md)。本文的旧引擎、开关与构建命令仅适用于当时提交；对照实验保留在 `test-audio/`。
+
 2026-10-23，未发布修改。用户要求寻找更小的中文标点方案，必要时接受 CT-Transformer INT8，并尝试把 Whisper q5 换成 q8。
 
 2026-10-25 后续本地改动：SRF 的弱标点和提前句末标点增加保守过滤，见 [过滤记录](srf-conservative-punctuation.md)；该调整尚未进入 rc.2 发布包。

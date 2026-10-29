@@ -65,3 +65,7 @@ python3 test-audio/tools/verify_artifacts.py --apk test-audio/outputs/audio-lab-
 构建与测试结果见 `evidence/build-checks-020.json`。尚无本版本 ARM64 真机完整验证，最终效果与时延由你在目标手机上的同录音对照决定。
 
 0.1.0 的完整候选清单、来源和历史验证限制见 [旧版说明](README-0.1.0.md)。所有权重来源、文件大小和 SHA-256 仍记录在 `app/src/main/assets/models.json`；许可说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+主应用现已选择同版本 X-ASR INT8。此目录继续保留历史模型对照；旧主项目的下载/标点评估工具已归档到 `tools/fetch_voice_benchmark.py`、`tools/fetch_voice_punctuation.py`、`tools/evaluate_voice_punctuation.py`，不参与主应用构建。
+
+历史 Whisper 下载缓存已归入 `test-audio/.cache/legacy-whisper/`，主项目不再保留 `.voice-benchmark/` 目录或依赖。

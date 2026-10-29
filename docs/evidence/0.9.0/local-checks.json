@@ -1,0 +1,72 @@
+{
+  "versionName": "0.9.0",
+  "versionCode": 36,
+  "scope": "Local release preflight. Unsigned APKs; final GitHub signatures and download checksums must be verified separately.",
+  "unitTests": [
+    {
+      "module": "core",
+      "variant": "test",
+      "tests": 72,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 23
+    },
+    {
+      "module": "voice",
+      "variant": "testDebugUnitTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "app",
+      "variant": "testStandardDebugUnitTest",
+      "tests": 38,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "module": "app",
+      "variant": "testVoiceDebugUnitTest",
+      "tests": 38,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "pythonTests": {
+    "tests": 7,
+    "failures": 0
+  },
+  "lint": [
+    "standardRelease passed",
+    "voiceRelease passed"
+  ],
+  "artifacts": [
+    {
+      "flavor": "standard",
+      "path": "app/build/outputs/apk/standard/release/app-standard-release-unsigned.apk",
+      "bytes": 12394375,
+      "sha256": "4cf1a255c7d8d19bfa172e6843fc0355852513e4b35400245d85b51dbf3fccbf",
+      "signed": false
+    },
+    {
+      "flavor": "voice",
+      "path": "app/build/outputs/apk/voice/release/app-voice-release-unsigned.apk",
+      "bytes": 193095601,
+      "sha256": "e294796f422b9a94efa6e458abe4d92443d38d1c233769ffefdf9a8f0233860d",
+      "signed": false
+    }
+  ],
+  "checks": [
+    "APK version 0.9.0 / code36",
+    "pinned X-ASR and both ABI runtime checksums",
+    "model install manifest matches lock",
+    "no obsolete models, runtime or DEX classes",
+    "standard voice separation",
+    "16KiB zipalign for voice"
+  ],
+  "deviceLimits": "Android Chinese decoded in migration checks; English end-to-end and ARM64 physical-device validation incomplete. See voice-xasr-20261030."
+}

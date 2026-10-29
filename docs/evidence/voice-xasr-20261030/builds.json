@@ -1,0 +1,67 @@
+{
+  "scope": "Local builds only; release APKs unsigned, debug APKs local certificate; not remote CI",
+  "artifacts": [
+    {
+      "path": "app/build/outputs/apk/standard/debug/app-standard-debug.apk",
+      "bytes": 16658571,
+      "sha256": "dd01a7f2cefd394ecaa24dc2e546b7374c3426f97a455a802337f424c3cfc64b"
+    },
+    {
+      "path": "app/build/outputs/apk/standard/release/app-standard-release-unsigned.apk",
+      "bytes": 12394379,
+      "sha256": "d15fd0aa30adc2988a069d2ebbcb43500ce2c77b1ced92eb227f06bae0dd2eee"
+    },
+    {
+      "path": "app/build/outputs/apk/voice/debug/app-voice-debug.apk",
+      "bytes": 199253611,
+      "sha256": "5247e6613e726a5a6036168f9a09401c081fff3b65c5dc3e921cd05d1f4e758d"
+    },
+    {
+      "path": "app/build/outputs/apk/voice/release/app-voice-release-unsigned.apk",
+      "bytes": 193095605,
+      "sha256": "df07ad9182b5a4e208bb54a59e0a83481425aaf51bf28679b73a15e6376679a5"
+    }
+  ],
+  "unitTests": [
+    {
+      "module": "voice",
+      "variant": "testDebugUnitTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "app",
+      "variant": "testStandardDebugUnitTest",
+      "tests": 38,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "module": "app",
+      "variant": "testVoiceDebugUnitTest",
+      "tests": 38,
+      "failures": 0,
+      "errors": 0
+    }
+  ],
+  "lint": [
+    "standardDebug passed",
+    "voiceDebug passed"
+  ],
+  "checks": [
+    "locked model and runtime SHA-256 for both ABIs",
+    "standard separation",
+    "obsolete payload blacklist",
+    "APK 16KiB zipalign and runtime ELF LOAD alignment",
+    "no obsolete Whisper / punctuation / ONNX Java classes in DEX",
+    "RECORD_AUDIO present only in voice, verified by aapt2"
+  ],
+  "audioLabRegression": {
+    "tests": 25,
+    "failures": 0,
+    "runtimeAndLegacyCachePreparation": "passed after relocation"
+  },
+  "instrumentationBuild": "Voice AndroidTest rebuilt after adding test-only asrThreads override; voice lint passed",
+  "androidRecognition": "Chinese complete on software TCG with 1 thread; English incomplete, ARM64 not run; see android-summary.json"
+}

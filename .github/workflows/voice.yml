@@ -1,0 +1,65 @@
+name: Voice checks
+on:
+  push:
+    paths: ['voice/**', 'app/**', 'scripts/fetch_voice.py', 'scripts/pinned_download.py', 'scripts/verify_voice_apk.py', 'scripts/tests/**', 'settings.gradle.kts', '.github/workflows/voice.yml']
+  pull_request:
+    paths: ['voice/**', 'app/**', 'scripts/fetch_voice.py', 'scripts/pinned_download.py', 'scripts/verify_voice_apk.py', 'scripts/tests/**', 'settings.gradle.kts', '.github/workflows/voice.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  voice-product:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-36 build-tools;35.0.0'
+      - uses: gradle/actions/setup-gradle@v5
+      - name: Fetch verified X-ASR and runtime
+        run: |
+          python3 -m unittest discover -s scripts/tests
+          python3 scripts/fetch_voice.py
+      - name: Unit tests, APKs, and lint
+        run: |
+          ./gradlew :voice:testDebugUnitTest :app:testVoiceDebugUnitTest \
+            :app:assembleStandardDebug :app:assembleVoiceDebug :app:assembleVoiceDebugAndroidTest \
+            :app:assembleStandardRelease :app:assembleVoiceRelease :app:lintVoiceDebug --console=plain
+      - name: Verify model, runtime, size, permissions and 16 KiB alignment
+        run: |
+          standard=app/build/outputs/apk/standard/release/app-standard-release-unsigned.apk
+          voice=app/build/outputs/apk/voice/release/app-voice-release-unsigned.apk
+          python3 scripts/verify_voice_apk.py "$standard" "$voice"
+          aapt="$ANDROID_HOME/build-tools/35.0.0/aapt2"
+          ! "$aapt" dump permissions "$standard" | grep RECORD_AUDIO
+          "$aapt" dump permissions "$voice" | grep RECORD_AUDIO
+          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -P 16 -v 4 "$voice" >/dev/null
+          for elf in .voice-models/runtime/jniLibs/*/*.so; do
+            readelf -lW "$elf" | awk '$1 == "LOAD" { seen=1; if ($NF != "0x4000") bad=1 } END { exit (!seen || bad) }'
+          done
+      - name: Android 15 model and cancellation smoke (manual)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          sdkmanager 'emulator' 'system-images;android-35;google_apis;x86_64'
+          echo no | timeout 60 avdmanager create avd --force --name voice-ci --package 'system-images;android-35;google_apis;x86_64' --device pixel_2
+          emulator -avd voice-ci -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 4096 >/tmp/voice-emulator.log 2>&1 &
+          emulator_pid=$!
+          trap 'kill $emulator_pid || true' EXIT
+          adb wait-for-device
+          timeout 300 bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = 1 ]; do sleep 2; done'
+          timeout 1200 ./gradlew :app:connectedVoiceDebugAndroidTest --console=plain \
+            -Pandroid.testInstrumentationRunnerArguments.class='dev.mtmux.VoiceProductTest,dev.mtmux.TerminalUiTest#flavorExposesOnlyItsVoiceCapability'
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: voice-product
+          path: |
+            app/build/outputs/apk/standard/**/*.apk
+            app/build/outputs/apk/voice/**/*.apk
+            app/build/outputs/apk/androidTest/voice/debug/*.apk
+            app/build/reports/
+            voice/build/reports/tests/

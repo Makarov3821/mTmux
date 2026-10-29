@@ -16,7 +16,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -26,11 +25,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.mtmux.voice.VoiceRecorder
-import dev.mtmux.voice.WhisperTranscriber
-import dev.mtmux.voice.PunctuationCancellation
-import dev.mtmux.voice.PunctuationRestorer
+import dev.mtmux.voice.XasrTranscriber
 import dev.mtmux.voice.hasAudibleSpeech
-import dev.mtmux.voice.recognitionLanguage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -39,30 +35,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.Executors
 
-internal fun initializeVoiceFlavor(context: android.content.Context) = Unit
+internal fun initializeVoiceFlavor(context: android.content.Context) {
+    kotlin.concurrent.thread(name = "voice-upgrade-cleanup", isDaemon = true) {
+        runCatching { XasrTranscriber.removeLegacyModels(context.applicationContext) }
+    }
+}
 
 @Composable internal fun VoiceSettings() {
-    val context = LocalContext.current
-    val preferences = remember { context.getSharedPreferences("voice-settings", 0) }
-    var automatic by remember { mutableStateOf(preferences.getBoolean("automatic-language", false)) }
-    var punctuation by remember { mutableStateOf(preferences.getBoolean("restore-punctuation", true)) }
     Text(stringResource(R.string.voice_settings_title), color = MaterialTheme.colorScheme.primary)
-    Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.voice_auto_language))
-            Text(stringResource(R.string.voice_auto_language_help), style = MaterialTheme.typography.bodySmall)
-        }
-        Switch(automatic, { automatic = it; preferences.edit().putBoolean("automatic-language", it).apply() },
-            modifier = Modifier.testTag("voice-auto-language"))
-    }
-    Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.voice_punctuation))
-            Text(stringResource(R.string.voice_punctuation_help), style = MaterialTheme.typography.bodySmall)
-        }
-        Switch(punctuation, { punctuation = it; preferences.edit().putBoolean("restore-punctuation", it).apply() },
-            modifier = Modifier.testTag("voice-punctuation"))
-    }
+    Text(stringResource(R.string.voice_model_info), style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.testTag("voice-model-info"))
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,10 +61,8 @@ internal fun initializeVoiceFlavor(context: android.content.Context) = Unit
     val recorderControl=remember {Executors.newSingleThreadExecutor()}
     val recorderDispatcher=remember(recorderControl) {recorderControl.asCoroutineDispatcher()}
     val mainHandler=remember {Handler(Looper.getMainLooper())}
-    val transcriber=remember {WhisperTranscriber(context.applicationContext)}
-    val punctuator=remember {PunctuationRestorer(context.applicationContext)}
+    val transcriber=remember {XasrTranscriber(context.applicationContext)}
     val lifecycle=LocalLifecycleOwner.current.lifecycle
-    val uiLanguage=LocalConfiguration.current.locales[0].language.let {if(it=="zh") "zh" else "en"}
     val latestToken by rememberUpdatedState(connectionToken)
     val latestTarget by rememberUpdatedState(targetKey)
     val latestEnabled by rememberUpdatedState(enabled)
@@ -95,14 +75,11 @@ internal fun initializeVoiceFlavor(context: android.content.Context) = Unit
     var capturedToken by remember {mutableStateOf("")}
     var capturedTarget by remember {mutableStateOf("")}
     var requestId by remember {mutableLongStateOf(0L)}
-    var punctuationCancellation by remember {mutableStateOf<PunctuationCancellation?>(null)}
 
     fun cancelAll() {
         val hadWork=state.phase!=VoicePhase.IDLE || requestId!=0L
         state.cancel()
         if(requestId!=0L) transcriber.cancel(requestId)
-        punctuationCancellation?.cancel()
-        punctuationCancellation=null
         requestId=0L
         if(hadWork) {
             runCatching {recorderControl.execute {runCatching {recorder.discard()}}}
@@ -117,7 +94,6 @@ internal fun initializeVoiceFlavor(context: android.content.Context) = Unit
         DebugLog.event(DebugLog.Event.VOICE_RECORD_STOP,(elapsed/1000).toInt())
         scope.launch {
             var ownRequest=0L
-            var ownPunctuation: PunctuationCancellation?=null
             try {
                 // Serialize stop with start/cancel, including a slow microphone initialization.
                 val pcm=withContext(recorderDispatcher) {
@@ -127,26 +103,14 @@ internal fun initializeVoiceFlavor(context: android.content.Context) = Unit
                 if(!hasAudibleSpeech(pcm)) {
                     errorText=R.string.voice_error_no_speech;state.error(id);return@launch
                 }
-                val automatic=context.getSharedPreferences("voice-settings",0).getBoolean("automatic-language",false)
-                val language=recognitionLanguage(automatic,uiLanguage)
                 ownRequest=transcriber.newRequestId()
                 requestId=ownRequest
                 DebugLog.event(DebugLog.Event.VOICE_TRANSCRIBE,pcm.size/VoiceRecorder.SAMPLE_RATE)
                 val result=withContext(Dispatchers.IO) {
-                    transcriber.transcribe(pcm,language,minOf(4,Runtime.getRuntime().availableProcessors()),ownRequest)
+                    transcriber.transcribe(pcm,minOf(4,Runtime.getRuntime().availableProcessors()),ownRequest)
                 }
                 if(!state.owns(id)) return@launch
-                val restorePunctuation=context.getSharedPreferences("voice-settings",0).getBoolean("restore-punctuation",true)
-                val offeredText=if(result.noSpeechProbability>=0.8f) "" else if(restorePunctuation) {
-                    val cancellation=PunctuationCancellation()
-                    ownPunctuation=cancellation;punctuationCancellation=cancellation
-                    DebugLog.event(DebugLog.Event.VOICE_PUNCTUATE)
-                    val restored=withContext(Dispatchers.IO) {punctuator.restore(result.text,cancellation)}
-                    if(!state.owns(id)) return@launch
-                    DebugLog.event(if(restored.failed) DebugLog.Event.VOICE_PUNCTUATE_FAILED else DebugLog.Event.VOICE_PUNCTUATE_DONE,
-                        restored.elapsedMs.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),if(restored.processed) 1 else 0)
-                    restored.text
-                } else result.text
+                val offeredText=result.text
                 resultText=offeredText
                 when(latestOffer(token,target,offeredText)) {
                     VoiceDraftOffer.TARGET_CHANGED -> {errorText=R.string.voice_error_target_changed;state.error(id)}
@@ -163,7 +127,6 @@ internal fun initializeVoiceFlavor(context: android.content.Context) = Unit
                 }
             } catch(error: CancellationException) {
                 if(ownRequest!=0L) transcriber.cancel(ownRequest)
-                ownPunctuation?.cancel()
                 throw error
             } catch(error: Exception) {
                 if(!state.owns(id)) return@launch
@@ -179,7 +142,6 @@ internal fun initializeVoiceFlavor(context: android.content.Context) = Unit
             } finally {
                 // An old completion must never clear a newer recording's cancellation handle.
                 if(requestId==ownRequest) requestId=0L
-                if(punctuationCancellation===ownPunctuation) punctuationCancellation=null
                 if(ownRequest!=0L) transcriber.releaseRequest(ownRequest)
             }
         }

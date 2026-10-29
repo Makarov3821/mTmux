@@ -1,6 +1,6 @@
 # tmux Doctor 使用与实现说明
 
-适用于 standard 与 voice 的未发布改动；最低兼容 baseline 为 tmux 3.2a。
+随 0.9.0 发布，适用于 standard 与 voice；最低兼容 baseline 为 tmux 3.2a。
 
 ## 使用入口
 

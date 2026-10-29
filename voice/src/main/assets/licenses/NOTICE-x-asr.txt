@@ -1,0 +1,18 @@
+X-ASR-zh-en: 480ms streaming Zipformer transducer, INT8, native punctuation/casing.
+Original model: Gilgamesh-J / GilgameshWind, Apache License 2.0.
+https://github.com/Gilgamesh-J/X-ASR
+https://huggingface.co/GilgameshWind/X-ASR-zh-en
+
+Unmodified deployment archive from k2-fsa/sherpa-onnx:
+sherpa-onnx-x-asr-480ms-streaming-zipformer-transducer-zh-en-punct-int8-2026-06-05.tar.bz2
+https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
+Archive SHA-256: fa5f63d618e5a01526e275a358bb7772e403f84808a4769fba52cffd8160bf74
+Only encoder.int8.onnx, decoder.onnx, joiner.int8.onnx and tokens.txt are distributed.
+Exact per-file checksums and byte sizes: voice/model.lock.json in the source repository.
+
+Runtime and Kotlin JNI API: sherpa-onnx v1.13.8, Apache License 2.0.
+https://github.com/k2-fsa/sherpa-onnx/tree/v1.13.8
+Uses upstream Android runtime with statically linked ONNX Runtime.
+Runtime hashes: voice/runtime.lock.json. See LICENSE-sherpa-onnx.txt,
+LICENSE-onnxruntime.txt and NOTICE-onnxruntime.txt for license/third-party notices.
+No separate punctuation model, Whisper/ggml engine or cloud API is used.

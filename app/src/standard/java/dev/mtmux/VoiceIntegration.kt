@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 @Composable internal fun VoiceSettings() = Unit
 
 internal fun initializeVoiceFlavor(context: android.content.Context) {
-    // Switching from voice to standard must also release the extracted ~60 MB private model.
+    // Switching from voice to standard must also release the extracted private voice models.
     kotlin.concurrent.thread(name="voice-model-cleanup",isDaemon=true) {
         runCatching { java.io.File(context.noBackupFilesDir,"voice").deleteRecursively() }
     }

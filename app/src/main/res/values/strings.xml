@@ -320,19 +320,17 @@
     <string name="editor_jump_pick_empty">No other saved servers</string>
     <string name="editor_jump_pick_failed">Cannot read that server\'s saved credentials. Edit it and save again.</string>
     <string name="voice_settings_title">Voice input</string>
-    <string name="voice_auto_language">Detect language automatically</string>
-    <string name="voice_auto_language_help">On: Whisper detects the language. Off: use the current interface language (faster).</string>
     <string name="voice_button">Voice input</string>
     <string name="voice_title">Offline voice input</string>
     <string name="voice_recording">Recording… %1$d s (maximum 60 s)</string>
-    <string name="voice_transcribing">Transcribing locally with Whisper base…</string>
+    <string name="voice_transcribing">Transcribing locally with X-ASR…</string>
     <string name="voice_result_help">The text will only be added to the draft. It is never sent automatically.</string>
     <string name="voice_stop">Stop</string>
     <string name="voice_inserted">Voice text is ready in the editor; review it before inserting.</string>
     <string name="voice_error_permission">Microphone permission was denied. You can continue typing.</string>
     <string name="voice_error_audio">Cannot start or read the microphone. Check whether another app is using it.</string>
     <string name="voice_error_too_short">Recording is too short. Speak for at least 0.1 seconds.</string>
-    <string name="voice_error_model">The bundled Whisper model is missing or damaged. Reinstall the voice APK.</string>
+    <string name="voice_error_model">The bundled X-ASR model is missing or damaged. Reinstall the voice APK.</string>
     <string name="voice_error_target_changed">The connection or reply target changed. Voice text was not inserted.</string>
     <string name="voice_error_no_speech">No speech was recognized. The draft was not changed.</string>
     <string name="voice_error_cancelled">Voice transcription was cancelled.</string>
@@ -349,8 +347,6 @@
     <string name="voice_preparing_short">Preparing…</string>
     <string name="voice_tap_stop">Tap the button to finish</string>
     <string name="voice_permission_ready">Microphone allowed. Hold the voice button again to record.</string>
-    <string name="voice_punctuation">Restore punctuation</string>
-    <string name="voice_punctuation_help">Add sentence breaks and punctuation after recognition, entirely offline. You can still edit the result.</string>
     <string name="settings_palette">Color palette</string>
     <string name="settings_appearance_language">Appearance and language</string>
     <string name="editor_target">Target server</string>
@@ -474,4 +470,5 @@
     <string name="doctor_touch_on">Finger gestures can send wheel events to the remote terminal.</string>
     <string name="doctor_touch_off">Remote touch forwarding is off in this app. Gestures only browse local terminal history, even if tmux mouse support is on.</string>
     <string name="doctor_enable_touch">Enable remote touch forwarding</string>
+    <string name="voice_model_info">X-ASR INT8 · Offline Chinese/English recognition with native punctuation and casing.</string>
 </resources>

@@ -1,0 +1,52 @@
+{
+  "version": "v1.13.8",
+  "archive": {
+    "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-v1.13.8-android-static-link-onnxruntime.tar.bz2",
+    "bytes": 35101751,
+    "sha256": "7583ca385ae7d981e65468455c2ea2c9f2da383921dccfc5658d0dc19d309e6f"
+  },
+  "libraries": [
+    {
+      "path": "jniLibs/arm64-v8a/libsherpa-onnx-jni.so",
+      "bytes": 24169352,
+      "sha256": "b4a53d915c19cb6d09b1cdc9a8084be54419b647aab9097ffdfb46f30c3c4dd8"
+    },
+    {
+      "path": "jniLibs/x86_64/libsherpa-onnx-jni.so",
+      "bytes": 27359872,
+      "sha256": "968e24f61d1e4dae0d5e7860aded42fee45b0f804e1c5a42dfa49186864cefc4"
+    }
+  ],
+  "kotlin": [
+    {
+      "path": "kotlin/FeatureConfig.kt",
+      "bytes": 301,
+      "sha256": "829c7adc4db1324f21b9a9cbf5bf10eacf759714fe50956f48317c1ffef044f6",
+      "url": "https://raw.githubusercontent.com/k2-fsa/sherpa-onnx/v1.13.8/sherpa-onnx/kotlin-api/FeatureConfig.kt"
+    },
+    {
+      "path": "kotlin/HomophoneReplacerConfig.kt",
+      "bytes": 170,
+      "sha256": "fe926b6413f4d87e67c41feb21b8363923a67cbd3a5eb687b76390a5f1f7db60",
+      "url": "https://raw.githubusercontent.com/k2-fsa/sherpa-onnx/v1.13.8/sherpa-onnx/kotlin-api/HomophoneReplacerConfig.kt"
+    },
+    {
+      "path": "kotlin/OnlineRecognizer.kt",
+      "bytes": 30509,
+      "sha256": "3204ff816361d99d94dda1e8c26681f6d4a5ad749a68d8fee93b4e8bb2b21d17",
+      "url": "https://raw.githubusercontent.com/k2-fsa/sherpa-onnx/v1.13.8/sherpa-onnx/kotlin-api/OnlineRecognizer.kt"
+    },
+    {
+      "path": "kotlin/OnlineStream.kt",
+      "bytes": 1178,
+      "sha256": "6b9f8de317e6a0bb51f0f29d940617b781cb31b190e1c725dd438231836c06ab",
+      "url": "https://raw.githubusercontent.com/k2-fsa/sherpa-onnx/v1.13.8/sherpa-onnx/kotlin-api/OnlineStream.kt"
+    },
+    {
+      "path": "kotlin/QnnConfig.kt",
+      "bytes": 156,
+      "sha256": "86c963f27677f690eb0d6639735052eba5e60d9f81ccd4c1df0aa831fd680d6f",
+      "url": "https://raw.githubusercontent.com/k2-fsa/sherpa-onnx/v1.13.8/sherpa-onnx/kotlin-api/QnnConfig.kt"
+    }
+  ]
+}

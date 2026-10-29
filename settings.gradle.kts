@@ -4,4 +4,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = "mtmux"
-include(":core", ":app", ":voice", ":voice-benchmark")
+include(":core", ":app", ":voice")

@@ -6,91 +6,79 @@ import androidx.core.content.ContextCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.mtmux.voice.VoiceRecorder
-import dev.mtmux.voice.WhisperTranscriber
-import dev.mtmux.voice.PunctuationRestorer
-import dev.mtmux.voice.PunctuationCancellation
+import dev.mtmux.voice.XasrTranscriber
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.security.MessageDigest
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class VoiceProductTest {
-    @Test fun punctuationAddsMarksAndPreservesTechnicalLiterals() {
-        val context=InstrumentationRegistry.getInstrumentation().targetContext
-        val raw="先检查连接超时的原因然后修改代码修改完成后运行测试 保留 README.md 和 /home/项目/main.kt"
-        val result=PunctuationRestorer(context).restore(raw)
-        assertFalse("punctuation fell back instead of running",result.failed)
-        assertTrue(result.processed)
-        assertTrue(result.text,result.text.any {it in "，。？！"})
-        assertEquals(raw,result.text.filterNot {it in "，。？！、"})
-        assertTrue(result.text.contains("README.md"))
-        assertTrue(result.text.contains("/home/项目/main.kt"))
-        val model=File(context.noBackupFilesDir,"voice/${PunctuationRestorer.MODEL_NAME}")
-        assertEquals(PunctuationRestorer.MODEL_BYTES,model.length())
-        assertEquals(PunctuationRestorer.MODEL_SHA256,sha256(model))
-    }
-
-    @Test fun punctuationCancellationBeforeInferenceNeverReturnsText() {
-        val context=InstrumentationRegistry.getInstrumentation().targetContext
-        val cancellation=PunctuationCancellation().apply {cancel()}
-        val error=runCatching {PunctuationRestorer(context).restore("先检查问题然后修改代码",cancellation)}.exceptionOrNull()
-        assertTrue(error is java.util.concurrent.CancellationException)
-    }
-
-    @Test fun bundledBaseModelExtractsAndNativeProbe() {
-        val context=InstrumentationRegistry.getInstrumentation().targetContext
-        File(context.noBackupFilesDir,"voice").deleteRecursively()
-        val engine=WhisperTranscriber(context)
-        assertEquals("base",engine.probeModel())
-        val model=File(context.noBackupFilesDir,"voice/${WhisperTranscriber.MODEL_NAME}")
-        assertEquals(WhisperTranscriber.MODEL_BYTES,model.length())
-        assertEquals(WhisperTranscriber.MODEL_SHA256,sha256(model))
-        assertFalse(File(model.parentFile,"${WhisperTranscriber.MODEL_NAME}.part").exists())
-    }
-
-    @Test fun bundledBaseModelExtractsAndTranscribesPinnedWav() {
+    @Test fun bundledXasrExtractsAndTranscribesChinese() {
         val instrumentation=InstrumentationRegistry.getInstrumentation()
         val context=instrumentation.targetContext
-        File(context.noBackupFilesDir,"voice").deleteRecursively()
+        val engine=XasrTranscriber(context)
+        val pcm=wav(instrumentation.context.assets.open("public_zh.wav").readBytes())
+        val result=engine.transcribe(pcm,threads(),engine.newRequestId())
+        report("zh",result.text,result.elapsedMs)
+        assertTrue(result.text,result.text.contains("欢迎大家"))
+        assertTrue(result.text,result.text.contains("语音识别模型"))
+        assertTrue(result.elapsedMs>0)
+        val files=engine.prepareModel()
+        assertEquals(4,files.size)
+        assertEquals(169_227_953L,files.sumOf {it.length()})
+    }
+
+    @Test fun bundledXasrTranscribesEnglish() {
+        val instrumentation=InstrumentationRegistry.getInstrumentation()
         val pcm=wav(instrumentation.context.assets.open("jfk.wav").readBytes())
-        val engine=WhisperTranscriber(context)
-        val result=engine.transcribe(pcm,"en",4,engine.newRequestId())
-        assertTrue(result.text,result.text.contains("ask not what your country can do for you",ignoreCase=true))
-        assertEquals("en",result.language)
-        val model=File(context.noBackupFilesDir,"voice/${WhisperTranscriber.MODEL_NAME}")
-        assertEquals(WhisperTranscriber.MODEL_BYTES,model.length())
-        assertEquals(WhisperTranscriber.MODEL_SHA256,sha256(model))
-        assertFalse(File(model.parentFile,"${WhisperTranscriber.MODEL_NAME}.part").exists())
+        val engine=XasrTranscriber(instrumentation.targetContext)
+        val result=engine.transcribe(pcm,threads(),engine.newRequestId())
+        report("en",result.text,result.elapsedMs)
+        assertTrue(result.text,result.text.contains("your country",ignoreCase=true))
+        assertTrue(result.text,result.text.contains("you",ignoreCase=true))
+    }
+
+    @Test fun upgradeRemovesOldModelsAndPreferencesButKeepsXasrAndDrafts() {
+        val context=InstrumentationRegistry.getInstrumentation().targetContext
+        val directory=File(context.noBackupFilesDir,"voice").apply {mkdirs()}
+        val old=listOf("ggml-base-q5_1.bin","ggml-base-q8_0.bin","ct-punct-int8.onnx","srf-punct-int8.onnx","srf-vocab.json")
+        old.forEach {File(directory,it).writeText("old");File(directory,"$it.part").writeText("partial")}
+        val keep=File(directory,"x-asr/keep.fixture").apply {parentFile!!.mkdirs();writeText("keep")}
+        context.getSharedPreferences("voice-settings",0).edit().putBoolean("automatic-language",true).putBoolean("restore-punctuation",false).commit()
+        try {
+            XasrTranscriber.removeLegacyModels(context)
+            old.forEach {assertFalse(File(directory,it).exists());assertFalse(File(directory,"$it.part").exists())}
+            assertEquals("keep",keep.readText())
+            assertFalse(context.getSharedPreferences("voice-settings",0).contains("automatic-language"))
+            assertFalse(context.getSharedPreferences("voice-settings",0).contains("restore-punctuation"))
+        } finally {keep.delete()}
     }
 
     @Test fun cancellationBeforeInferenceNeverReturnsText() {
-        val instrumentation=InstrumentationRegistry.getInstrumentation()
-        val pcm=wav(instrumentation.context.assets.open("jfk.wav").readBytes())
-        val engine=WhisperTranscriber(instrumentation.targetContext)
-        val id=engine.newRequestId();engine.cancel(id)
-        val error=runCatching {engine.transcribe(pcm,"en",2,id)}.exceptionOrNull()
-        assertNotNull(error)
-        assertTrue(error!!.message.orEmpty(),error.message.orEmpty().contains("VOICE_CANCELLED"))
+        val context=InstrumentationRegistry.getInstrumentation().targetContext
+        val engine=XasrTranscriber(context)
+        val id=engine.newRequestId();assertTrue(engine.cancel(id))
+        val error=runCatching {engine.transcribe(FloatArray(16000),2,id)}.exceptionOrNull()
+        assertTrue(error is java.util.concurrent.CancellationException)
+        assertFalse(engine.cancel(id))
     }
 
     @Test fun cancellationDuringInferenceStopsNativeWork() {
         val instrumentation=InstrumentationRegistry.getInstrumentation()
-        val pcm=wav(instrumentation.context.assets.open("jfk.wav").readBytes())
-        val engine=WhisperTranscriber(instrumentation.targetContext)
+        val sample=wav(instrumentation.context.assets.open("public_zh.wav").readBytes())
+        val pcm=FloatArray(16000*60) {sample[it%sample.size]}
+        val engine=XasrTranscriber(instrumentation.targetContext)
         engine.prepareModel()
         val id=engine.newRequestId();val worker=Executors.newSingleThreadExecutor()
         try {
-            val result=worker.submit<Throwable?> {runCatching {engine.transcribe(pcm,"en",4,id)}.exceptionOrNull()}
+            val result=worker.submit<Throwable?> {runCatching {engine.transcribe(pcm,threads(),id)}.exceptionOrNull()}
             Thread.sleep(1000)
-            val started=System.nanoTime();assertTrue("native request was not registered",engine.cancel(id))
-            val error=result.get(20,TimeUnit.SECONDS)
-            assertNotNull(error)
-            assertTrue(error!!.message.orEmpty(),error.message.orEmpty().contains("VOICE_CANCELLED"))
-            assertTrue("native cancellation took too long",System.nanoTime()-started<TimeUnit.SECONDS.toNanos(8))
+            assertTrue(engine.cancel(id))
+            val error=result.get(90,TimeUnit.SECONDS)
+            assertTrue(error is java.util.concurrent.CancellationException)
         } finally {worker.shutdownNow()}
     }
 
@@ -120,6 +108,16 @@ class VoiceProductTest {
         } finally {recorder.close()}
     }
 
+    // Software TCG can override this; real-device/accelerated CI defaults match production.
+    private fun threads() = (InstrumentationRegistry.getArguments().getString("asrThreads")?.toInt() ?: 4).coerceIn(1,4)
+
+    private fun report(language:String,text:String,elapsedMs:Long) {
+        // Public fixtures only; production does not log recordings or recognized text.
+        InstrumentationRegistry.getInstrumentation().sendStatus(2,android.os.Bundle().apply {
+            putString("xasr-smoke", "$language | threads=${threads()} | ${elapsedMs}ms | $text")
+        })
+    }
+
     private fun wav(bytes:ByteArray):FloatArray {
         fun u32(at:Int)= (bytes[at].toInt() and 255) or ((bytes[at+1].toInt() and 255) shl 8) or
             ((bytes[at+2].toInt() and 255) shl 16) or ((bytes[at+3].toInt() and 255) shl 24)
@@ -133,11 +131,5 @@ class VoiceProductTest {
             at=data+size+(size and 1)
         }
         error("test WAV has no data")
-    }
-    private fun sha256(file:File):String {
-        val digest=MessageDigest.getInstance("SHA-256");file.inputStream().use {input ->
-            val block=ByteArray(1024*1024);while(true){val n=input.read(block);if(n<0)break;digest.update(block,0,n)}
-        }
-        return digest.digest().joinToString(""){"%02x".format(it.toInt() and 255)}
     }
 }

@@ -1,0 +1,20 @@
+{
+  "scope": "Public fixtures; Linux desktop model/API compatibility only, not Android latency or accuracy",
+  "runtime": "1.13.8",
+  "records": [
+    {
+      "audio": "public_zh.wav",
+      "sha256": "a1bd32dc78493c123f9625a66deee562aed2895f53fbc39f2cca3be7e6f4f20f",
+      "text": "欢迎大家来体验达摩院推出的语音识别模型",
+      "loadMs": 2540,
+      "decodeMs": 492
+    },
+    {
+      "audio": "jfk.wav",
+      "sha256": "59dfb9a4acb36fe2a2affc14bacbee2920ff435cb13cc314a08c13f66ba7860e",
+      "text": "And so my fellow americans ask not what your country can do for you ask what you can do for your country",
+      "loadMs": 2504,
+      "decodeMs": 890
+    }
+  ]
+}

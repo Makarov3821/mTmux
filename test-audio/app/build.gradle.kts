@@ -16,7 +16,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk { abiFilters += providers.gradleProperty("audioTestAbis").orElse("arm64-v8a").get().split(",") }
         externalNativeBuild { cmake {
-            arguments += listOf("-DWHISPER_CPP_DIR=${rootDir.parentFile}/.voice-benchmark/whisper.cpp", "-DGGML_NATIVE=OFF", "-DGGML_OPENMP=OFF",
+            arguments += listOf("-DWHISPER_CPP_DIR=${rootDir}/.cache/legacy-whisper/whisper.cpp", "-DGGML_NATIVE=OFF", "-DGGML_OPENMP=OFF",
                 // Debug is for the software emulator. Avoid its CVTPS2PD page-edge fault.
                 "-DCMAKE_CXX_FLAGS_DEBUG=-O3 -g -fno-vectorize -fno-slp-vectorize",
                 "-DCMAKE_C_FLAGS_DEBUG=-O3 -g -fno-vectorize -fno-slp-vectorize")

@@ -26,7 +26,7 @@ jobs:
       - uses: android-actions/setup-android@v4
         with:
           # Default list includes the removed 'tools' package, which makes sdkmanager fail.
-          packages: "platform-tools platforms;android-36 build-tools;35.0.0 ndk;28.2.13676358 cmake;3.22.1"
+          packages: "platform-tools platforms;android-36 build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v5
       # gradle/actions v6 bundles a proprietary caching component with separate terms; stay on v5 (MIT).
 
@@ -73,14 +73,10 @@ jobs:
             || { echo "::error::MTMUX_KEY_PASSWORD cannot unlock the private key"; exit 1; }
           echo "Keystore opened with the configured password and alias."
 
-      - name: Fetch pinned whisper.cpp and base q8_0 + INT8 punctuation
+      - name: Fetch pinned X-ASR INT8 and sherpa runtime
         run: |
           python3 -m unittest discover -s scripts/tests
-          python3 scripts/fetch_voice_benchmark.py deps
-          python3 scripts/fetch_voice_benchmark.py base
-          python3 scripts/fetch_voice_punctuation.py
-          python3 scripts/fetch_voice_benchmark.py verify-source
-          python3 scripts/fetch_voice_benchmark.py verify-base
+          python3 scripts/fetch_voice.py
 
       - name: Test and build signed releases
         run: ./gradlew :core:test :voice:testDebugUnitTest :app:testStandardDebugUnitTest :app:testVoiceDebugUnitTest :app:assembleStandardRelease :app:assembleVoiceRelease --console=plain
@@ -107,18 +103,11 @@ jobs:
           "$aapt" dump permissions "$voice" | grep RECORD_AUDIO
           [ "$("$aapt" dump badging "$standard" | sed -n '1p')" = "$("$aapt" dump badging "$voice" | sed -n '1p')" ] \
             || { echo "::error::package/version differ between flavors"; exit 1; }
-          ! unzip -l "$standard" | grep -E 'libmtmux_voice|ggml-base-|ct-punct|srf-punct|onnxruntime'
-          unzip -l "$voice" | grep 'assets/models/ggml-base-q8_0.bin'
-          unzip -l "$voice" | grep 'lib/arm64-v8a/libmtmux_voice.so'
-          unzip -l "$voice" | grep 'lib/x86_64/libmtmux_voice.so'
-          [ "$(unzip -p "$voice" assets/models/ggml-base-q8_0.bin | sha256sum | cut -d' ' -f1)" = \
-            "c577b9a86e7e048a0b7eada054f4dd79a56bbfa911fbdacf900ac5b567cbb7d9" ]
           python3 scripts/verify_voice_apk.py "$standard" "$voice"
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -P 16 -v 4 "$standard" >/dev/null
           "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -P 16 -v 4 "$voice" >/dev/null
           standard_name="mtmux-${GITHUB_REF_NAME//\//-}-standard.apk"
           voice_name="mtmux-${GITHUB_REF_NAME//\//-}-voice.apk"
-          case "$GITHUB_REF_NAME" in *-*) voice_name="mtmux-${GITHUB_REF_NAME//\//-}-voice-ct.apk" ;; esac
           cp "$standard" "$standard_name"; cp "$voice" "$voice_name"
           sha256sum "$standard_name" > "$standard_name.sha256"
           sha256sum "$voice_name" > "$voice_name.sha256"
@@ -127,57 +116,12 @@ jobs:
           cat > release-notes.md <<EOF
           Two APKs use the same package, version, and release certificate; install one flavor at a time.
 
-          - **standard**: no microphone permission, Whisper model, or voice native library (${standard_size} bytes)
-          - **voice**: offline Whisper.cpp 1.9.5 multilingual base q8_0 + INT8 punctuation, arm64-v8a + x86_64 (${voice_size} bytes)
-          - Model SHA-256: \`c577b9a86e7e048a0b7eada054f4dd79a56bbfa911fbdacf900ac5b567cbb7d9\`
-          - Punctuation model SHA-256: \`65a3fb9f5ad7bfb96bf69e0dc4481df97f6ee60513c1d94ce981ba6effd524b1\`
+          - **standard**: no microphone permission, speech model, or voice native library (${standard_size} bytes)
+          - **voice**: offline X-ASR 480ms INT8 Chinese/English with native punctuation and casing, arm64-v8a + x86_64 (${voice_size} bytes)
+          - Pinned model/runtime files: \`voice/model.lock.json\`, \`voice/runtime.lock.json\`
           - Certificate SHA-256: \`$certificate\`
 
           Voice audio and transcription stay on device. Recognition opens an editable card; inserting text into the terminal requires confirmation and never presses Enter automatically.
-          EOF
-          version_notes="docs/releases/${GITHUB_REF_NAME#v}.md"
-          if [ -f "$version_notes" ]; then
-            printf '\n' >> release-notes.md
-            cat "$version_notes" >> release-notes.md
-          fi
-      - name: Build and verify signed SRF pre-release
-        if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref_name, '-')
-        run: |
-          python3 scripts/fetch_voice_punctuation.py --model srf
-          # Create a fresh APK so switching models cannot retain incremental ZIP holes.
-          rm -f app/build/outputs/apk/voice/release/app-voice-release.apk
-          ./gradlew -PvoicePunctuationModel=srf :voice:testDebugUnitTest :app:testVoiceDebugUnitTest :app:assembleVoiceRelease :app:lintVoiceRelease --console=plain
-          standard=app/build/outputs/apk/standard/release/app-standard-release.apk
-          voice=app/build/outputs/apk/voice/release/app-voice-release.apk
-          expected=$(echo "$EXPECTED_CERT" | tr 'A-F' 'a-f' | tr -d ': ')
-          actual=$("$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --print-certs "$voice" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
-          [ -n "$expected" ] && [ "$actual" = "$expected" ] || { echo "::error::SRF certificate differs from the existing release"; exit 1; }
-          aapt="$ANDROID_HOME/build-tools/35.0.0/aapt2"
-          [ "$("$aapt" dump badging "$standard" | sed -n '1p')" = "$("$aapt" dump badging "$voice" | sed -n '1p')" ] || { echo "::error::SRF package/version differ"; exit 1; }
-          "$aapt" dump permissions "$voice" | grep RECORD_AUDIO
-          python3 scripts/verify_voice_apk.py "$standard" "$voice" --punctuation-model srf
-          "$ANDROID_HOME/build-tools/35.0.0/zipalign" -c -P 16 -v 4 "$voice" >/dev/null
-          srf_name="mtmux-${GITHUB_REF_NAME//\//-}-voice-srf.apk"
-          cp "$voice" "$srf_name"
-          sha256sum "$srf_name" > "$srf_name.sha256"
-          echo "SRF_APK_NAME=$srf_name" >> "$GITHUB_ENV"
-          ct_size=$(stat -c %s "$VOICE_APK_NAME")
-          srf_size=$(stat -c %s "$srf_name")
-          version_code=$(sed -n 's/^ *versionCode = \([0-9]*\)/\1/p' app/build.gradle.kts)
-          cat > release-notes.md <<EOF
-          # 语音输入模型对照预发行版
-
-          版本 $GITHUB_REF_NAME，versionCode $version_code。两个 APK 均使用现有正式发布证书、包名 dev.mtmux 和相同版本，可覆盖 0.8.4 保留配置，也可互相覆盖比较。无需卸载正式版。
-
-          - **voice-ct**：Whisper multilingual base q8_0 + CT-Transformer INT8 标点恢复，${ct_size} bytes。
-          - **voice-srf**：相同 Whisper q8_0 + SRF INT8 轻量中文标点模型，${srf_size} bytes。
-          - 两者包含 arm64-v8a / x86_64；设置内可关闭自动补标点。识别和标点完全离线，结果只填入可编辑草稿，不自动发送。
-          - 按住准备、麦克风就绪后绿色光晕与 60 秒倒计时、最后十秒渐变橙红、松手转文字；支持上滑取消和滑回继续。
-          - 短样例中 CT 的长句断句更连贯，SRF 较小但有误断句。q8 是否提升识别准确率、手机时延与温升仍需实际录音验证。
-          - 此版本标记为 pre-release，不替换正式版 Latest；APK 大于最初的 100 MB 目标，需比较实际效果与包体取舍。
-          - Certificate SHA-256: $actual
-
-          详细对照与设备验证范围：docs/testing/voice-models-20261023.md；交互图：docs/design/voice-hold-preview.md。
           EOF
           version_notes="docs/releases/${GITHUB_REF_NAME#v}.md"
           if [ -f "$version_notes" ]; then
@@ -200,10 +144,10 @@ jobs:
           case "$GITHUB_REF_NAME" in
             *-*)
               gh release create "$GITHUB_REF_NAME" \
+                "$STANDARD_APK_NAME" "$STANDARD_APK_NAME.sha256" \
                 "$VOICE_APK_NAME" "$VOICE_APK_NAME.sha256" \
-                "$SRF_APK_NAME" "$SRF_APK_NAME.sha256" \
                 --prerelease --latest=false --verify-tag \
-                --notes-file release-notes.md --title "mTmux $GITHUB_REF_NAME · 语音模型对照"
+                --notes-file release-notes.md --title "mTmux $GITHUB_REF_NAME"
               ;;
             *)
               gh release create "$GITHUB_REF_NAME" \

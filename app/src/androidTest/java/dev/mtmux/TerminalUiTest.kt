@@ -1771,10 +1771,8 @@ class TerminalUiTest {
         val voice = BuildConfig.FLAVOR == "voice"
         compose.activity.getSharedPreferences("voice-settings",0).edit().clear().commit()
         compose.onNodeWithTag("settings").performClick()
-        if (voice) {
-            compose.onNodeWithTag("voice-auto-language").performScrollTo().assertIsOff().performClick().assertIsOn()
-            assertTrue(compose.activity.getSharedPreferences("voice-settings",0).getBoolean("automatic-language",false))
-        } else compose.onNodeWithTag("voice-auto-language").assertDoesNotExist()
+        if (voice) compose.onNodeWithTag("voice-model-info").performScrollTo().assertExists()
+        else compose.onNodeWithTag("voice-model-info").assertDoesNotExist()
         compose.onNodeWithText("‹ 返回").performClick()
         showTerminalForFixture()
         val control=compose.onNodeWithTag("voice-input")

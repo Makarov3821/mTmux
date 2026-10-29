@@ -13,7 +13,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 PROJECT = ROOT.parent
-sys.path.insert(0, str(PROJECT / "scripts"))
+sys.path.insert(0, str(ROOT / "tools"))
 from fetch_voice_benchmark import FILES, fetch, valid
 
 CACHE = ROOT / ".cache"
@@ -47,7 +47,7 @@ def runtime():
             if not valid(dest, spec["sha256"], spec["bytes"]): raise ValueError("Bad native library")
     for spec in lock["kotlin"]:
         fetch_locked("audiolab-" + Path(spec["path"]).name, spec, ROOT / "vendor" / spec["path"])
-    subprocess.run([sys.executable, str(PROJECT / "scripts/fetch_voice_benchmark.py"), "deps"], check=True)
+    subprocess.run([sys.executable, str(ROOT / "tools/fetch_voice_benchmark.py"), "deps"], check=True)
 
 def models():
     manifest = json.loads((ROOT / "app/src/main/assets/models.json").read_text())
@@ -57,7 +57,7 @@ def models():
         # Reuse the already verified mTmux weight cache when it exists.
         if not spec["archive"]:
             w = spec["files"][0]
-            for old in [PROJECT / ".voice-benchmark/models" / Path(w["path"]).name, PROJECT / ".voice-benchmark/punctuation" / Path(w["path"]).name]:
+            for old in [CACHE / "legacy-whisper/models" / Path(w["path"]).name, CACHE / "legacy-whisper/punctuation" / Path(w["path"]).name]:
                 if valid(old, w["sha256"], w["bytes"]):
                     install(old, MODELS / w["path"], w["bytes"], w["sha256"]); break
             if valid(MODELS / w["path"], w["sha256"], w["bytes"]): continue

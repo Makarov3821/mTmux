@@ -1,6 +1,6 @@
 # 文档目录
 
-界面快照（`c6a672b`，未含新 Doctor）：[浏览全部页面与弹窗](screenshots/current/index.html) · [范围与截图索引](screenshots/current/README.md)。
+界面快照（`c6a672b`，未含新 Doctor 与 X-ASR 设置变化）：[浏览全部页面与弹窗](screenshots/current/index.html) · [范围与截图索引](screenshots/current/README.md)。
 
 版本变更摘要统一在根目录 [CHANGELOG.md](../CHANGELOG.md)；产品范围与路线在 [plan.md](../plan.md)。
 
@@ -12,6 +12,6 @@
 | [screenshots/current/](screenshots/current/) | 当前代码的 Android 原生页面、弹窗和固定状态图集 |
 | [evidence/](evidence/) | 测试日志与原始结果，按版本分子目录（旧目录沿用历史命名，如 `p1-011` = 0.1.1、`ui-062` = 0.6.2；0.7.0 起直接用版本号） |
 
-当前语音模型试验：[q8、轻量 SRF 与 CT-Transformer 的对照及 APK 体积](testing/voice-models-20261023.md)。
+当前主应用语音：[X-ASR INT8 迁移与验证](testing/voice-xasr.md)。[旧 q8 / SRF / CT 试验](testing/voice-models-20261023.md) 作为历史保留；独立 [Audio Lab](../test-audio/README.md) 不参与主应用发布。
 
 新增版本时：在 `releases/` 写详细记录，在 CHANGELOG 顶部加摘要并链接，截图放入 `evidence/<版本>/`。

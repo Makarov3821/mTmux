@@ -1,0 +1,18 @@
+...Downloading fixture (0.0 MB)…
+OK fetched fixture: /tmp/tmp72lh2o3n/model.bin
+.Downloading fixture (0.0 MB)…
+Retry fixture 1/4: ValueError
+OK fetched fixture: /tmp/tmpm8o0727v/model.bin
+.Downloading fixture (0.0 MB)…
+Retry fixture 1/4: ValueError
+OK fetched fixture: /tmp/tmpp7ifp0q2/model.bin
+.Downloading fixture (0.0 MB)…
+Retry fixture 1/4: ValueError
+Retry fixture 2/4: ValueError
+Retry fixture 3/4: ValueError
+Retry fixture 4/4: ValueError
+.
+----------------------------------------------------------------------
+Ran 7 tests in 0.008s
+
+OK
