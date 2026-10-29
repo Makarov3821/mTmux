@@ -1,0 +1,18 @@
+[
+  {
+    "package": "tmux_3.0a-2ubuntu0.4_amd64.deb",
+    "url": "https://archive.ubuntu.com/ubuntu/pool/main/t/tmux/tmux_3.0a-2ubuntu0.4_amd64.deb",
+    "sha256": "ef05f636e20448cf75eb7afa0e98b18b3a1e57dcfb872e1f62d6a0ee7dc91bad",
+    "binary": "/tmp/mtmux-compat-research/tmux_3.0a-2ubuntu0.4_amd64/usr/bin/tmux",
+    "version": "tmux 3.0a",
+    "error": ""
+  },
+  {
+    "package": "tmux_3.2a-4ubuntu0.3_amd64.deb",
+    "url": "https://archive.ubuntu.com/ubuntu/pool/main/t/tmux/tmux_3.2a-4ubuntu0.3_amd64.deb",
+    "sha256": "4a32837c256b31de0187e120b1a283e4e68ab6252518cf5d89c03fb71c66613a",
+    "binary": "/tmp/mtmux-compat-research/tmux_3.2a-4ubuntu0.3_amd64/usr/bin/tmux",
+    "version": "tmux 3.2a",
+    "error": ""
+  }
+]

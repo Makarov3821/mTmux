@@ -1,0 +1,59 @@
+[
+  {
+    "binary": "/tmp/mtmux-compat-research/tmux_3.0a-2ubuntu0.4_amd64/usr/bin/tmux",
+    "version": "tmux 3.0a",
+    "mouse": "on",
+    "length_modifier": ":中文",
+    "mtmux_length_modifier_ok": false,
+    "identity": "7:1793282344:$0:@0:%0:8:0",
+    "wheel_bindings": [
+      "bind-key    -T copy-mode    WheelUpPane           select-pane \\; send-keys -X -N 5 scroll-up",
+      "bind-key    -T copy-mode    WheelDownPane         select-pane \\; send-keys -X -N 5 scroll-down",
+      "bind-key    -T copy-mode-vi WheelUpPane           select-pane \\; send-keys -X -N 5 scroll-up",
+      "bind-key    -T copy-mode-vi WheelDownPane         select-pane \\; send-keys -X -N 5 scroll-down",
+      "bind-key    -T root         WheelUpPane           if-shell -F -t = \"#{mouse_any_flag}\" \"send-keys -M\" \"if -Ft= \\\"#{pane_in_mode}\\\" \\\"send-keys -M\\\" \\\"copy-mode -et=\\\"\""
+    ],
+    "wheel_up_enters_history": true,
+    "history_mode": "copy-mode",
+    "wheel_down_exits_history": true,
+    "wheel_up_down_forwarded_to_mouse_app": true
+  },
+  {
+    "binary": "/tmp/mtmux-compat-research/tmux_3.2a-4ubuntu0.3_amd64/usr/bin/tmux",
+    "version": "tmux 3.2a",
+    "mouse": "on",
+    "length_modifier": "6:中文",
+    "mtmux_length_modifier_ok": true,
+    "identity": "31:1793282344:$0:@0:%0:32:0",
+    "wheel_bindings": [
+      "bind-key    -T copy-mode    WheelUpPane          select-pane \\; send-keys -X -N 5 scroll-up",
+      "bind-key    -T copy-mode    WheelDownPane        select-pane \\; send-keys -X -N 5 scroll-down",
+      "bind-key    -T copy-mode-vi WheelUpPane          select-pane \\; send-keys -X -N 5 scroll-up",
+      "bind-key    -T copy-mode-vi WheelDownPane        select-pane \\; send-keys -X -N 5 scroll-down",
+      "bind-key    -T root         WheelUpPane          if-shell -F \"#{||:#{pane_in_mode},#{mouse_any_flag}}\" \"send -M\" \"copy-mode -e\""
+    ],
+    "wheel_up_enters_history": true,
+    "history_mode": "copy-mode",
+    "wheel_down_exits_history": true,
+    "wheel_up_down_forwarded_to_mouse_app": true
+  },
+  {
+    "binary": "/usr/bin/tmux",
+    "version": "tmux 3.4",
+    "mouse": "on",
+    "length_modifier": "6:中文",
+    "mtmux_length_modifier_ok": true,
+    "identity": "55:1793282344:$0:@0:%0:56:0",
+    "wheel_bindings": [
+      "bind-key    -T copy-mode    WheelUpPane            select-pane \\; send-keys -X -N 5 scroll-up",
+      "bind-key    -T copy-mode    WheelDownPane          select-pane \\; send-keys -X -N 5 scroll-down",
+      "bind-key    -T copy-mode-vi WheelUpPane            select-pane \\; send-keys -X -N 5 scroll-up",
+      "bind-key    -T copy-mode-vi WheelDownPane          select-pane \\; send-keys -X -N 5 scroll-down",
+      "bind-key    -T root         WheelUpPane            if-shell -F \"#{||:#{pane_in_mode},#{mouse_any_flag}}\" { send-keys -M } { copy-mode -e }"
+    ],
+    "wheel_up_enters_history": true,
+    "history_mode": "copy-mode",
+    "wheel_down_exits_history": true,
+    "wheel_up_down_forwarded_to_mouse_app": true
+  }
+]
