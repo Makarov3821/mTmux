@@ -126,6 +126,7 @@ class TerminalView(
     fun latest() = js("scrollLatest()")
     fun composition(text: String) = js("showComposition(${JSONObject.quote(text)})")
     fun revealInput() = js("revealInputCursor()")
+    fun inputFocus(focused: Boolean) = js("setInputFocus($focused)")
     fun remoteTouch(enabled: Boolean) = js("setRemoteTouch($enabled)")
     fun scrollSensitivity(value: Float) = js("setScrollSensitivity(${ScrollSpeed.normalize(value)})")
     private fun js(code: String) {

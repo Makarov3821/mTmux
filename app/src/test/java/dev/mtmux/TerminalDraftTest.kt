@@ -1,5 +1,6 @@
 package dev.mtmux
 
+/* Backspace experiment paused together with TerminalDraft.state.
 import androidx.compose.ui.text.TextRange
 import org.junit.Assert.*
 import org.junit.Test
@@ -20,3 +21,4 @@ class TerminalDraftTest {
         assertEquals("",draft.text);assertEquals(TextRange.Zero,draft.state.selection)
     }
 }
+*/

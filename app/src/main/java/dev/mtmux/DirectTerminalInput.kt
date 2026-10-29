@@ -5,6 +5,7 @@ import android.text.Editable
 import android.text.InputType
 import android.text.Selection
 import android.text.SpannableStringBuilder
+import android.graphics.Rect
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.BaseInputConnection
@@ -16,6 +17,7 @@ internal class DirectTerminalInput(context: Context) : View(context) {
     var onText: (String) -> Unit = {}
     var onKey: (String, Int) -> Unit = { _, _ -> }
     var onComposition: (String) -> Unit = {}
+    var onInputFocus: (Boolean) -> Unit = {}
     var modifiers: Int = 0
     var inputEnabled = false
         set(value) {
@@ -50,6 +52,10 @@ internal class DirectTerminalInput(context: Context) : View(context) {
         if (restartPending) return
         restartPending = true
         post { restartPending = false; if (inputEnabled && hasFocus()) ime.restartInput(this) }
+    }
+    override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: Rect?) {
+        super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
+        onInputFocus(gainFocus && inputEnabled)
     }
     override fun onDetachedFromWindow() { retire(); super.onDetachedFromWindow() }
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
@@ -121,6 +127,8 @@ internal class DirectTerminalInput(context: Context) : View(context) {
             if (!active()) return true
             if (before !in 0..64 || after !in 0..64) return false
             if (pending.isNotEmpty()) {
+                // Backspace experiment paused: use Android's standard composing-text deletion.
+                /*
                 // BaseInputConnection protects the whole composing span when deleting
                 // surrounding text. Here the composing word itself is the local buffer.
                 val start = minOf(Selection.getSelectionStart(pending), Selection.getSelectionEnd(pending)).coerceAtLeast(0)
@@ -134,6 +142,11 @@ internal class DirectTerminalInput(context: Context) : View(context) {
                 if (to>0 && to<pending.length && Character.isLowSurrogate(pending[to]) && Character.isHighSurrogate(pending[to-1])) to++
                 pending.delete(from,to); Selection.setSelection(pending,from)
                 changed(); return true
+                */
+                val result = if (points) super.deleteSurroundingTextInCodePoints(before, after)
+                    else super.deleteSurroundingText(before, after)
+                changed()
+                return result
             }
             repeat(before) { onKey("Backspace", 0) }; repeat(after) { onKey("Delete", 0) }
             return true

@@ -211,6 +211,39 @@ try {
   assert.ok(await page.evaluate(()=>document.querySelector('.xterm-screen').getBoundingClientRect().top<0));
   await page.evaluate(()=>setVisibleHeight(window.innerHeight));
   assert.equal(await page.evaluate(()=>document.querySelector('.xterm-screen').getBoundingClientRect().top),0);
+  // Opening the IME must reveal a bottom Agent prompt without waiting for a typed character.
+  await feed(`\x1b[${await page.evaluate(()=>terminal.rows)};1Hagent> `, 'input-focus-prompt');
+  const inputGrid = await page.evaluate(()=>[terminal.cols,terminal.rows]);
+  const inputEvents = await page.evaluate(()=>events.filter(e=>['input','binaryInput','draftInput'].includes(e[0])).length);
+  await page.evaluate(()=>setInputFocus(true)); // focus arrives before the keyboard height
+  assert.equal(await page.evaluate(()=>document.querySelector('.xterm-screen').getBoundingClientRect().top),0);
+  for (const height of [400,320,240]) {
+    await page.evaluate(height=>setVisibleHeight(height),height);
+    assert.ok(await page.evaluate(()=>document.querySelector('.xterm-screen').getBoundingClientRect().top<0));
+    assert.deepEqual(await page.evaluate(()=>[terminal.cols,terminal.rows]),inputGrid);
+    assert.ok(await page.evaluate(()=> {
+      const screen=document.querySelector('.xterm-screen');
+      return screen.getBoundingClientRect().top+(terminal.buffer.active.cursorY+1)*screen.clientHeight/terminal.rows<=visibleHeight+1;
+    }), 'cursor must be above the keyboard throughout its animation');
+  }
+  await page.evaluate(()=>setVisibleHeight(window.innerHeight));
+  assert.equal(await page.evaluate(()=>document.querySelector('.xterm-screen').getBoundingClientRect().top),0);
+  await page.evaluate(()=>setVisibleHeight(240)); // reopen while native focus is retained
+  assert.ok(await page.evaluate(()=>document.querySelector('.xterm-screen').getBoundingClientRect().top<0));
+  await page.evaluate(()=>{setInputFocus(false);setVisibleHeight(window.innerHeight);setVisibleHeight(240);});
+  assert.equal(await page.evaluate(()=>document.querySelector('.xterm-screen').getBoundingClientRect().top),0);
+  await page.evaluate(()=>setInputFocus(true)); // height arrives before focus
+  assert.ok(await page.evaluate(()=>document.querySelector('.xterm-screen').getBoundingClientRect().top<0));
+  assert.equal(await page.evaluate(()=>events.filter(e=>['input','binaryInput','draftInput'].includes(e[0])).length),inputEvents,
+    'focus and keyboard animation must not send text or Enter');
+  await page.evaluate(()=>{setInputFocus(false);setVisibleHeight(window.innerHeight);});
+  await feed('\x1b[?1049l'+('history line\r\n'.repeat(80)), 'input-focus-history');
+  await page.evaluate(()=>terminal.scrollToLine(0));
+  const historyViewport = await page.evaluate(()=>terminal.buffer.active.viewportY);
+  await page.evaluate(()=>{setInputFocus(true);setVisibleHeight(240);});
+  assert.equal(await page.evaluate(()=>terminal.buffer.active.viewportY),historyViewport);
+  assert.equal(await page.evaluate(()=>document.querySelector('.xterm-screen').getBoundingClientRect().top),0);
+  await page.evaluate(()=>{setInputFocus(false);setVisibleHeight(window.innerHeight);});
   await page.evaluate(() => { terminal.reset(); terminal.resize(12, 4); });
   await feed('中文👋 ABCDEFGHIJKLMN\r\nsecond line\r\nthird', 'copy-fixture');
   const copyEvents = await page.evaluate(() => events.filter(e=>['input','binaryInput'].includes(e[0])).length);

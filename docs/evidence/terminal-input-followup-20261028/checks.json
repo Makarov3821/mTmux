@@ -1,0 +1,35 @@
+{
+  "baseVersion": "0.8.5",
+  "released": false,
+  "backspaceExperiment": "Custom composing-buffer deletion and state/selection-specific editor changes are commented out with their targeted tests; ordinary terminal delete forwarding remains active.",
+  "keyboardFocus": "Native focus and explicit keyboard request persist input intent through viewport/IME-height updates.",
+  "webUnit": {
+    "tests": 5,
+    "failures": 0
+  },
+  "webBrowser": "passed; focus-before-height, height-before-focus, animation, keyboard close/reopen, no input emission, stable grid and local history",
+  "standardAndroidTestCompilation": "passed; three active DirectTerminalInput lifecycle cases, two Backspace-specific cases commented",
+  "androidInstrumentationExecuted": false,
+  "standardUnit": {
+    "tests": 38,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "voiceUnit": {
+    "tests": 38,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "standardDebugLint": {
+    "Error": 0,
+    "Warning": 85
+  },
+  "standardDebugBuild": "passed",
+  "voiceDebugLint": {
+    "Error": 0,
+    "Warning": 57
+  },
+  "voiceDebugBuild": "passed"
+}

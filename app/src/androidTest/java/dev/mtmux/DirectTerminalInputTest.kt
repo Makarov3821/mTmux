@@ -8,7 +8,7 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Actual Android BaseInputConnection, including IMEs that repeat DELETE as key events. */
+/** Actual Android BaseInputConnection lifecycle; paused Backspace cases remain below. */
 @RunWith(AndroidJUnit4::class)
 class DirectTerminalInputTest {
     private fun check(block: (DirectTerminalInput, MutableList<String>, MutableList<String>) -> Unit) {
@@ -31,6 +31,7 @@ class DirectTerminalInputTest {
         input.commitText("你",1);input.finishComposingText()
         assertEquals(listOf("你"),sent);assertEquals("",composing.last())
     }
+    /* Backspace experiment paused: keep these two targeted cases for later comparison.
     @Test fun deleteFinishesTheComposingWordThenContinuesWithoutLifting() = check {view,sent,_ ->
         val input=view.onCreateInputConnection(EditorInfo())!!
         input.setComposingText("。",1)
@@ -49,6 +50,7 @@ class DirectTerminalInputTest {
         assertEquals("一大段语音。",sent.first())
         assertEquals(List(15) {"<Backspace>"},sent.drop(1))
     }
+    */
     @Test fun retiredConnectionCannotCommitOrDeleteIntoTheNextTarget() = check {view,sent,_ ->
         val old=view.onCreateInputConnection(EditorInfo())!!
         old.setComposingText("old",1)

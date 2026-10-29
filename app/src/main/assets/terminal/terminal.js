@@ -67,6 +67,7 @@ window.setConnection = token => {
   cancelGesture();
   window.showComposition('');
   connected = token !== '';
+  inputFocused = false;
   revealBottom = false;
   updateVisibleArea();
   connectionToken = token;
@@ -105,6 +106,7 @@ window.setFont = size => { terminal.options.fontSize = size; fit.fit(); };
 window.copySelection = () => NativeTerminal.copy(terminal.getSelection());
 let visibleHeight = window.innerHeight;
 let revealBottom = false;
+let inputFocused = false;
 function updateVisibleArea() {
   const offset = revealBottom ? Math.max(0, window.innerHeight - visibleHeight) : 0;
   document.getElementById('terminal').style.transform = `translateY(-${offset}px)`;
@@ -113,6 +115,12 @@ window.setVisibleHeight = height => {
   visibleHeight = Math.max(1, Number(height) || window.innerHeight);
   if (visibleHeight >= window.innerHeight) revealBottom = false;
   updateVisibleArea();
+  if (inputFocused) window.revealInputCursor();
+};
+// Focus can arrive before the IME's first viewport update; remember it through the animation.
+window.setInputFocus = focused => {
+  inputFocused = connected && Boolean(focused);
+  if (inputFocused) window.revealInputCursor();
 };
 window.scrollLatest = () => { terminal.scrollToBottom(); revealBottom = true; updateVisibleArea(); };
 window.revealInputCursor = () => {

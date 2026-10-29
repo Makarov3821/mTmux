@@ -483,6 +483,7 @@ class MainActivity : AppCompatActivity() {
         }
         fun showTerminalKeyboard() {
             if (!keysEnabled || editorOpen || showTools || quickReplyToken != null) return
+            terminalView?.inputFocus(true)
             directInput.showKeyboard()
         }
         val currentFocusInput by rememberUpdatedState({showTerminalKeyboard()})
@@ -511,6 +512,7 @@ class MainActivity : AppCompatActivity() {
         SideEffect {
             directInput.inputEnabled=keysEnabled && !editorOpen && !showTools && quickReplyToken==null && copySnapshot==null && pendingReply==null
             directInput.modifiers=sticky.modifiers
+            directInput.onInputFocus={terminalView?.inputFocus(it)}
             directInput.onComposition={ if(it.isNotEmpty()) terminalView?.revealInput(); terminalView?.composition(it) }
             directInput.onKey={key,modifiers -> terminalView?.revealInput(); sendKeyStroke(key,modifiers)}
             directInput.onText={text ->
@@ -745,9 +747,9 @@ class MainActivity : AppCompatActivity() {
                             Text(stringResource(R.string.terminal_edit_text),style=MaterialTheme.typography.titleLarge)
                             Text(stringResource(R.string.terminal_editor_help),style=MaterialTheme.typography.bodySmall,
                                 color=MaterialTheme.colorScheme.onSurfaceVariant)
-                            OutlinedTextField(state=draft.state,enabled=!pastePending,
+                            OutlinedTextField(value=draft.text,onValueChange={draft.text=it},enabled=!pastePending,
                                 modifier=Modifier.fillMaxWidth().heightIn(max=260.dp).testTag("command-input"),
-                                lineLimits=androidx.compose.foundation.text.input.TextFieldLineLimits.MultiLine(minHeightInLines=3,maxHeightInLines=8))
+                                minLines=3,maxLines=8)
                             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
                                 horizontalArrangement=Arrangement.spacedBy(12.dp)) {
                                 VoiceInputControl(modifier=Modifier,enabled=valid && !pastePending,
