@@ -1,0 +1,73 @@
+{
+  "scope": "Unreleased worktree after v0.9.0 / 1224524; no release or tag changed",
+  "baseline": {
+    "app": "0.8.5/code35 development debug installation, pre-fix DirectTerminalInput implementation",
+    "tests": 2,
+    "failures": 2,
+    "expected": true,
+    "failuresObserved": [
+      "window focus loss left composing text active",
+      "keyboard tap failed to replace a closed input connection after initial real IME connection succeeded"
+    ]
+  },
+  "fixedAndroid": {
+    "device": "Android 15 AOSP_ATD x86_64, software emulator",
+    "ime": "com.android.inputmethod.latin/.LatinIME",
+    "tests": 7,
+    "failures": 0,
+    "covers": [
+      "Chinese composition",
+      "stale connection and late close isolation",
+      "latched key not replayed",
+      "window focus loss without Activity stop",
+      "closed connection explicitly reopened",
+      "return from another editor window with real IME"
+    ]
+  },
+  "unitTests": [
+    {
+      "variant": "testStandardDebugUnitTest",
+      "tests": 41,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0
+    },
+    {
+      "variant": "testVoiceDebugUnitTest",
+      "tests": 41,
+      "errors": 0,
+      "failures": 0,
+      "skipped": 0
+    }
+  ],
+  "builds": [
+    "standardDebug",
+    "voiceDebug",
+    "standardDebugAndroidTest"
+  ],
+  "lint": [
+    "standardDebug passed",
+    "voiceDebug passed"
+  ],
+  "modelAndRuntimeSeparation": "verify_voice_apk.py passed",
+  "artifacts": [
+    {
+      "flavor": "standard",
+      "bytes": 16528457,
+      "sha256": "2e069c9c4b78107c922569f4557575eecda8b9d1603ba4fab9bd6669d3fd85b5",
+      "signing": "local debug certificate, not official release certificate"
+    },
+    {
+      "flavor": "voice",
+      "bytes": 199253607,
+      "sha256": "c479b02ee09391f810df3f02e5fcecc308e08cb95ba9107c33a86f16a1249cbb",
+      "signing": "local debug certificate, not official release certificate"
+    }
+  ],
+  "imeLogEvents": 50,
+  "limits": [
+    "User phone and third-party keyboard not yet tested",
+    "Full input queue/SSH/render timing instrumentation not part of this patch",
+    "Previous tmux-copy-mode mechanism not confirmed as cause of user report"
+  ]
+}

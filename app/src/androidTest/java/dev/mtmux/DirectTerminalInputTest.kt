@@ -65,4 +65,30 @@ class DirectTerminalInputTest {
         input.setComposingText("a",1);input.commitText("a",1)
         assertEquals(listOf("<a>"),sent)
     }
+
+    @Test fun windowFocusLossInvalidatesImeEvenWithoutAnActivityStop() = check {view,sent,composing ->
+        val old=view.onCreateInputConnection(EditorInfo())!!
+        old.setComposingText("unfinished",1)
+        view.onWindowFocusChanged(false)
+        assertEquals("",composing.last())
+        old.commitText("late commit",1)
+        old.deleteSurroundingText(1,0)
+        assertTrue(sent.isEmpty())
+        // The re-created endpoint accepts input, even though the SSH target did not change.
+        val fresh=view.onCreateInputConnection(EditorInfo())!!
+        old.closeConnection() // A late close must not invalidate its replacement.
+        fresh.commitText("回来继续输入",1)
+        assertEquals(listOf("回来继续输入"),sent)
+    }
+
+    @Test fun retiredConnectionCannotSwallowOrDeleteTextFromItsReplacement() = check {view,sent,_ ->
+        val old=view.onCreateInputConnection(EditorInfo())!!
+        view.restart()
+        old.commitText("stale",1)
+        val fresh=view.onCreateInputConnection(EditorInfo())!!
+        old.closeConnection()
+        fresh.setComposingText("xian",1)
+        fresh.commitText("现在",1)
+        assertEquals(listOf("现在"),sent)
+    }
 }

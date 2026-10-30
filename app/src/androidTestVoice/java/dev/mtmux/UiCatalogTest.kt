@@ -186,7 +186,7 @@ open class UiCatalogTest {
             .put("kind",if(terminalRoot && group=="terminal" && !name.contains("copy")) "terminal-render-fixture" else kind).put("captureMethod","android-view-canvas").put("source",source).put("notes",notes).put("theme",if(dark) "dark" else "light")
             .put("palette",palette.name).put("width",bitmap.width).put("height",bitmap.height))
         bitmap.recycle()
-        File(output,"manifest.json").writeText(JSONObject().put("sourceCommit","c6a672b").put("appVersion","0.8.5 + committed follow-up")
+        File(output,"manifest.json").writeText(JSONObject().put("sourceCommit",args.getString("catalogSource") ?: "working-tree").put("appVersion",BuildConfig.VERSION_NAME)
             .put("device","Android 15 AOSP ATD, dedicated software emulator, synthetic fixtures")
             .put("capturePolicy","Capture protection is cleared only by this documentation test on a fresh fixture AVD; release code is unchanged.")
             .put("screens",records).toString(2))
@@ -206,7 +206,51 @@ open class UiCatalogTest {
             if(selected("dialogs")) captureDialogs()
             if(selected("voice")) captureVoice()
             if(selected("extras")) captureExtras()
+            if(selected("doctor")) captureDoctor()
         } finally {pool.close()}
+    }
+    private fun captureDoctor() {
+        home()
+        render { Backdrop(); TmuxDoctorInvitation({}, {}) }
+        shot("doctor","01-invitation","保存验证后：可选 tmux 使用诊断",source="TmuxDoctorDialog.kt")
+        val healthy=mapOf("path.status" to "ok","path" to "/usr/bin/tmux","version.client" to "tmux 3.4",
+            "version.server" to "3.4","server.status" to "ready","server.frame" to "3:123",
+            "sessions.sampled" to "2","mouse" to "on","history-limit" to "10000")
+        for((name,facts) in listOf("02-report" to healthy,"03-old-version" to (healthy+mapOf("version.client" to "tmux 3.1c","version.server" to "3.1c")),
+            "04-missing" to (healthy+mapOf("path.status" to "missing","server.status" to "none")),
+            "05-mouse-off" to (healthy+mapOf("mouse" to "off")))) {
+            render {
+                Backdrop()
+                AlertDialog(onDismissRequest={},title={Text("tmux 使用诊断")},text={
+                    Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                        DoctorFindings(TmuxDoctorReport(facts),autoMouse=false)
+                    }
+                },confirmButton={TextButton({}){Text(stringResource(R.string.common_close))}})
+            }
+            shot("doctor",name,"tmux 诊断：$name","component-fixture","TmuxDoctorDialog.kt / DoctorFindings","生产诊断行组件，使用固定报告，不执行远端检查。")
+        }
+    }
+    @Test fun captureDoctorConfig() {
+        org.junit.Assume.assumeTrue("Documentation capture is opt-in",args.getString("uiCatalog")=="true" && args.getString("catalogGroup")=="doctor-config")
+        require(BuildConfig.DEBUG && android.os.Build.HARDWARE in listOf("ranchu","goldfish"))
+        require(store.all().all {it.id.startsWith("catalog-")})
+        home()
+        render {
+            Backdrop()
+            AlertDialog(onDismissRequest={},title={Text(stringResource(R.string.doctor_config_preview))},text={
+                Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                    Text(stringResource(R.string.doctor_config_scope,"/home/developer/.tmux.conf"))
+                    OutlinedTextField("10000",{},label={Text(stringResource(R.string.doctor_history_lines))})
+                    Text(TmuxConfigBootstrap.template(10000),style=MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.doctor_config_pending))
+                    Row {Checkbox(true,{});Text(stringResource(R.string.doctor_first_setup))}
+                }
+            },confirmButton={TextButton({}){Text(stringResource(R.string.doctor_apply_config))}},dismissButton={TextButton({}){Text(stringResource(R.string.common_cancel))}})
+        }
+        shot("doctor","06-config-preview","首次使用：最小配置预览与确认","state-fixture","TmuxDoctorDialog.kt / TmuxConfigBootstrap.kt","固定预览；模板由生产代码生成，不写入远端文件。")
+        render {Backdrop();AlertDialog(onDismissRequest={},title={Text(stringResource(R.string.doctor_undo))},text={Text(stringResource(R.string.doctor_undo_help))},
+            confirmButton={TextButton({}){Text(stringResource(R.string.doctor_undo))}},dismissButton={TextButton({}){Text(stringResource(R.string.common_cancel))}})}
+        shot("doctor","07-undo","撤销初始化确认","state-fixture","TmuxDoctorDialog.kt","固定确认分支，不执行撤销。")
     }
     private fun captureHome() {
         home(true);shot("home","01-empty","首次打开：空服务器列表",source="ServerHome.kt")

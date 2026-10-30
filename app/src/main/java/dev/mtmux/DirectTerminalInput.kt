@@ -11,6 +11,7 @@ import android.view.View
 import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import java.util.concurrent.atomic.AtomicInteger
 
 /** Native IME endpoint. Only the uncommitted composing word lives locally. */
 internal class DirectTerminalInput(context: Context) : View(context) {
@@ -21,12 +22,38 @@ internal class DirectTerminalInput(context: Context) : View(context) {
     var modifiers: Int = 0
     var inputEnabled = false
         set(value) {
-            if (field && !value) { retire(); clearFocus() }
+            if (field == value) return
             field = value
+            if (!value) { recovery.suspend(); retire(); clearFocus() }
+            else scheduleRecovery()
         }
     private var connection: TerminalConnection? = null
+    private val recovery = TerminalImeRecovery()
     private var restartPending = false
     private val ime get() = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+
+    private fun inputFlags() = (if (inputEnabled) 1 else 0) or (if (hasFocus()) 2 else 0) or
+        (if (hasWindowFocus()) 4 else 0) or (if (isAttachedToWindow) 8 else 0) or (if (connection != null) 16 else 0)
+    private fun readyForIme() = inputEnabled && isAttachedToWindow && hasFocus() && hasWindowFocus()
+    private val recoverInput = Runnable {
+        restartPending = false
+        val request = recovery.take(readyForIme()) ?: return@Runnable
+        if (request.restart) {
+            DebugLog.event(DebugLog.Event.IME_RESTART, connection?.id ?: 0, inputFlags())
+            ime.restartInput(this)
+        }
+        if (request.show) {
+            val shown = ime.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT)
+            DebugLog.event(DebugLog.Event.IME_SHOW, if (shown) 1 else 0, inputFlags())
+            // Do not spin or open a keyboard on another editor. A later focus event/tap retries.
+            if (!shown) recovery.keyboard(connection != null)
+        }
+    }
+    private fun scheduleRecovery() {
+        if (restartPending || !recovery.pending || !readyForIme()) return
+        restartPending = true
+        post(recoverInput)
+    }
 
     init { isFocusable = true; isFocusableInTouchMode = true; importantForAutofill = IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS }
     override fun onCheckIsTextEditor() = true
@@ -38,26 +65,49 @@ internal class DirectTerminalInput(context: Context) : View(context) {
         outAttrs.imeOptions = EditorInfo.IME_FLAG_NO_EXTRACT_UI or EditorInfo.IME_FLAG_NO_FULLSCREEN or
             EditorInfo.IME_ACTION_NONE or if (modifiers != 0) EditorInfo.IME_FLAG_FORCE_ASCII else 0
         outAttrs.initialSelStart = 0; outAttrs.initialSelEnd = 0
-        return TerminalConnection().also { connection = it }
+        return TerminalConnection().also {
+            connection = it
+            recovery.connected()
+            DebugLog.event(DebugLog.Event.IME_CREATED, it.id, inputFlags())
+        }
     }
     fun showKeyboard() {
         if (!inputEnabled) return
-        requestFocus()
-        post { if (inputEnabled && hasFocus()) ime.showSoftInput(this, InputMethodManager.SHOW_IMPLICIT) }
+        if (!requestFocus()) return
+        recovery.keyboard(connection != null && ime.isActive(this))
+        scheduleRecovery()
     }
     fun finishComposition() { connection?.finishComposingText() }
-    fun retire() { connection?.retire(); connection = null; onComposition("") }
+    fun retire() {
+        connection?.retire()
+        connection = null
+        recovery.invalidate()
+        onComposition("")
+    }
     fun restart() {
         retire()
-        if (restartPending) return
-        restartPending = true
-        post { restartPending = false; if (inputEnabled && hasFocus()) ime.restartInput(this) }
+        scheduleRecovery()
     }
     override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: Rect?) {
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
-        onInputFocus(gainFocus && inputEnabled)
+        if (!gainFocus) { recovery.suspend(); retire() }
+        onInputFocus(gainFocus && inputEnabled && hasWindowFocus())
+        DebugLog.event(DebugLog.Event.IME_FOCUS, 1, inputFlags())
+        if (gainFocus) scheduleRecovery()
     }
-    override fun onDetachedFromWindow() { retire(); super.onDetachedFromWindow() }
+    override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
+        super.onWindowFocusChanged(hasWindowFocus)
+        if (!hasWindowFocus) { recovery.suspend(); retire() }
+        onInputFocus(hasWindowFocus && inputEnabled && hasFocus())
+        DebugLog.event(DebugLog.Event.IME_FOCUS, 2, inputFlags())
+        if (hasWindowFocus) scheduleRecovery()
+    }
+    override fun onAttachedToWindow() { super.onAttachedToWindow(); scheduleRecovery() }
+    override fun onDetachedFromWindow() {
+        removeCallbacks(recoverInput); restartPending = false
+        recovery.suspend(); retire()
+        super.onDetachedFromWindow()
+    }
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (!inputEnabled) return super.onKeyDown(keyCode, event)
         if (KeyEvent.isModifierKey(keyCode)) return true
@@ -71,12 +121,27 @@ internal class DirectTerminalInput(context: Context) : View(context) {
         else super.onKeyUp(keyCode, event)
 
     internal inner class TerminalConnection : BaseInputConnection(this@DirectTerminalInput, true) {
+        val id = connectionIds.incrementAndGet()
         private val pending = SpannableStringBuilder().also { Selection.setSelection(it, 0) }
         private var retired = false
+        private var loggedStale = false
+        private var loggedInput = false
         private var batchDepth = 0
         override fun getEditable(): Editable = pending
-        private fun active() = !retired && inputEnabled && connection === this
-        fun retire() { retired = true; pending.clear() }
+        private fun active(): Boolean {
+            if (!retired && inputEnabled && connection === this) return true
+            if (!loggedStale) {
+                loggedStale = true
+                DebugLog.event(DebugLog.Event.IME_STALE, id, inputFlags() or (if (retired) 32 else 0))
+            }
+            // Never replay an old connection into a new target. Recover the endpoint instead.
+            if (connection == null) { recovery.invalidate(); scheduleRecovery() }
+            return false
+        }
+        fun retire() {
+            if (!retired) DebugLog.event(DebugLog.Event.IME_RETIRED, id, inputFlags())
+            retired = true; pending.clear()
+        }
         fun hasPendingText() = active() && pending.isNotEmpty()
         private fun changed() {
             if (!active()) return
@@ -89,6 +154,10 @@ internal class DirectTerminalInput(context: Context) : View(context) {
             val text = pending.toString()
             pending.clear(); Selection.setSelection(pending, 0)
             changed()
+            if (text.isNotEmpty() && !loggedInput) {
+                loggedInput = true
+                DebugLog.event(DebugLog.Event.IME_INPUT, id, text.length)
+            }
             if (text.isNotEmpty()) when (text) {
                 "\r", "\n", "\r\n" -> onKey("Enter", 0)
                 else -> onText(text)
@@ -159,6 +228,11 @@ internal class DirectTerminalInput(context: Context) : View(context) {
             if (active()) { finishComposingText(); onKey("Enter", 0) }
             return true
         }
-        override fun closeConnection() { retire(); if (connection === this) { connection = null; onComposition("") }; super.closeConnection() }
+        override fun closeConnection() {
+            retire()
+            if (connection === this) { connection = null; recovery.invalidate(); onComposition("") }
+            super.closeConnection()
+        }
     }
+    companion object { private val connectionIds = AtomicInteger() }
 }

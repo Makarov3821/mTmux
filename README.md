@@ -2,6 +2,8 @@
 
 Android 上的 SSH + tmux Agent 控制端。目标是离开电脑后，打开手机查看远程 Agent 输出、回复并继续工作；不在服务器安装常驻服务。
 
+**0.9.1 预发行版**修复直接输入的输入法连接恢复并增加 IME 生命周期日志；正式 Latest 保留 0.9.0。详见 [0.9.1](docs/releases/0.9.1.md)。程序图集在本地生成并被 Git 忽略，复现见 [截图说明](docs/screenshots/README.md)。
+
 **0.9.0（versionCode 36，应用 ID `dev.mtmux`）：voice 切换为离线 X-ASR 480ms INT8，自带中英识别、标点和大小写；新增可选 tmux Doctor，修复键盘唤起时输入区避让。** 按住说话、上滑取消和可编辑卡片继续保留。实现、升级与验证范围见 [0.9.0 发布记录](docs/releases/0.9.0.md)。
 
 发布提供 standard / voice 两份既有证书签名 APK，使用相同包名与递增版本，可覆盖旧正式版保留配置。X-ASR 的模型与包体检查见 [迁移记录](docs/testing/voice-xasr.md)；独立 [Audio Lab](test-audio/README.md) 保留历史模型对照，不参与主应用发布。

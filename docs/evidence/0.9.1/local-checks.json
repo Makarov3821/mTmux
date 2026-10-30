@@ -1,0 +1,57 @@
+{
+  "versionName": "0.9.1",
+  "versionCode": 37,
+  "channel": "prerelease; v0.9.0 remains latest stable",
+  "unitTests": [
+    {
+      "variant": "testStandardDebugUnitTest",
+      "tests": 41,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "variant": "testVoiceDebugUnitTest",
+      "tests": 41,
+      "failures": 0,
+      "errors": 0
+    }
+  ],
+  "pythonTests": 7,
+  "localBuilds": [
+    "voiceDebug",
+    "voiceDebugAndroidTest",
+    "standardRelease",
+    "voiceRelease"
+  ],
+  "lint": "voiceDebug passed; both flavor lint from IME fix passed",
+  "artifacts": [
+    {
+      "flavor": "standard",
+      "bytes": 12394375,
+      "sha256": "8cb027302fb49696764484f3ebcb7d3f5c0497e7ab13faad113cd5803e07bd9f",
+      "signed": false
+    },
+    {
+      "flavor": "voice",
+      "bytes": 193095601,
+      "sha256": "9836e22a4a8cd344525771cb431be2787f4dcfed1feb6d4c9a27fa3d478b02d8",
+      "signed": false
+    }
+  ],
+  "screenshots": {
+    "count": 101,
+    "groups": {
+      "dialogs": 10,
+      "doctor": 7,
+      "home": 26,
+      "server": 13,
+      "settings": 6,
+      "terminal": 25,
+      "voice": 14
+    },
+    "productionSourceSha256": "d734828c0f0d4455241dd16e34f2ef5e88c22a46947fa7fa383a174713a1aae0",
+    "galleryCheck": "101 images load; filtering, zoom, navigation and search passed",
+    "gitPolicy": "generated gallery and image assets ignored; instructions and capture code tracked"
+  },
+  "deviceRegression": "7 IME native tests passed in previous fix validation, unchanged production fix; third-party phone keyboard pending"
+}

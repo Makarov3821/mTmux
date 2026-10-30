@@ -529,7 +529,7 @@ class MainActivity : AppCompatActivity() {
             if(!editorOpen && keysEnabled && resumeDirectInput) {resumeDirectInput=false;showTerminalKeyboard()}
         }
         LaunchedEffect(wireToken,draftScopeKey,showConfig) {
-            directInput.retire()
+            directInput.restart()
             if(editorOpen && (editorToken!=wireToken || editorTarget!=draftScopeKey || showConfig)) editorOpen=false
         }
         DisposableEffect(directInput) { onDispose { directInput.retire() } }

@@ -1,6 +1,6 @@
 # 文档目录
 
-界面快照（`c6a672b`，未含新 Doctor 与 X-ASR 设置变化）：[浏览全部页面与弹窗](screenshots/current/index.html) · [范围与截图索引](screenshots/current/README.md)。
+界面图集在本地生成并被 Git 忽略。采集与复现方法见 [截图说明](screenshots/README.md)；本地浏览路径为 `docs/screenshots/current/index.html`。
 
 版本变更摘要统一在根目录 [CHANGELOG.md](../CHANGELOG.md)；产品范围与路线在 [plan.md](../plan.md)。
 
@@ -8,8 +8,8 @@
 | --- | --- |
 | [releases/](releases/) | 每个版本的详细交付记录（`<版本>.md`）：原因、实现、验证结果、截图与 APK SHA-256 |
 | [design/](design/) | 设计与计划：[UI 方案](design/ui-plan.md)、[本轮美化方案](design/ui-beautification-plan.md)、[双版本语音输入计划](design/voice-input-plan.md)、[按住说话状态图](design/voice-hold-preview.md)、[100 MB 模型预算](design/voice-model-budget.md)、[下一阶段评估](design/next-phase-plan.md)（双语、语音、云同步）、[界面草图](design/mockups/) |
-| [testing/](testing/) | [P0 技术验证报告](testing/p0-report.md)（含 0.0.2、0.0.3）、[语音 V0 Android 基准](testing/voice-v0-report.md)、[连接性能与日志 v2](testing/connection-performance.md)、[真机验证清单](testing/device-checklist.md)、[UI 改版验证](testing/ui-refresh-report.md)、[终端组合键与循环翻页](testing/terminal-keyboard.md)、[按住说话与标点分析](testing/voice-hold-input.md)、[服务器管理](testing/server-management.md)、[tmux Doctor](testing/tmux-doctor.md)、[终端直接输入](testing/terminal-direct-input.md) |
-| [screenshots/current/](screenshots/current/) | 当前代码的 Android 原生页面、弹窗和固定状态图集 |
+| [testing/](testing/) | [P0 技术验证报告](testing/p0-report.md)（含 0.0.2、0.0.3）、[语音 V0 Android 基准](testing/voice-v0-report.md)、[连接性能与日志 v2](testing/connection-performance.md)、[真机验证清单](testing/device-checklist.md)、[UI 改版验证](testing/ui-refresh-report.md)、[终端组合键与循环翻页](testing/terminal-keyboard.md)、[按住说话与标点分析](testing/voice-hold-input.md)、[服务器管理](testing/server-management.md)、[tmux Doctor](testing/tmux-doctor.md)、[终端直接输入](testing/terminal-direct-input.md)、[输入连接恢复](testing/terminal-ime-recovery.md) |
+| `screenshots/current/`（本地产物） | 当前代码的 Android 原生页面、弹窗和固定状态图集 |
 | [evidence/](evidence/) | 测试日志与原始结果，按版本分子目录（旧目录沿用历史命名，如 `p1-011` = 0.1.1、`ui-062` = 0.6.2；0.7.0 起直接用版本号） |
 
 当前主应用语音：[X-ASR INT8 迁移与验证](testing/voice-xasr.md)。[旧 q8 / SRF / CT 试验](testing/voice-models-20261023.md) 作为历史保留；独立 [Audio Lab](../test-audio/README.md) 不参与主应用发布。

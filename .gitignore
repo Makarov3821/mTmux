@@ -59,3 +59,8 @@ __pycache__/
 
 # Keep Gradle wrapper JAR, npm lockfile, bundled terminal assets/licenses,
 # source tests, and curated docs/evidence under version control.
+
+# Generated UI captures and galleries stay local.
+/docs/screenshots/*
+!/docs/screenshots/README.md
+/app/src/androidTestVoice/assets/ui-catalog/*.png

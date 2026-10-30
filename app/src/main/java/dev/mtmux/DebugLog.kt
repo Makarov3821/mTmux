@@ -26,7 +26,8 @@ object DebugLog {
         REFRESH_HANDOFF_REQUEST, REFRESH_HANDOFF,
         SERVER_VERIFY, SERVER_VERIFY_DONE, SERVER_VERIFY_FAILED, SERVER_SAVED_UNVERIFIED,
         TMUX_CREATE, TMUX_CREATE_DONE, TMUX_CREATE_FAILED, DOCTOR, DOCTOR_DONE, DOCTOR_FAILED,
-        DOCTOR_CONFIG, DOCTOR_CONFIG_DONE, DOCTOR_CONFIG_FAILED }
+        DOCTOR_CONFIG, DOCTOR_CONFIG_DONE, DOCTOR_CONFIG_FAILED,
+        IME_CREATED, IME_RETIRED, IME_RESTART, IME_FOCUS, IME_INPUT, IME_STALE, IME_SHOW }
     enum class Owner { CONNECT, REFRESH, VERIFY, CREATE, DOCTOR }
     private val worker = ThreadPoolExecutor(1,1,0,TimeUnit.MILLISECONDS,ArrayBlockingQueue(128))
     private val dropped = AtomicInteger()
@@ -37,7 +38,7 @@ object DebugLog {
     @Synchronized fun start(context: Context) {
         if (journal != null) return
         val version = context.packageManager.getPackageInfo(context.packageName,0).versionName
-        header = "mtmux diagnostics v2\nbuild=connection-perf-v3\napp=$version androidApi=${Build.VERSION.SDK_INT} webView=${runCatching { android.webkit.WebView.getCurrentWebViewPackage()?.versionName }.getOrNull() ?: "unknown"}\nprocessStartedAt=${java.time.Instant.now()}\nRetention: latest 10 MiB (older events may be overwritten). No terminal text or credentials.\n"
+        header = "mtmux diagnostics v2\nbuild=connection-perf-v3\ninputIme=focus-recovery-v1\napp=$version androidApi=${Build.VERSION.SDK_INT} webView=${runCatching { android.webkit.WebView.getCurrentWebViewPackage()?.versionName }.getOrNull() ?: "unknown"}\nprocessStartedAt=${java.time.Instant.now()}\nRetention: latest 10 MiB (older events may be overwritten). No terminal text or credentials.\n"
         journal = DiagnosticJournal(File(context.filesDir,"diagnostics"))
         event(Event.START)
         val previous = Thread.getDefaultUncaughtExceptionHandler()

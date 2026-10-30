@@ -1,0 +1,120 @@
+INSTRUMENTATION_STATUS: class=dev.mtmux.DirectTerminalInputTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=2
+INSTRUMENTATION_STATUS: stream=
+dev.mtmux.DirectTerminalInputTest:
+INSTRUMENTATION_STATUS: test=windowFocusLossInvalidatesImeEvenWithoutAnActivityStop
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.mtmux.DirectTerminalInputTest
+INSTRUMENTATION_STATUS: current=1
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=2
+INSTRUMENTATION_STATUS: stack=org.junit.ComparisonFailure: expected:<[]> but was:<[unfinished]>
+	at org.junit.Assert.assertEquals(Assert.java:117)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at dev.mtmux.DirectTerminalInputTest.windowFocusLossInvalidatesImeEvenWithoutAnActivityStop$lambda$0(DirectTerminalInputTest.kt:73)
+	at dev.mtmux.DirectTerminalInputTest.$r8$lambda$iK3RYHXuediFFs7gHukJVQDRR1s(Unknown Source:0)
+	at dev.mtmux.DirectTerminalInputTest$$ExternalSyntheticLambda0.invoke(D8$$SyntheticClass:0)
+	at dev.mtmux.DirectTerminalInputTest.check$lambda$0(DirectTerminalInputTest.kt:23)
+	at dev.mtmux.DirectTerminalInputTest.$r8$lambda$LYCIhh49F3nj4glorAtK7d8LLGU(Unknown Source:0)
+	at dev.mtmux.DirectTerminalInputTest$$ExternalSyntheticLambda5.run(D8$$SyntheticClass:0)
+	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:487)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:264)
+	at android.app.Instrumentation$SyncRunnable.run(Instrumentation.java:2612)
+	at android.os.Handler.handleCallback(Handler.java:959)
+	at android.os.Handler.dispatchMessage(Handler.java:100)
+	at android.os.Looper.loopOnce(Looper.java:232)
+	at android.os.Looper.loop(Looper.java:317)
+	at android.app.ActivityThread.main(ActivityThread.java:8705)
+	at java.lang.reflect.Method.invoke(Native Method)
+	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:580)
+	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:886)
+
+INSTRUMENTATION_STATUS: stream=
+Error in windowFocusLossInvalidatesImeEvenWithoutAnActivityStop(dev.mtmux.DirectTerminalInputTest):
+org.junit.ComparisonFailure: expected:<[]> but was:<[unfinished]>
+	at org.junit.Assert.assertEquals(Assert.java:117)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at dev.mtmux.DirectTerminalInputTest.windowFocusLossInvalidatesImeEvenWithoutAnActivityStop$lambda$0(DirectTerminalInputTest.kt:73)
+	at dev.mtmux.DirectTerminalInputTest.$r8$lambda$iK3RYHXuediFFs7gHukJVQDRR1s(Unknown Source:0)
+	at dev.mtmux.DirectTerminalInputTest$$ExternalSyntheticLambda0.invoke(D8$$SyntheticClass:0)
+	at dev.mtmux.DirectTerminalInputTest.check$lambda$0(DirectTerminalInputTest.kt:23)
+	at dev.mtmux.DirectTerminalInputTest.$r8$lambda$LYCIhh49F3nj4glorAtK7d8LLGU(Unknown Source:0)
+	at dev.mtmux.DirectTerminalInputTest$$ExternalSyntheticLambda5.run(D8$$SyntheticClass:0)
+	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:487)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:264)
+	at android.app.Instrumentation$SyncRunnable.run(Instrumentation.java:2612)
+	at android.os.Handler.handleCallback(Handler.java:959)
+	at android.os.Handler.dispatchMessage(Handler.java:100)
+	at android.os.Looper.loopOnce(Looper.java:232)
+	at android.os.Looper.loop(Looper.java:317)
+	at android.app.ActivityThread.main(ActivityThread.java:8705)
+	at java.lang.reflect.Method.invoke(Native Method)
+	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:580)
+	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:886)
+
+INSTRUMENTATION_STATUS: test=windowFocusLossInvalidatesImeEvenWithoutAnActivityStop
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_STATUS: class=dev.mtmux.TerminalImeFocusTest
+INSTRUMENTATION_STATUS: current=2
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=2
+INSTRUMENTATION_STATUS: stream=
+dev.mtmux.TerminalImeFocusTest:
+INSTRUMENTATION_STATUS: test=explicitKeyboardTapRecreatesAClosedConnection
+INSTRUMENTATION_STATUS_CODE: 1
+INSTRUMENTATION_STATUS: class=dev.mtmux.TerminalImeFocusTest
+INSTRUMENTATION_STATUS: current=2
+INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+INSTRUMENTATION_STATUS: numtests=2
+INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: keyboard tap retained the closed input connection
+	at org.junit.Assert.fail(Assert.java:89)
+	at dev.mtmux.TerminalImeFocusTest.await(TerminalImeFocusTest.kt:32)
+	at dev.mtmux.TerminalImeFocusTest.explicitKeyboardTapRecreatesAClosedConnection(TerminalImeFocusTest.kt:53)
+
+INSTRUMENTATION_STATUS: stream=
+Error in explicitKeyboardTapRecreatesAClosedConnection(dev.mtmux.TerminalImeFocusTest):
+java.lang.AssertionError: keyboard tap retained the closed input connection
+	at org.junit.Assert.fail(Assert.java:89)
+	at dev.mtmux.TerminalImeFocusTest.await(TerminalImeFocusTest.kt:32)
+	at dev.mtmux.TerminalImeFocusTest.explicitKeyboardTapRecreatesAClosedConnection(TerminalImeFocusTest.kt:53)
+
+INSTRUMENTATION_STATUS: test=explicitKeyboardTapRecreatesAClosedConnection
+INSTRUMENTATION_STATUS_CODE: -2
+INSTRUMENTATION_RESULT: stream=
+
+Time: 68.222
+There were 2 failures:
+1) windowFocusLossInvalidatesImeEvenWithoutAnActivityStop(dev.mtmux.DirectTerminalInputTest)
+org.junit.ComparisonFailure: expected:<[]> but was:<[unfinished]>
+	at org.junit.Assert.assertEquals(Assert.java:117)
+	at org.junit.Assert.assertEquals(Assert.java:146)
+	at dev.mtmux.DirectTerminalInputTest.windowFocusLossInvalidatesImeEvenWithoutAnActivityStop$lambda$0(DirectTerminalInputTest.kt:73)
+	at dev.mtmux.DirectTerminalInputTest.$r8$lambda$iK3RYHXuediFFs7gHukJVQDRR1s(Unknown Source:0)
+	at dev.mtmux.DirectTerminalInputTest$$ExternalSyntheticLambda0.invoke(D8$$SyntheticClass:0)
+	at dev.mtmux.DirectTerminalInputTest.check$lambda$0(DirectTerminalInputTest.kt:23)
+	at dev.mtmux.DirectTerminalInputTest.$r8$lambda$LYCIhh49F3nj4glorAtK7d8LLGU(Unknown Source:0)
+	at dev.mtmux.DirectTerminalInputTest$$ExternalSyntheticLambda5.run(D8$$SyntheticClass:0)
+	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:487)
+	at java.util.concurrent.FutureTask.run(FutureTask.java:264)
+	at android.app.Instrumentation$SyncRunnable.run(Instrumentation.java:2612)
+	at android.os.Handler.handleCallback(Handler.java:959)
+	at android.os.Handler.dispatchMessage(Handler.java:100)
+	at android.os.Looper.loopOnce(Looper.java:232)
+	at android.os.Looper.loop(Looper.java:317)
+	at android.app.ActivityThread.main(ActivityThread.java:8705)
+	at java.lang.reflect.Method.invoke(Native Method)
+	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:580)
+	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:886)
+2) explicitKeyboardTapRecreatesAClosedConnection(dev.mtmux.TerminalImeFocusTest)
+java.lang.AssertionError: keyboard tap retained the closed input connection
+	at org.junit.Assert.fail(Assert.java:89)
+	at dev.mtmux.TerminalImeFocusTest.await(TerminalImeFocusTest.kt:32)
+	at dev.mtmux.TerminalImeFocusTest.explicitKeyboardTapRecreatesAClosedConnection(TerminalImeFocusTest.kt:53)
+
+FAILURES!!!
+Tests run: 2,  Failures: 2
+
+
+INSTRUMENTATION_CODE: -1

@@ -140,9 +140,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # v0.7.1 -> normal release; v0.7.1-dev / v0.8.0-rc.1 (any "-" suffix) -> pre-release
+          # v0.9.1 is an explicit pre-release; v0.7.1 -> normal release; v0.7.1-dev / v0.8.0-rc.1 (any "-" suffix) -> pre-release
           case "$GITHUB_REF_NAME" in
-            *-*)
+            v0.9.1|*-*)
               gh release create "$GITHUB_REF_NAME" \
                 "$STANDARD_APK_NAME" "$STANDARD_APK_NAME.sha256" \
                 "$VOICE_APK_NAME" "$VOICE_APK_NAME.sha256" \

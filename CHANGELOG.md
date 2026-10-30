@@ -2,6 +2,12 @@
 
 版本号不代表完整真机验收。每个版本的实现细节、验证结果、截图与 APK SHA-256 见对应的「详细记录」；测试证据在 [docs/evidence/](docs/evidence/)。文档目录说明见 [docs/README.md](docs/README.md)。
 
+## [0.9.1] — 2026-10-30 · versionCode 37 · Pre-release
+
+详细记录：[0.9.1](docs/releases/0.9.1.md)。
+
+- 修补终端直接输入的输入法连接恢复：重建请求等待视图与窗口同时获得焦点，再次点键盘时可修复缺失连接；旧连接继续失效，迟到回调不重放。增加轻量 IME 生命周期日志，便于区分本机输入连接失效和远端拒绝输入。验证见 [输入连接恢复](docs/testing/terminal-ime-recovery.md)。
+
 ## [0.9.0] — 2026-10-30 · versionCode 36
 
 详细记录：[0.9.0](docs/releases/0.9.0.md)。
