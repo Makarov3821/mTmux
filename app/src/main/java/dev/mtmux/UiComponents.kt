@@ -422,21 +422,24 @@ enum class RouteState { NORMAL, DONE, CURRENT, FAILED }
     onReplies: () -> Unit, voice: @Composable () -> Unit) {
     val compact=androidx.compose.ui.platform.LocalDensity.current.fontScale>1.15f || androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp<360
     val repliesDescription=stringResource(R.string.terminal_quick_replies)
+    // Tools and replies read at about 70% of the 52dp voice button (36dp tall, 22dp icon, 16sp label);
+    // the voice button stays centered and each label is centered in its half, so they sit symmetrically.
+    val label=MaterialTheme.typography.labelLarge.copy(fontSize=16.sp,lineHeight=20.sp)
     Row(Modifier.fillMaxWidth().height(52.dp),verticalAlignment=Alignment.CenterVertically) {
         Box(Modifier.weight(1f),contentAlignment=Alignment.Center) {
         TextButton(onClick=onTools,colors=ButtonDefaults.textButtonColors(contentColor=MaterialTheme.colorScheme.onSurfaceVariant),
-            contentPadding=PaddingValues(horizontal=8.dp),modifier=Modifier.height(48.dp).testTag("terminal-tools")) {
-            AppIcon(UiSymbol.TOOLS,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp))
-            Text(stringResource(R.string.terminal_tools_compact),maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,style=MaterialTheme.typography.labelMedium)
+            contentPadding=PaddingValues(horizontal=10.dp),modifier=Modifier.height(48.dp).testTag("terminal-tools")) {
+            AppIcon(UiSymbol.TOOLS,modifier=Modifier.size(22.dp));Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.terminal_tools_compact),maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,style=label)
         }
         }
         Box(contentAlignment=Alignment.Center) {voice()}
         Box(Modifier.weight(1f),contentAlignment=Alignment.Center) {
         TextButton(onClick=onReplies,enabled=enabled,colors=ButtonDefaults.textButtonColors(contentColor=MaterialTheme.colorScheme.onSurfaceVariant),
-            contentPadding=PaddingValues(horizontal=8.dp),modifier=Modifier.height(48.dp)
+            contentPadding=PaddingValues(horizontal=10.dp),modifier=Modifier.height(48.dp)
                 .semantics {contentDescription=repliesDescription}.testTag("quick-replies")) {
-            AppIcon(UiSymbol.REPLY,modifier=Modifier.size(18.dp));Spacer(Modifier.width(6.dp))
-            Text(stringResource(if(compact) R.string.terminal_replies_short else R.string.terminal_replies_compact),maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,style=MaterialTheme.typography.labelMedium)
+            AppIcon(UiSymbol.REPLY,modifier=Modifier.size(22.dp));Spacer(Modifier.width(8.dp))
+            Text(stringResource(if(compact) R.string.terminal_replies_short else R.string.terminal_replies_compact),maxLines=1,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis,style=label)
         }
         }
     }

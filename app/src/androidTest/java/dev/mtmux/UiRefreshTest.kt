@@ -123,7 +123,7 @@ class UiRefreshTest {
             assertTrue("chevrons right-aligned: $rights",rights.max()-rights.min()<1f)
             val title=compose.onNodeWithTag("server-title-${profile.id}",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot.left
             val dot=compose.onNodeWithTag("task-status-${profile.id}-%0",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot.left
-            assertEquals("server title starts at the status dots",dot,title,1f)
+            assertEquals("server title sits 2dp right of the status dots",dot+2*compose.density.density,title,1f)
             compose.runOnUiThread {
                 val field=MainActivity::class.java.getDeclaredField("showConfig\$delegate").apply {isAccessible=true}
                 @Suppress("UNCHECKED_CAST")

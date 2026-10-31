@@ -20,6 +20,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontFamily
@@ -37,27 +38,29 @@ private val keyPages = listOf(
     val pageLabel = stringResource(R.string.keys_page,terminalKeyPage(pager.currentPage)+1,TERMINAL_KEY_PAGE_COUNT)
     val pending = if(modifiers == 0) "" else stringResource(R.string.keys_modifier_pending,TerminalKeyStroke.label(modifiers))
     val indicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
-    Box(Modifier.fillMaxWidth().height(54.dp)) {
+    // 2dp top, 38dp keys, then a 10dp gap to the action row that also holds the page dots.
+    Box(Modifier.fillMaxWidth().height(50.dp)) {
         HorizontalPager(pager,reverseLayout=true,overscrollEffect=null,
             modifier=Modifier.fillMaxSize().testTag("terminal-key-pages").semantics { stateDescription=pageLabel }) { page ->
-            Row(Modifier.fillMaxSize().padding(top=2.dp,bottom=14.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxSize().padding(top=2.dp,bottom=10.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                 keyPages[terminalKeyPage(page)].forEach { (label,key) ->
                     val bit = when(key) {"Ctrl" -> TerminalKeyStroke.CTRL;"Shift" -> TerminalKeyStroke.SHIFT;"Alt" -> TerminalKeyStroke.ALT;else -> 0}
                     val latched = bit != 0 && modifiers and bit != 0
                     TextButton(onClick={if(bit!=0) onModifier(bit) else onKey(key)},enabled=enabled,
                         shape=RoundedCornerShape(10.dp),
                         border=if(latched) BorderStroke(1.5.dp,MaterialTheme.colorScheme.primary) else null,
-                        colors=ButtonDefaults.textButtonColors(containerColor=if(latched) MaterialTheme.colorScheme.primary.copy(alpha=.16f) else MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor=MaterialTheme.colorScheme.onSurface,disabledContainerColor=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.45f)),
+                        // Plain keys are transparent; only a latched modifier gets a tint and outline.
+                        colors=ButtonDefaults.textButtonColors(containerColor=if(latched) MaterialTheme.colorScheme.primary.copy(alpha=.16f) else Color.Transparent,
+                            contentColor=MaterialTheme.colorScheme.onSurface,disabledContainerColor=Color.Transparent),
                         contentPadding=PaddingValues(0.dp),modifier=Modifier.weight(1f).fillMaxHeight().testTag("terminal-key-$label")
                             .semantics { if(bit!=0) selected=latched }) {
-                        Text(label,maxLines=1,style=MaterialTheme.typography.labelLarge.copy(fontFamily=FontFamily.Monospace,fontWeight=FontWeight.SemiBold),
+                        Text(label,maxLines=1,style=MaterialTheme.typography.labelLarge.copy(fontSize=11.sp,fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Medium),
                             color=if(enabled && (latched || modifiers!=0 && bit==0)) MaterialTheme.colorScheme.primary else LocalContentColor.current)
                     }
                 }
             }
         }
-        Row(Modifier.align(Alignment.BottomCenter).padding(bottom=5.dp).semantics {contentDescription=pageLabel;stateDescription=pending}
+        Row(Modifier.align(Alignment.BottomCenter).padding(bottom=3.5.dp).semantics {contentDescription=pageLabel;stateDescription=pending}
             .drawWithContent {
                 drawContent()
                 val step = 7.dp.toPx()

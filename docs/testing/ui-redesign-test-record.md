@@ -80,6 +80,14 @@ standard 失败的那项是 `taskStatusDiscoveryReadsExactPaneWithoutChangingFoc
 
 逐项把修复改回后，新增的检查都会失败（例如终端：314/336px，空白 22px，大于字符宽 8.5px）。全套：standard 68/69，voice 75/75；失败的 `TmuxDoctorUiTest#offlineDiagnosis…` 在未改动的 HEAD 上同样稳定失败，原因另查。
 
+## 0.9.3-rc.1 真机反馈二次调整
+
+- 首页服务器标题左边距 18dp（比状态点右 2dp，测试同步）。
+- 终端顶栏：服务器名 14→16sp，任务名 11→13sp，高度 48→54dp。
+- 底栏：工具/快捷回复图标 22dp、文字 16sp，约为 52dp 语音按钮的 70%；语音按钮居中，两侧各自居中对称。
+- 快捷键：文字 14→11sp，去掉键帽底色，仅锁定的修饰键保留高亮；按键与下方间距 10dp，翻页点在这段间距内。底栏 106→102dp。
+- 全套：standard 68/69，voice 74/75。失败的 `encryptedPrivateKeysRestoreAndConnectWithOneClick`（等待第 0 行出现 SSH 欢迎语超时）在未改动的 HEAD 上也失败，重启模拟器后仍失败，原因另查。
+
 ## 仍未覆盖
 
 - 语音弧形区、气泡、按钮的视觉过渡，以及真实麦克风录音。

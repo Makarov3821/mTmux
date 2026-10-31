@@ -45,6 +45,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.edit
 import dev.mtmux.core.*
@@ -592,12 +593,12 @@ class MainActivity : AppCompatActivity() {
                 val keyboardFreeHeight = remember(maxWidth) { mutableStateOf(maxHeight) }
                 val stableHeight = if (imeVisible) maxOf(keyboardFreeHeight.value, maxHeight) else maxHeight
                 SideEffect { keyboardFreeHeight.value = stableHeight }
-                val gridHeight = (stableHeight - 154.dp).coerceAtLeast(48.dp)
+                val gridHeight = (stableHeight - TERMINAL_TOP_BAR - TERMINAL_DOCK).coerceAtLeast(48.dp)
                 Column(Modifier.fillMaxSize().imePadding()) {
                     val backHomeLabel = stringResource(R.string.terminal_back_home)
                     val keyboardLabel = stringResource(R.string.terminal_direct_keyboard)
                     val latestLabel = stringResource(R.string.terminal_latest)
-                    Row(Modifier.fillMaxWidth().height(48.dp).padding(horizontal=2.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().height(TERMINAL_TOP_BAR).padding(horizontal=2.dp), verticalAlignment = Alignment.CenterVertically) {
                         AppIconButton(UiSymbol.BACK,backHomeLabel,{home()},Modifier.testTag("terminal-home"),tone=IconTone.PLAIN,iconSize=22.dp)
                         val server = activeProfile?.let { privacySettings.label(it, privacyDisplay) } ?: target?.let { if (privacyDisplay) stringResource(R.string.terminal_current_server) else it } ?: stringResource(R.string.terminal_not_connected)
                         val pane = panes.firstOrNull { it.id == replyPane?.pane }
@@ -609,10 +610,10 @@ class MainActivity : AppCompatActivity() {
                                     busy -> CircularProgressIndicator(Modifier.size(9.dp),strokeWidth=1.5.dp)
                                     else -> TaskStateDot(when { connected -> StatusColors.ready(); connectFailure != null -> StatusColors.attention(); else -> StatusColors.unknown() })
                                 }
-                                Text(server,style=MaterialTheme.typography.titleSmall.copy(fontWeight=FontWeight.SemiBold),maxLines=1,overflow=TextOverflow.Ellipsis)
+                                Text(server,style=MaterialTheme.typography.titleMedium.copy(fontSize=16.sp,lineHeight=21.sp,fontWeight=FontWeight.SemiBold),maxLines=1,overflow=TextOverflow.Ellipsis)
                             }
                             Text((if (!connected && renderedBytes > 0 && !busy) stringResource(R.string.terminal_disconnected_short) + " · " else "") + taskName,
-                                style=MaterialTheme.typography.labelSmall.copy(fontFamily=FontFamily.Monospace),color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
+                                style=MaterialTheme.typography.labelSmall.copy(fontSize=13.sp,lineHeight=17.sp,fontFamily=FontFamily.Monospace),color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
                         }
                         AppIconButton(UiSymbol.KEYBOARD,keyboardLabel,{showTerminalKeyboard()},Modifier.testTag("terminal-keyboard"),enabled=keysEnabled,tone=IconTone.PLAIN,iconSize=20.dp)
                         AppIconButton(UiSymbol.EDIT,stringResource(R.string.terminal_edit_text),{openEditor()},Modifier.testTag("terminal-editor"),enabled=terminalReady && !pastePending,
@@ -748,7 +749,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     }
-                    Surface(Modifier.fillMaxWidth().height(106.dp),color=MaterialTheme.colorScheme.surface,shape=RoundedCornerShape(topStart=24.dp,topEnd=24.dp)) {
+                    Surface(Modifier.fillMaxWidth().height(TERMINAL_DOCK),color=MaterialTheme.colorScheme.surface,shape=RoundedCornerShape(topStart=24.dp,topEnd=24.dp)) {
                         Column(Modifier.padding(horizontal=8.dp)) {
                             TerminalKeys(enabled=keysEnabled,modifiers=sticky.modifiers,onModifier={bit ->
                                 directInput.finishComposition()
@@ -935,3 +936,7 @@ data class TerminalStatus(val text: UiText, val alert: Boolean = false) {
 }
 
 private data class PendingDraft(val id: String, val token: String, val target: String, val binding: PaneBinding?, val text: String, val enter: Boolean)
+
+/** Terminal chrome heights; the grid takes what is left so the dock never covers the last row. */
+internal val TERMINAL_TOP_BAR = 54.dp
+internal val TERMINAL_DOCK = 102.dp

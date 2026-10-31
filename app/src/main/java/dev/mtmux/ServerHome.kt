@@ -449,7 +449,7 @@ private class HomeRefresh {
                         Box {
                         if(state.refreshing) LinearProgressIndicator(Modifier.fillMaxWidth().height(2.dp).align(Alignment.TopCenter),trackColor=Color.Transparent)
                         Column {
-                            Row(Modifier.padding(start=16.dp,end=2.dp,top=6.dp,bottom=6.dp),verticalAlignment=Alignment.CenterVertically) {
+                            Row(Modifier.padding(start=18.dp,end=2.dp,top=6.dp,bottom=6.dp),verticalAlignment=Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f).heightIn(min=48.dp).clickable(enabled=search.isEmpty()) { collapsed[profile.id]=!folded;cache.collapse(profile.id,!folded) },verticalArrangement=Arrangement.Center) {
                                     val title = privacySettings.label(profile, privacyDisplay)
                                     Text(title,Modifier.testTag("server-title-${profile.id}"),style=MaterialTheme.typography.titleMedium.copy(fontWeight=FontWeight.SemiBold),maxLines=1,overflow=TextOverflow.Ellipsis)
