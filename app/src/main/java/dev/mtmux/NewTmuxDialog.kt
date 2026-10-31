@@ -90,7 +90,9 @@ import kotlinx.coroutines.*
                     if (owner.cancelled || !owner.client.compareAndSet(client, null)) throw CancellationException("creation cancelled")
                     handedOff = true
                     DebugLog.event(DebugLog.Event.TMUX_CREATE_DONE, profile.id.hashCode())
-                    onCreated(task, client)
+                    // Opening the terminal touches the WebView: always hand off on the main thread,
+                    // even if the effect dispatcher resumed this coroutine elsewhere.
+                    withContext(Dispatchers.Main.immediate) { onCreated(task, client) }
                 } catch (failure: Exception) {
                     if (failure is CancellationException || owner.cancelled) throw CancellationException("creation cancelled", failure)
                     DebugLog.event(DebugLog.Event.TMUX_CREATE_FAILED, profile.id.hashCode(), error = failure)

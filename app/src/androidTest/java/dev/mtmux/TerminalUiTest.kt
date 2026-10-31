@@ -46,14 +46,17 @@ class TerminalUiTest {
         compose.waitForIdle()
     }
 
+    /** The editor and tools are bottom sheets in their own windows; hide the IME from whichever window owns it. */
+    private fun appWindows(): List<android.view.View> =
+        android.view.inspector.WindowInspector.getGlobalWindowViews().filter { it.isAttachedToWindow && it.context.applicationContext == compose.activity.applicationContext }
     private fun hideKeyboard() {
         compose.runOnUiThread {
-            (compose.activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
-                .hideSoftInputFromWindow(compose.activity.window.decorView.windowToken,0)
+            val imm=compose.activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+            appWindows().forEach { imm.hideSoftInputFromWindow(it.windowToken,0) }
         }
         compose.waitUntil(10000) {
             var hidden=false
-            compose.runOnUiThread {hidden=ViewCompat.getRootWindowInsets(compose.activity.window.decorView)?.isVisible(WindowInsetsCompat.Type.ime())!=true}
+            compose.runOnUiThread {hidden=appWindows().none { ViewCompat.getRootWindowInsets(it)?.isVisible(WindowInsetsCompat.Type.ime())==true }}
             hidden
         }
     }
@@ -1241,6 +1244,8 @@ class TerminalUiTest {
         sendEditor()
         compose.waitUntil(30000) { compose.onAllNodesWithTag("disconnected-history").fetchSemanticsNodes().isNotEmpty() }
         assertTrue(evaluate(view, "Array.from({length:terminal.buffer.active.length},(_,i)=>terminal.buffer.active.getLine(i).translateToString(true)).join('\\n')").contains("REMOTE_DONE"))
+        // Inserting closes the editor; reopen it with a new draft: nothing may be sent to the dropped connection.
+        draftNode().performTextInput("AFTER_DROP")
         compose.onNodeWithTag("insert-terminal").assertIsNotEnabled()
         compose.onNodeWithTag("add-server").assertDoesNotExist() // stays on the terminal
         saveScreenshot("remote-disconnect-retained")

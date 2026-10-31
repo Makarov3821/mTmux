@@ -586,7 +586,13 @@ class MainActivity : AppCompatActivity() {
                 BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.displayCutout))) {
                 // IME only clips the visible lower part. The WebView/grid keeps its full
                 // keyboard-free size, so focus changes cannot resize/reflow remote tmux.
-                val gridHeight = (maxHeight - 148.dp).coerceAtLeast(48.dp)
+                // With adjustResize the window itself can shrink for the IME (seen on API 35 with direct
+                // input). Keep the last keyboard-free height while the IME is up; rotation/width resets it.
+                val imeVisible = WindowInsets.isImeVisible
+                val keyboardFreeHeight = remember(maxWidth) { mutableStateOf(maxHeight) }
+                val stableHeight = if (imeVisible) maxOf(keyboardFreeHeight.value, maxHeight) else maxHeight
+                SideEffect { keyboardFreeHeight.value = stableHeight }
+                val gridHeight = (stableHeight - 148.dp).coerceAtLeast(48.dp)
                 Column(Modifier.fillMaxSize().imePadding()) {
                     val backHomeLabel = stringResource(R.string.terminal_back_home)
                     val keyboardLabel = stringResource(R.string.terminal_direct_keyboard)

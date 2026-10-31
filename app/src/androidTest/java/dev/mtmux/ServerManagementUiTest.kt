@@ -20,6 +20,15 @@ class ServerManagementUiTest {
     val compose = createAndroidComposeRule<MainActivity>()
     @get:Rule val rules: RuleChain = RuleChain.outerRule(AppLocaleRule("zh-CN")).around(compose)
     private fun present(tag: String) = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+    private fun homeShown(): Boolean {
+        var shown=false
+        compose.runOnUiThread {
+            val field=MainActivity::class.java.getDeclaredField("showConfig\$delegate").apply { isAccessible=true }
+            @Suppress("UNCHECKED_CAST")
+            shown=(field.get(compose.activity) as androidx.compose.runtime.MutableState<Boolean>).value
+        }
+        return shown
+    }
 
     @Test fun failedConnectionStaysUnsavedUntilSaveAnywayAndTrustRemainsUnchanged() {
         val name = "offline-" + UUID.randomUUID().toString().take(8)
@@ -78,8 +87,9 @@ class ServerManagementUiTest {
             assertEquals(key,pins.getString(endpoint,null))
             compose.onNodeWithTag("run-tmux-doctor").assertExists()
             compose.onNodeWithTag("skip-tmux-doctor").performClick()
-            compose.onNodeWithTag("profile-${profile.id}").assertExists()
-            compose.onNodeWithTag("terminal-home").assertDoesNotExist()
+            compose.onNodeWithTag("profile-${profile.id}").assertIsDisplayed()
+            // The terminal stays composed under the server list; what matters is that saving did not open it.
+            assertTrue("Saving must return to the server list, not open a terminal", homeShown())
         } finally { store.all().filter { it.name == name }.forEach { store.delete(it.id) }; pins.edit().putString(endpoint,old).commit() }
     }
 

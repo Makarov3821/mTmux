@@ -98,6 +98,21 @@ class UiRefreshTest {
         compose.runOnUiThread {terminal().evaluateJavascript(script){result=it;done.countDown()}}
         assertTrue(done.await(30,TimeUnit.SECONDS));return result
     }
+    private fun appWindows(): List<android.view.View> =
+        android.view.inspector.WindowInspector.getGlobalWindowViews().filter { it.isAttachedToWindow && it.context.applicationContext == compose.activity.applicationContext }
+    private fun imeVisible(): Boolean {
+        var visible=false
+        compose.runOnUiThread { visible=appWindows().any { androidx.core.view.ViewCompat.getRootWindowInsets(it)?.isVisible(androidx.core.view.WindowInsetsCompat.Type.ime())==true } }
+        return visible
+    }
+    private fun waitIme(visible:Boolean) { compose.waitUntil(15000) { imeVisible()==visible } }
+    private fun hideIme() {
+        compose.runOnUiThread {
+            val imm=compose.activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+            appWindows().forEach { imm.hideSoftInputFromWindow(it.windowToken,0) }
+        }
+        waitIme(false)
+    }
     @Test fun terminalDockToolsAndKeyboardKeepTheLogicalGrid() {
         val profile=seed()
         try {
@@ -115,13 +130,20 @@ class UiRefreshTest {
             evaluate("terminal.write('\\x1b[32m✓ mTmux UI\\x1b[0m\\r\\n$ echo ready\\r\\nready');setConnection('ui-fixture')")
             screenshot("terminal-dock")
             val before=evaluate("JSON.stringify([terminal.cols,terminal.rows])")
-            compose.onNodeWithTag("command-input").performClick().performTextInput("检查一下当前任务")
+            // 0.8.5+: typing goes straight to the terminal; long text uses the on-demand editor card.
+            compose.onNodeWithTag("terminal-keyboard").performClick()
+            waitIme(true)
             screenshot("terminal-keyboard")
             assertEquals(before,evaluate("JSON.stringify([terminal.cols,terminal.rows])"))
-            compose.runOnUiThread {
-                (compose.activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
-                    .hideSoftInputFromWindow(compose.activity.window.decorView.windowToken,0)
-            }
+            hideIme()
+            compose.onNodeWithTag("terminal-editor").performClick()
+            compose.onNodeWithTag("command-input").performClick().performTextInput("检查一下当前任务")
+            waitIme(true)
+            screenshot("terminal-editor-keyboard")
+            assertEquals(before,evaluate("JSON.stringify([terminal.cols,terminal.rows])"))
+            hideIme()
+            compose.onNodeWithTag("close-text-editor").performClick()
+            compose.waitForIdle()
             compose.onNodeWithTag("terminal-tools").performClick()
             compose.onNodeWithTag("scroll-speed").performScrollTo().performSemanticsAction(SemanticsActions.SetProgress){it(5f)}
             screenshot("terminal-tools")
