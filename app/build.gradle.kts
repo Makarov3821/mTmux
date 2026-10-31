@@ -11,8 +11,8 @@ android {
         applicationId = "dev.mtmux"
         minSdk = 26
         targetSdk = 36
-        versionCode = 37
-        versionName = "0.9.1"
+        versionCode = 38
+        versionName = "0.9.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     // Release signing comes only from environment variables (CI secrets or

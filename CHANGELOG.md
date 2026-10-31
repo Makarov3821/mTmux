@@ -2,6 +2,14 @@
 
 版本号不代表完整真机验收。每个版本的实现细节、验证结果、截图与 APK SHA-256 见对应的「详细记录」；测试证据在 [docs/evidence/](docs/evidence/)。文档目录说明见 [docs/README.md](docs/README.md)。
 
+## [0.9.2] — 2026-10-31 · versionCode 38 · Pre-release
+
+详细记录：[0.9.2](docs/releases/0.9.2.md)。
+
+- 界面改版：首页 mTmux 应用栏与数量标签、卡片四按钮和底部操作面板；终端两行顶栏、圆角底栏、连接阶段卡、仅“重连”的断线卡片与胶囊；voice 版下半屏语音浮层（弧形按压区、上滑取消、进出场与转写过渡）；验证、指纹、新建会话、Doctor、设置等统一样式。
+- 修复直接输入弹出键盘时终端行数缩小并触发远端 resize；新建会话后在主线程打开终端。
+- Android 界面测试按新界面整改并新增 7 项，见 [测试记录](docs/testing/ui-redesign-test-record.md)。
+
 ## [0.9.1] — 2026-10-30 · versionCode 37 · Pre-release
 
 详细记录：[0.9.1](docs/releases/0.9.1.md)。

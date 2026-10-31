@@ -17,6 +17,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -225,10 +227,11 @@ internal fun initializeVoiceFlavor(context: android.content.Context) {
             if(state.phase in listOf(VoicePhase.STARTING,VoicePhase.RECORDING)) finishRecording(state.generation)
             else requestStart(accessibility=true)
         })
-    if(state.phase==VoicePhase.STARTING || state.phase==VoicePhase.RECORDING) VoiceRecordingFeedback(state) {recorder.level}
+    VoiceRecordingFeedback(state,{recorder.level},visible=state.phase==VoicePhase.STARTING || state.phase==VoicePhase.RECORDING)
+    BackHandler(enabled=state.phase==VoicePhase.TRANSCRIBING) {cancelAll()}
+    VoiceTranscribingBubble(visible=state.phase==VoicePhase.TRANSCRIBING,onCancel={cancelAll()})
 
     when(state.phase) {
-        VoicePhase.TRANSCRIBING -> VoiceTranscribingBubble(onCancel={cancelAll()})
         VoicePhase.ERROR -> if(errorText==R.string.voice_error_permission) AppSheet(onDismiss={cancelAll()}) {
             SheetHeader(stringResource(R.string.voice_title),stringResource(R.string.voice_local_badge),UiSymbol.MIC,Tone.WARNING)
             Text(stringResource(errorText),Modifier.padding(horizontal=12.dp,vertical=8.dp).testTag("voice-error"),style=MaterialTheme.typography.bodyMedium)
@@ -259,17 +262,32 @@ internal fun initializeVoiceFlavor(context: android.content.Context) {
     }
 }
 
-/** Transcription in place of the recording bubble; tapping outside cancels. */
-@Composable internal fun VoiceTranscribingBubble(onCancel: () -> Unit) {
-    androidx.compose.ui.window.Dialog(onDismissRequest=onCancel,properties=androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth=false)) {
-        Box(Modifier.fillMaxSize().clickable(interactionSource=null,indication=null,onClick=onCancel),contentAlignment=androidx.compose.ui.Alignment.Center) {
-            Surface(Modifier.padding(horizontal=32.dp).widthIn(max=360.dp).fillMaxWidth(),shape=androidx.compose.foundation.shape.RoundedCornerShape(22.dp),
-                color=MaterialTheme.colorScheme.surfaceVariant,shadowElevation=10.dp) {
+/**
+ * Transcription in place of the recording bubble. A non-focusable popup so it never takes the IME or
+ * focus from the editor card that opens next; it settles in from the bubble position and fades out
+ * while the card slides up. Tapping outside the bubble or Back cancels.
+ */
+@Composable internal fun VoiceTranscribingBubble(visible: Boolean = true, onCancel: () -> Unit) {
+    val shown=remember {androidx.compose.animation.core.MutableTransitionState(false)}
+    shown.targetState=visible
+    if (!shown.currentState && !shown.targetState) return
+    val progress by androidx.compose.animation.core.rememberTransition(shown,label="voice-transcribe").animateFloat(transitionSpec={
+        androidx.compose.animation.core.tween(if (false isTransitioningTo true) 200 else 180)
+    },label="voice-transcribe-progress") { if (it) 1f else 0f }
+    val density=androidx.compose.ui.platform.LocalDensity.current
+    androidx.compose.ui.window.Popup(alignment=androidx.compose.ui.Alignment.Center,
+        properties=androidx.compose.ui.window.PopupProperties(focusable=false,usePlatformDefaultWidth=false)) {
+        Box(Modifier.fillMaxSize().then(if(visible) Modifier.clickable(interactionSource=null,indication=null,onClick=onCancel) else Modifier),
+            contentAlignment=androidx.compose.ui.Alignment.Center) {
+            Surface(Modifier.padding(horizontal=32.dp).widthIn(max=360.dp).fillMaxWidth().graphicsLayer {
+                alpha=progress;val k=.92f+.08f*progress;scaleX=k;scaleY=k
+                translationY=(if (visible) 1f-progress else progress-1f)*with(density) {28.dp.toPx()}
+            },shape=androidx.compose.foundation.shape.RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surfaceVariant,shadowElevation=10.dp) {
                 Column(Modifier.padding(horizontal=16.dp,vertical=14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                         CircularProgressIndicator(Modifier.size(14.dp),strokeWidth=2.dp)
                         Text(stringResource(R.string.voice_transcribing),Modifier.weight(1f).testTag("voice-transcribing"),style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                        TextButton(onClick=onCancel){Text(stringResource(R.string.common_cancel))}
+                        TextButton(onClick=onCancel,enabled=visible){Text(stringResource(R.string.common_cancel))}
                     }
                     LinearProgressIndicator(Modifier.fillMaxWidth().height(8.dp),trackColor=MaterialTheme.colorScheme.surface,strokeCap=androidx.compose.ui.graphics.StrokeCap.Round)
                     Text(stringResource(R.string.voice_result_help),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)

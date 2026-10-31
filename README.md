@@ -2,7 +2,7 @@
 
 Android 上的 SSH + tmux Agent 控制端。目标是离开电脑后，打开手机查看远程 Agent 输出、回复并继续工作；不在服务器安装常驻服务。
 
-**0.9.1 预发行版**修复直接输入的输入法连接恢复并增加 IME 生命周期日志；正式 Latest 保留 0.9.0。详见 [0.9.1](docs/releases/0.9.1.md)。程序图集在本地生成并被 Git 忽略，复现见 [截图说明](docs/screenshots/README.md)。
+**0.9.2 预发行版**为界面改版：新首页、终端阶段卡与断线卡片、下半屏语音浮层；并修复直接输入时键盘使终端缩小的问题。正式 Latest 保留 0.9.0。详见 [0.9.2](docs/releases/0.9.2.md)。程序图集在本地生成并被 Git 忽略，复现见 [截图说明](docs/screenshots/README.md)。
 
 **0.9.0（versionCode 36，应用 ID `dev.mtmux`）：voice 切换为离线 X-ASR 480ms INT8，自带中英识别、标点和大小写；新增可选 tmux Doctor，修复键盘唤起时输入区避让。** 按住说话、上滑取消和可编辑卡片继续保留。实现、升级与验证范围见 [0.9.0 发布记录](docs/releases/0.9.0.md)。
 

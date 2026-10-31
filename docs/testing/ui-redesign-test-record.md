@@ -62,6 +62,10 @@ standard 失败的那项是 `taskStatusDiscoveryReadsExactPaneWithoutChangingFoc
 
 原始结果在 `.tools/diagnostics/matrix/`（base-standard、new-standard、fix-standard、fix-voice），已被 Git 忽略。
 
+## 0.9.2 发布前复跑
+
+补上语音进出场和转写过渡后，重启模拟器并复跑全套：voice 72/72；standard 65/66，失败的 `encryptedPrivateKeysRestoreAndConnectWithOneClick` 单独重跑通过。模拟器连续运行数小时后，有两项会稳定超时；改动前的提交在同一状态下同样失败，重启后恢复，因此判断为模拟器状态问题。动画用暂停时钟逐帧截图检查过，帧图没有提交。
+
 ## 仍未覆盖
 
 - 语音弧形区、气泡、按钮的视觉过渡，以及真实麦克风录音。

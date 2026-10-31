@@ -35,6 +35,13 @@ import kotlinx.coroutines.delay
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.rememberTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.platform.LocalConfiguration
@@ -117,12 +124,12 @@ private object FullWindowPosition : PopupPositionProvider {
 }
 
 /** Semantic voice colors: accent while talking, amber/red near the limit, red to cancel. */
-@Composable internal fun voiceTint(state: VoiceHoldState, remaining: Long): Color {
+@Composable internal fun voiceTint(armed: Boolean, phase: VoicePhase, remaining: Long): Color {
     val accent=MaterialTheme.colorScheme.primary
     val warn=StatusColors.running(); val danger=StatusColors.attention()
     return when {
-        state.cancelArmed -> danger
-        state.phase==VoicePhase.STARTING -> MaterialTheme.colorScheme.surfaceVariant
+        armed -> danger
+        phase==VoicePhase.STARTING -> MaterialTheme.colorScheme.surfaceVariant
         remaining>10_000 -> accent
         remaining>5_000 -> lerp(accent,warn,((10_000-remaining)/2_000f).coerceIn(0f,1f))
         else -> lerp(warn,danger,((5_000-remaining)/5_000f).coerceIn(0f,1f))
@@ -134,8 +141,20 @@ private object FullWindowPosition : PopupPositionProvider {
  * raised press arc. Not focusable and not touchable, so the original press keeps its pointer
  * stream and the terminal never resizes.
  */
-@Composable internal fun VoiceRecordingFeedback(state: VoiceHoldState, level: () -> Float = {0f}) {
-    val phase=state.phase
+@Composable internal fun VoiceRecordingFeedback(state: VoiceHoldState, level: () -> Float = {0f}, visible: Boolean = true) {
+    // Enter: shade fades in, arc rises, bubble settles. Exit keeps the last look while it fades out.
+    val shown=remember {MutableTransitionState(false)}
+    shown.targetState=visible
+    if (!shown.currentState && !shown.targetState) return
+    val transition=rememberTransition(shown,label="voice-overlay")
+    val progress by transition.animateFloat(transitionSpec={
+        if (false isTransitioningTo true) tween(220,easing=FastOutSlowInEasing) else tween(160,easing=LinearOutSlowInEasing)
+    },label="voice-progress") { if (it) 1f else 0f }
+    val frozenArmed=remember {mutableStateOf(false)}
+    val frozenPhase=remember {mutableStateOf(VoicePhase.STARTING)}
+    if (visible) {frozenArmed.value=state.cancelArmed;frozenPhase.value=state.phase}
+    val armed=frozenArmed.value
+    val phase=frozenPhase.value
     val startedAt=state.startedAt
     val remaining by produceState(VoiceHoldState.LIMIT_MILLIS,phase,startedAt) {
         if (phase==VoicePhase.RECORDING) {
@@ -156,12 +175,12 @@ private object FullWindowPosition : PopupPositionProvider {
     val seconds=((remaining+999)/1000).toInt()
     val elapsed=((VoiceHoldState.LIMIT_MILLIS-remaining)/1000).toInt()
     val scheme=MaterialTheme.colorScheme
-    val tint=voiceTint(state,remaining)
+    val tint=voiceTint(armed,phase,remaining)
     val onTint=if(phase==VoicePhase.STARTING) scheme.onSurface else if (tint.luminance()>.45f) Color(0xFF121420) else Color.White
     val bubbleColor by animateColorAsState(tint,tween(180),label="voice-bubble")
-    val arcLift by animateDpAsState(if(state.cancelArmed) 0.dp else 18.dp,tween(160),label="voice-arc")
+    val arcLift by animateDpAsState(if(armed) 0.dp else 18.dp,tween(160),label="voice-arc")
     val title=stringResource(when {
-        state.cancelArmed -> R.string.voice_release_cancel
+        armed -> R.string.voice_release_cancel
         phase==VoicePhase.STARTING -> R.string.voice_starting
         state.accessibilityHold -> R.string.voice_tap_stop
         else -> R.string.voice_release_transcribe
@@ -171,10 +190,13 @@ private object FullWindowPosition : PopupPositionProvider {
     Popup(popupPositionProvider=FullWindowPosition,
         properties=PopupProperties(flags=android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
             dismissOnBackPress=false,dismissOnClickOutside=false,usePlatformDefaultWidth=false)) {
-        Box(Modifier.fillMaxWidth().height(height).background(Brush.verticalGradient(0f to Color.Transparent,.24f to shade.copy(alpha=.92f),.42f to shade.copy(alpha=.98f),1f to shade.copy(alpha=.98f)))
-            .testTag(if(phase==VoicePhase.RECORDING) "voice-recording" else "voice-preparing")) {
+        val density=LocalDensity.current
+        Box(Modifier.fillMaxWidth().height(height).graphicsLayer {alpha=progress}.background(Brush.verticalGradient(0f to Color.Transparent,.24f to shade.copy(alpha=.92f),.42f to shade.copy(alpha=.98f),1f to shade.copy(alpha=.98f)))
+            .testTag(if(!visible) "voice-exiting" else if(phase==VoicePhase.RECORDING) "voice-recording" else "voice-preparing")) {
             // Bubble with live level and remaining time.
-            Column(Modifier.align(Alignment.TopCenter).padding(top=height*.28f),horizontalAlignment=Alignment.CenterHorizontally) {
+            Column(Modifier.align(Alignment.TopCenter).padding(top=height*.28f).graphicsLayer {
+                val k=.85f+.15f*progress;scaleX=k;scaleY=k;translationY=(1f-progress)*with(density) {40.dp.toPx()};transformOrigin=TransformOrigin(.5f,1f)
+            },horizontalAlignment=Alignment.CenterHorizontally) {
                 Surface(shape=RoundedCornerShape(22.dp),color=bubbleColor,contentColor=onTint,shadowElevation=8.dp,modifier=Modifier.widthIn(min=160.dp)) {
                     Column(Modifier.padding(horizontal=20.dp,vertical=14.dp),horizontalAlignment=Alignment.CenterHorizontally) {
                         when {
@@ -182,19 +204,19 @@ private object FullWindowPosition : PopupPositionProvider {
                                 CircularProgressIndicator(Modifier.size(18.dp),strokeWidth=2.dp); Text(stringResource(R.string.voice_preparing_short),style=MaterialTheme.typography.titleSmall)
                             }
                             else -> {
-                                if (!state.cancelArmed && remaining<=10_000) Text("$seconds",fontSize=30.sp,fontWeight=FontWeight.Bold,lineHeight=34.sp)
+                                if (!armed && remaining<=10_000) Text("$seconds",fontSize=30.sp,fontWeight=FontWeight.Bold,lineHeight=34.sp)
                                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                                    if (state.cancelArmed) AppIcon(UiSymbol.CLOSE,modifier=Modifier.size(22.dp),tint=onTint)
+                                    if (armed) AppIcon(UiSymbol.CLOSE,modifier=Modifier.size(22.dp),tint=onTint)
                                     Canvas(Modifier.width(150.dp).height(34.dp)) {
                                         val w=size.width/bars.size
                                         bars.forEachIndexed { i,v ->
                                             val h=(size.height*v).coerceAtLeast(3.dp.toPx())
-                                            drawRoundRect(onTint.copy(alpha=if(state.cancelArmed) .55f else 1f),Offset(i*w+w*.3f,(size.height-h)/2),Size(w*.4f,h),
+                                            drawRoundRect(onTint.copy(alpha=if(armed) .55f else 1f),Offset(i*w+w*.3f,(size.height-h)/2),Size(w*.4f,h),
                                                 androidx.compose.ui.geometry.CornerRadius(w*.2f))
                                         }
                                     }
                                 }
-                                Text(if(state.cancelArmed) stringResource(R.string.voice_discard_hint,"%d:%02d".format(elapsed/60,elapsed%60))
+                                Text(if(armed) stringResource(R.string.voice_discard_hint,"%d:%02d".format(elapsed/60,elapsed%60))
                                     else if (remaining<=10_000) stringResource(R.string.voice_auto_stop)
                                     else stringResource(R.string.voice_bubble_time,"%d:%02d".format(elapsed/60,elapsed%60),seconds),
                                     style=MaterialTheme.typography.labelMedium,color=onTint.copy(alpha=.78f),modifier=Modifier.padding(top=4.dp))
@@ -208,19 +230,20 @@ private object FullWindowPosition : PopupPositionProvider {
                 }
             }
             Column(Modifier.align(Alignment.BottomCenter).padding(bottom=150.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-                if (!state.accessibilityHold && !state.cancelArmed) Text(stringResource(R.string.voice_slide_cancel_short),color=scheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
-                Text(title,color=if(state.cancelArmed) tint else scheme.onSurface,style=MaterialTheme.typography.titleSmall,
+                if (!state.accessibilityHold && !armed) Text(stringResource(R.string.voice_slide_cancel_short),color=scheme.onSurfaceVariant,style=MaterialTheme.typography.bodySmall)
+                Text(title,color=if(armed) tint else scheme.onSurface,style=MaterialTheme.typography.titleSmall,
                     modifier=Modifier.padding(top=6.dp).semantics {liveRegion=LiveRegionMode.Polite})
             }
             // Raised press arc; sinks and dims while cancel is armed.
-            val arcTop=if(state.cancelArmed) scheme.surface else lerp(scheme.surfaceVariant,tint,.18f)
-            Canvas(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(130.dp+arcLift)) {
+            val arcTop=if(armed) scheme.surface else lerp(scheme.surfaceVariant,tint,.18f)
+            Canvas(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(130.dp+arcLift).graphicsLayer {translationY=(1f-progress)*size.height}) {
                 val w=size.width*1.6f
                 drawOval(Brush.verticalGradient(listOf(arcTop,scheme.surface),startY=0f,endY=size.height),Offset((size.width-w)/2,0f),Size(w,size.height*2.4f))
-                drawOval(if(state.cancelArmed) tint.copy(alpha=.35f) else tint.copy(alpha=.30f),Offset((size.width-w)/2,0f),Size(w,size.height*2.4f),style=Stroke(1.5.dp.toPx()))
+                drawOval(if(armed) tint.copy(alpha=.35f) else tint.copy(alpha=.30f),Offset((size.width-w)/2,0f),Size(w,size.height*2.4f),style=Stroke(1.5.dp.toPx()))
             }
-            Icon(painterResource(R.drawable.ic_voice_input),null,Modifier.align(Alignment.BottomCenter).padding(bottom=44.dp).size(30.dp),
-                tint=if(state.cancelArmed) scheme.onSurfaceVariant else tint.takeIf {phase==VoicePhase.RECORDING} ?: scheme.onSurfaceVariant)
+            Icon(painterResource(R.drawable.ic_voice_input),null,Modifier.align(Alignment.BottomCenter).padding(bottom=44.dp).size(30.dp)
+                .graphicsLayer {translationY=(1f-progress)*with(density) {150.dp.toPx()}},
+                tint=if(armed) scheme.onSurfaceVariant else tint.takeIf {phase==VoicePhase.RECORDING} ?: scheme.onSurfaceVariant)
         }
     }
 }
