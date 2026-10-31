@@ -2,6 +2,8 @@ package dev.mtmux
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -57,6 +59,42 @@ class UiRedesignTest {
             compose.onNodeWithText("编辑服务器").assertIsDisplayed()
             compose.onAllNodesWithText(compose.activity.getString(R.string.home_new_tmux)).assertCountEquals(0)
         } finally { ServerProfiles(compose.activity).delete(profile.id) }
+    }
+
+    /** 0.9.2 regression: after a refresh the summary used the previous minute tick and counted every new reading as gray. */
+    @Test fun summaryKeepsCountingTasksAfterARefresh() {
+        val args = androidx.test.platform.app.InstrumentationRegistry.getArguments()
+        org.junit.Assume.assumeTrue(args.containsKey("fixtureTmux"))
+        val key = java.util.Base64.getDecoder().decode(args.getString("fixtureKey"))
+        val profile = ServerProfile(name = "summary-refresh", host = "127.0.0.1", port = args.getString("fixturePort")!!.toInt(),
+            user = args.getString("fixtureUser")!!, path = args.getString("fixtureTmux")!!, keyAuthentication = true)
+        val client = SshClient(object : PinStore { override fun get(endpoint: String) = args.getString("fixtureHostKey") })
+        val tmux = Tmux.quote(profile.path)
+        var session = ""
+        val store = ServerProfiles(compose.activity)
+        try {
+            client.connect(Login(profile.host, profile.port, profile.user, "", key))
+            // A Codex composer with a live "esc to interrupt" control reads as running.
+            session = client.exec("$tmux new-session -d -P -F '#{session_id}' -s summary-refresh-fixture 'printf \"• Working (3s • esc to interrupt)\\n› Ask Codex to do anything\\nGPT-6-Astra medium · ~/project\\n\"; sleep 120'").output.trim()
+            assertTrue(session.startsWith("$"))
+            Thread.sleep(250)
+            store.all().forEach { store.delete(it.id) }
+            store.save(profile, SavedCredentials("", key, ""))
+            compose.activity.getSharedPreferences("host-pins", 0).edit().putString(profile.trustEndpoint(), args.getString("fixtureHostKey")).commit()
+            ServerCache(compose.activity).apply { write(profile, emptyList()); markAttempt(profile) }
+            compose.activityRule.scenario.recreate()
+            compose.onAllNodesWithText("运行中", substring = true).assertCountEquals(0)
+            compose.onNodeWithTag("refresh-${profile.id}").performClick()
+            compose.waitUntil(15000) { compose.onAllNodesWithText("个运行中", substring = true).fetchSemanticsNodes().isNotEmpty() }
+            // A second refresh replaces the snapshot again; the count must stay.
+            compose.waitUntil(15000) { compose.onNodeWithTag("refresh-${profile.id}").fetchSemanticsNode().config.contains(SemanticsProperties.Disabled).not() }
+            compose.onNodeWithTag("refresh-${profile.id}").performClick()
+            compose.waitUntil(15000) { compose.onNodeWithTag("refresh-${profile.id}").fetchSemanticsNode().config.contains(SemanticsProperties.Disabled).not() }
+            compose.onNodeWithText("个运行中", substring = true).assertIsDisplayed()
+        } finally {
+            if (session.startsWith("$")) client.exec("$tmux kill-session -t ${Tmux.quote(session)}")
+            client.close(); store.delete(profile.id)
+        }
     }
 
     @Test fun summaryHidesWhenNothingNeedsTheUserAndUnavailableTmuxDisablesOnlyCreation() {
@@ -154,5 +192,18 @@ class UiRedesignComponentTest {
         val fp = "SHA256:ZgNwJk7mDemoFingerprintForUiCatalogOnly"
         compose.setContent { MaterialTheme { FingerprintBlock("[192.0.2.10]:22", fp, valueTag = "fp") } }
         compose.onNodeWithTag("fp").assertTextEquals(fp)
+    }
+
+    /** 0.9.2 phone feedback: when "Very many" wraps, the other options stay vertically centered. */
+    @Test fun segmentedChoiceKeepsOptionsCenteredWhenOneLabelWraps() {
+        val options = listOf("None", "Few", "Medium", "Many", "Very many indeed")
+        compose.setContent { MaterialTheme { androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.width(300.dp)) {
+            SegmentedChoice(options, "Medium", { it }, { "seg-$it" }, {})
+        } } }
+        val boxes = options.map { compose.onNodeWithTag("seg-$it").fetchSemanticsNode().boundsInRoot }
+        assertTrue("the long label wraps in this width", boxes.last().height > 40 * compose.density.density)
+        boxes.forEach { assertEquals("every option fills the row height", boxes.last().height, it.height, 1f) }
+        val centers = options.map { compose.onNodeWithText(it).fetchSemanticsNode().boundsInRoot.center.y }
+        centers.forEach { assertEquals("labels are vertically centered", centers.last(), it, 1.5f) }
     }
 }

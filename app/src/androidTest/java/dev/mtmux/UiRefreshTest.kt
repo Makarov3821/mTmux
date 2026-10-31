@@ -113,6 +113,31 @@ class UiRefreshTest {
         }
         waitIme(false)
     }
+    /** 0.9.2 phone feedback: chevrons line up, the card title lines up with the dots, the terminal fills the width. */
+    @Test fun homeRowsAlignAndTerminalFillsTheWidth() {
+        val profile=seed()
+        try {
+            compose.activityRule.scenario.recreate()
+            compose.waitUntil(10000) { compose.onAllNodesWithTag("task-next-${profile.id}-%0",useUnmergedTree=true).fetchSemanticsNodes().isNotEmpty() }
+            val rights=listOf("%0","%1","%2").map { compose.onNodeWithTag("task-next-${profile.id}-$it",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot.right }
+            assertTrue("chevrons right-aligned: $rights",rights.max()-rights.min()<1f)
+            val title=compose.onNodeWithTag("server-title-${profile.id}",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot.left
+            val dot=compose.onNodeWithTag("task-status-${profile.id}-%0",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot.left
+            assertEquals("server title starts at the status dots",dot,title,1f)
+            compose.runOnUiThread {
+                val field=MainActivity::class.java.getDeclaredField("showConfig\$delegate").apply {isAccessible=true}
+                @Suppress("UNCHECKED_CAST")
+                (field.get(compose.activity) as androidx.compose.runtime.MutableState<Any>).value=false
+            }
+            compose.waitForIdle()
+            compose.waitUntil(60000) { evaluate("typeof setConnection")=="\"function\"" }
+            val (screen,width,cell)=evaluate("JSON.stringify([document.querySelector('.xterm-screen').getBoundingClientRect().width,document.getElementById('terminal').clientWidth,terminal._core._renderService.dimensions.css.cell.width])")
+                .trim('"').replace("\\","").trim('[',']').split(',').map { it.toFloat() }
+            // Only the remainder of the last cell may stay blank; no 15px scrollbar reservation.
+            assertTrue("terminal grid $screen of $width px, cell $cell",width-screen<cell)
+        } finally { ServerProfiles(compose.activity).delete(profile.id) }
+    }
+
     @Test fun terminalDockToolsAndKeyboardKeepTheLogicalGrid() {
         val profile=seed()
         try {

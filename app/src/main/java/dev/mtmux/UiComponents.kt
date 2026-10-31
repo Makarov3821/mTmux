@@ -446,10 +446,11 @@ enum class RouteState { NORMAL, DONE, CURRENT, FAILED }
 @Composable fun <T> SegmentedChoice(options: List<T>, selected: T, label: @Composable (T) -> String, tag: (T) -> String,
     onSelect: (T) -> Unit, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
-    Row(modifier.fillMaxWidth().background(scheme.surfaceVariant, RoundedCornerShape(12.dp)).padding(3.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+    // Same height for every option: when one label wraps, the others stay vertically centered.
+    Row(modifier.fillMaxWidth().height(IntrinsicSize.Min).background(scheme.surfaceVariant, RoundedCornerShape(12.dp)).padding(3.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
         options.forEach { option ->
             val on = option == selected
-            Box(Modifier.weight(1f).heightIn(min = 38.dp).clip(RoundedCornerShape(9.dp))
+            Box(Modifier.weight(1f).fillMaxHeight().heightIn(min = 38.dp).clip(RoundedCornerShape(9.dp))
                 .background(if (on) scheme.primary.copy(alpha = .16f) else Color.Transparent)
                 .selectable(on, role = Role.Tab) { onSelect(option) }.testTag(tag(option)).padding(horizontal = 4.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center) {

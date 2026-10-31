@@ -7,6 +7,13 @@ const terminal = new Terminal({
 const fit = new FitAddon.FitAddon();
 terminal.loadAddon(fit);
 terminal.open(document.getElementById('terminal'));
+// xterm 5.5 falls back to reserving 15px for a scrollbar when the measured width is 0.
+// Android WebView uses overlay scrollbars, so that reservation left a blank strip of
+// one to two columns on the right. Only drop it when the scrollbar really takes no width.
+{
+  const viewport = document.querySelector('.xterm-viewport');
+  if (viewport && viewport.offsetWidth - viewport.clientWidth === 0) terminal._core.viewport.scrollBarWidth = 0;
+}
 let connected = false;
 let connectionToken = '';
 let draftData = null;

@@ -22,8 +22,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 
@@ -39,10 +37,10 @@ private val keyPages = listOf(
     val pageLabel = stringResource(R.string.keys_page,terminalKeyPage(pager.currentPage)+1,TERMINAL_KEY_PAGE_COUNT)
     val pending = if(modifiers == 0) "" else stringResource(R.string.keys_modifier_pending,TerminalKeyStroke.label(modifiers))
     val indicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
-    Box(Modifier.fillMaxWidth().height(48.dp)) {
+    Box(Modifier.fillMaxWidth().height(54.dp)) {
         HorizontalPager(pager,reverseLayout=true,overscrollEffect=null,
             modifier=Modifier.fillMaxSize().testTag("terminal-key-pages").semantics { stateDescription=pageLabel }) { page ->
-            Row(Modifier.fillMaxSize().padding(top=2.dp,bottom=8.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxSize().padding(top=2.dp,bottom=14.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                 keyPages[terminalKeyPage(page)].forEach { (label,key) ->
                     val bit = when(key) {"Ctrl" -> TerminalKeyStroke.CTRL;"Shift" -> TerminalKeyStroke.SHIFT;"Alt" -> TerminalKeyStroke.ALT;else -> 0}
                     val latched = bit != 0 && modifiers and bit != 0
@@ -59,7 +57,7 @@ private val keyPages = listOf(
                 }
             }
         }
-        Row(Modifier.align(Alignment.BottomCenter).padding(bottom=1.dp).semantics {contentDescription=pageLabel;stateDescription=pending}
+        Row(Modifier.align(Alignment.BottomCenter).padding(bottom=5.dp).semantics {contentDescription=pageLabel;stateDescription=pending}
             .drawWithContent {
                 drawContent()
                 val step = 7.dp.toPx()
@@ -68,8 +66,9 @@ private val keyPages = listOf(
                 clipRect {
                     // Draw edge copies so wrapping continues through the edge instead of jumping back.
                     for (cycle in -1..1) {
-                        val x = 1.5.dp.toPx() + (position + cycle * TERMINAL_KEY_PAGE_COUNT) * step
-                        drawRoundRect(indicatorColor,Offset(x,size.height/2-1.5.dp.toPx()),Size(10.dp.toPx(),3.dp.toPx()),CornerRadius(1.5.dp.toPx()))
+                        // Exactly one dot wide (3dp at 2dp padding): a wider bar covered two dots at once.
+                        val x = 2.dp.toPx() + (position + cycle * TERMINAL_KEY_PAGE_COUNT) * step
+                        drawCircle(indicatorColor,1.5.dp.toPx(),Offset(x+1.5.dp.toPx(),size.height/2))
                     }
                 }
             }.padding(horizontal=2.dp),

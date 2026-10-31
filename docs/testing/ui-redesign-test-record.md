@@ -66,6 +66,20 @@ standard 失败的那项是 `taskStatusDiscoveryReadsExactPaneWithoutChangingFoc
 
 补上语音进出场和转写过渡后，重启模拟器并复跑全套：voice 72/72；standard 65/66，失败的 `encryptedPrivateKeysRestoreAndConnectWithOneClick` 单独重跑通过。模拟器连续运行数小时后，有两项会稳定超时；改动前的提交在同一状态下同样失败，重启后恢复，因此判断为模拟器状态问题。动画用暂停时钟逐帧截图检查过，帧图没有提交。
 
+## 0.9.2 真机反馈修复（problems/1）
+
+| 问题 | 原因 | 修复 | 测试 |
+| --- | --- | --- | --- |
+| 首页状态总览刷新后计数变少或消失 | 总览的“当前时间”只在每分钟刷新一次；新快照的采样时间晚于它，被当成未来时间判为灰色 | 快照变化时重新取时间，与卡片状态点同一规则 | `UiRedesignTest#summaryKeepsCountingTasksAfterARefresh`（真实 tmux，刷新两次） |
+| 任务行 `>` 参差不齐 | 名称和占位 Spacer 各占一份剩余宽度 | 名称、窗口、标签放进同一个占满剩余宽度的 Row | `UiRefreshTest#homeRowsAlignAndTerminalFillsTheWidth` |
+| 服务器标题比状态点更靠左 | 标题左内边距 14dp，任务行 16dp | 统一为 16dp | 同上 |
+| 终端右侧空白 | xterm 5.5 测得滚动条宽度为 0 时按 15px 预留；Android 是悬浮滚动条 | 仅在滚动条确实不占宽度时取消预留 | 同上：空白须小于一个字符宽 |
+| 按键与工具栏太挤 | — | 快捷键区加高 6dp（约 1mm），底栏 100→106dp，终端高度同步扣除 | 截图核对 |
+| 翻页指示一次亮两个点 | 高亮条 10dp 宽，盖住两个 3dp 的点 | 改成一个点大小 | 截图核对 |
+| 设置分段选项换行时其他选项偏上 | 各选项高度不同，按顶部对齐 | 所有选项取同一高度并居中 | `UiRedesignComponentTest#segmentedChoiceKeepsOptionsCenteredWhenOneLabelWraps` |
+
+逐项把修复改回后，新增的检查都会失败（例如终端：314/336px，空白 22px，大于字符宽 8.5px）。全套：standard 68/69，voice 75/75；失败的 `TmuxDoctorUiTest#offlineDiagnosis…` 在未改动的 HEAD 上同样稳定失败，原因另查。
+
 ## 仍未覆盖
 
 - 语音弧形区、气泡、按钮的视觉过渡，以及真实麦克风录音。

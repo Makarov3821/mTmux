@@ -592,7 +592,7 @@ class MainActivity : AppCompatActivity() {
                 val keyboardFreeHeight = remember(maxWidth) { mutableStateOf(maxHeight) }
                 val stableHeight = if (imeVisible) maxOf(keyboardFreeHeight.value, maxHeight) else maxHeight
                 SideEffect { keyboardFreeHeight.value = stableHeight }
-                val gridHeight = (stableHeight - 148.dp).coerceAtLeast(48.dp)
+                val gridHeight = (stableHeight - 154.dp).coerceAtLeast(48.dp)
                 Column(Modifier.fillMaxSize().imePadding()) {
                     val backHomeLabel = stringResource(R.string.terminal_back_home)
                     val keyboardLabel = stringResource(R.string.terminal_direct_keyboard)
@@ -748,7 +748,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     }
-                    Surface(Modifier.fillMaxWidth().height(100.dp),color=MaterialTheme.colorScheme.surface,shape=RoundedCornerShape(topStart=24.dp,topEnd=24.dp)) {
+                    Surface(Modifier.fillMaxWidth().height(106.dp),color=MaterialTheme.colorScheme.surface,shape=RoundedCornerShape(topStart=24.dp,topEnd=24.dp)) {
                         Column(Modifier.padding(horizontal=8.dp)) {
                             TerminalKeys(enabled=keysEnabled,modifiers=sticky.modifiers,onModifier={bit ->
                                 directInput.finishComposition()

@@ -374,8 +374,11 @@ private class HomeRefresh {
                 }
                 message?.let { NoticeStrip(it.string(),Tone.DANGER,UiSymbol.ALERT_CIRCLE,Modifier.padding(start=4.dp,end=4.dp,top=8.dp)) }
                 // Counts of tasks that need the user, from the same cached snapshots as the dots.
-                val summaryNow = remember(statusClock) { System.currentTimeMillis() }
-                val summary = profiles.flatMap { profile -> val row = rows[profile.id] ?: HomeRow(cache.read(profile))
+                val summaryRows = profiles.map { profile -> rows[profile.id] ?: HomeRow(cache.read(profile)) }
+                // Same rule as the card dots: a fresh snapshot is stamped after the last minute tick,
+                // so the clock must be re-read when any snapshot changes, or new readings count as gray.
+                val summaryNow = remember(statusClock, summaryRows.map { it.snapshot }) { System.currentTimeMillis() }
+                val summary = summaryRows.flatMap { row ->
                     if(row.error!=null) emptyList() else row.snapshot?.let { s -> s.tasks.map { s.taskState(it,summaryNow) } }.orEmpty() }
                 val attentionCount = summary.count { it==TaskState.ATTENTION }; val runningCount = summary.count { it==TaskState.RUNNING }
                 if(attentionCount+runningCount>0) Row(Modifier.padding(start=4.dp,top=10.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -446,7 +449,7 @@ private class HomeRefresh {
                         Box {
                         if(state.refreshing) LinearProgressIndicator(Modifier.fillMaxWidth().height(2.dp).align(Alignment.TopCenter),trackColor=Color.Transparent)
                         Column {
-                            Row(Modifier.padding(start=14.dp,end=2.dp,top=6.dp,bottom=6.dp),verticalAlignment=Alignment.CenterVertically) {
+                            Row(Modifier.padding(start=16.dp,end=2.dp,top=6.dp,bottom=6.dp),verticalAlignment=Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f).heightIn(min=48.dp).clickable(enabled=search.isEmpty()) { collapsed[profile.id]=!folded;cache.collapse(profile.id,!folded) },verticalArrangement=Arrangement.Center) {
                                     val title = privacySettings.label(profile, privacyDisplay)
                                     Text(title,Modifier.testTag("server-title-${profile.id}"),style=MaterialTheme.typography.titleMedium.copy(fontWeight=FontWeight.SemiBold),maxLines=1,overflow=TextOverflow.Ellipsis)
@@ -497,15 +500,16 @@ private class HomeRefresh {
                                     Row(Modifier.fillMaxWidth().heightIn(min=46.dp).clickable {if(group.size==1) open(profile,group.first()) else expandedWindows[profile.id+id]=!expanded}
                                         .testTag("task-${profile.id}-${group.first().binding!!.pane}").padding(start=16.dp,end=12.dp),verticalAlignment=Alignment.CenterVertically) {
                                         TaskStatusDot(TaskStates.aggregate(group.map { if(state.error==null) state.snapshot?.taskState(it,stateNow) ?: TaskState.UNKNOWN else TaskState.UNKNOWN }),"task-status-${profile.id}-${group.first().binding!!.pane}")
+                                        Row(Modifier.weight(1f),verticalAlignment=Alignment.CenterVertically) {
                                         Text(group.first().sessionName,Modifier.weight(1f,fill=false),color=MaterialTheme.colorScheme.onSurface,style=MaterialTheme.typography.bodyMedium.copy(fontWeight=FontWeight.Medium),maxLines=1,overflow=TextOverflow.Ellipsis)
                                         val window=group.first().windowName.removeSuffix(" · ${group.first().sessionName}").takeIf { it!=group.first().sessionName }
                                         if(window!=null) Text("  $window",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
                                         if(group.any { it.identity==last?.identity }) Surface(Modifier.padding(start=8.dp),shape=RoundedCornerShape(5.dp),color=MaterialTheme.colorScheme.primary.copy(alpha=.14f)) {
                                             Text(stringResource(R.string.home_last_used),Modifier.padding(horizontal=6.dp,vertical=1.dp),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
                                         }
-                                        Spacer(Modifier.weight(1f))
+                                        }
                                         if(group.size>1) Text("${group.size}",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                                        AppIcon(if(group.size>1 && expanded) UiSymbol.DOWN else UiSymbol.NEXT,modifier=Modifier.size(16.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
+                                        AppIcon(if(group.size>1 && expanded) UiSymbol.DOWN else UiSymbol.NEXT,modifier=Modifier.size(16.dp).testTag("task-next-${profile.id}-${group.first().binding!!.pane}"),tint=MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                     val paneGuide=MaterialTheme.colorScheme.outlineVariant
                                     if(group.size>1 && expanded) Column(Modifier.padding(start=24.dp,bottom=6.dp).drawBehind { drawLine(paneGuide,Offset(0f,0f),Offset(0f,size.height),2.dp.toPx()) }) { group.forEach { task -> Row(Modifier.fillMaxWidth().heightIn(min=40.dp).clickable{open(profile,task)}.testTag("pane-${profile.id}-${task.binding!!.pane}").padding(start=14.dp,end=12.dp),verticalAlignment=Alignment.CenterVertically){TaskStatusDot(if(state.error==null) state.snapshot?.taskState(task,stateNow) ?: TaskState.UNKNOWN else TaskState.UNKNOWN,"pane-status-${profile.id}-${task.binding!!.pane}");Text(stringResource(R.string.home_pane, task.binding!!.pane),Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant);AppIcon(UiSymbol.NEXT,modifier=Modifier.size(15.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)} } }
