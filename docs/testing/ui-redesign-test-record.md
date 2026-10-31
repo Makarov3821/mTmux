@@ -60,7 +60,7 @@
 
 standard 失败的那项是 `taskStatusDiscoveryReadsExactPaneWithoutChangingFocus`，它只操作远端 tmux，不涉及界面；之后单独连续跑 3 次都通过，判断为偶发。其余检查：两个版本的单元测试、lint、构建，以及 `npm --prefix web test` 都通过。
 
-原始结果在 `.tools/diagnostics/matrix/`（base-standard、new-standard、fix-standard、fix-voice），已被 Git 忽略。
+原始结果在 `.tools/diagnostics/matrix/`（base-standard、new-standard、fix-standard、fix-voice），已被 Git 忽略。运行和汇总脚本见 `scripts/run_android_matrix.sh`、`scripts/summarize_android_results.py`，固定流程见 [改动、测试与发布流程](ui-redesign-change-and-release-routine.md)。
 
 ## 0.9.2 发布前复跑
 
