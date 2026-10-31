@@ -2,6 +2,12 @@
 
 版本号不代表完整真机验收。每个版本的实现细节、验证结果、截图与 APK SHA-256 见对应的「详细记录」；测试证据在 [docs/evidence/](docs/evidence/)。文档目录说明见 [docs/README.md](docs/README.md)。
 
+## [0.9.3-rc.1] — 2026-10-31 · versionCode 39 · Pre-release
+
+详细记录：[0.9.3-rc.1](docs/releases/0.9.3-rc.1.md)。
+
+- 修复 0.9.2 真机反馈：首页状态总览刷新后消失、任务行 `>` 与服务器标题对齐、终端右侧空白、快捷键区间距、翻页指示亮两个点、设置分段选项换行后不居中。
+
 ## [0.9.2] — 2026-10-31 · versionCode 38 · Pre-release
 
 详细记录：[0.9.2](docs/releases/0.9.2.md)。
