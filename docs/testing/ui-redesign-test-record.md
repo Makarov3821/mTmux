@@ -88,6 +88,14 @@ standard 失败的那项是 `taskStatusDiscoveryReadsExactPaneWithoutChangingFoc
 - 快捷键：文字 14→11sp，去掉键帽底色，仅锁定的修饰键保留高亮；按键与下方间距 10dp，翻页点在这段间距内。底栏 106→102dp。
 - 全套：standard 68/69，voice 74/75。失败的 `encryptedPrivateKeysRestoreAndConnectWithOneClick`（等待第 0 行出现 SSH 欢迎语超时）在未改动的 HEAD 上也失败，重启模拟器后仍失败，原因另查。
 
+## 0.9.3-rc.2 真机反馈三次调整
+
+- 快捷键文字 11→12sp；翻页点上移 2dp，停止翻页 5 秒后淡出，翻页时重新出现（`UiRedesignComponentTest#keyPageDotsHideAfterFiveSecondsIdle`，去掉隐藏逻辑后失败）。
+- 首页服务器标题与时间这一组的中线：布局上与右侧按钮中线一致（470 vs 470px），截图里文字可见部分与按钮也都在 517.5px，无需调整；测试增加该检查。
+- 设置去掉语音一节（voice 版原先只显示模型说明），并删除对应文案。
+- `run_android_matrix.sh` 每类运行前清掉上一类结果，编译失败时报告 NORUN，不再误读旧结果。
+- 全套：standard 70/70，voice 76/76；上一轮稳定失败的加密私钥一键连接这次通过。
+
 ## 仍未覆盖
 
 - 语音弧形区、气泡、按钮的视觉过渡，以及真实麦克风录音。

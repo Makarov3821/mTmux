@@ -124,6 +124,11 @@ class UiRefreshTest {
             val title=compose.onNodeWithTag("server-title-${profile.id}",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot.left
             val dot=compose.onNodeWithTag("task-status-${profile.id}-%0",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot.left
             assertEquals("server title sits 2dp right of the status dots",dot+2*compose.density.density,title,1f)
+            val top=compose.onNodeWithTag("server-title-${profile.id}",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot.top
+            val bottom=compose.onNodeWithTag("server-updated-${profile.id}",useUnmergedTree=true).fetchSemanticsNode().boundsInRoot.bottom
+            val button=compose.onNodeWithTag("ssh-${profile.id}").fetchSemanticsNode().boundsInRoot.center.y
+            android.util.Log.i("UiRefreshTest","title block ${(top+bottom)/2} button $button")
+            assertEquals("title + time block centred on the card buttons",button,(top+bottom)/2,1f*compose.density.density)
             compose.runOnUiThread {
                 val field=MainActivity::class.java.getDeclaredField("showConfig\$delegate").apply {isAccessible=true}
                 @Suppress("UNCHECKED_CAST")

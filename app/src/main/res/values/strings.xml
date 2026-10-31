@@ -319,7 +319,6 @@
     <string name="editor_jump_pick_help">Its address, username and credentials are copied into this route. Its own jump hosts are added before it. Later edits to that server are not synced.</string>
     <string name="editor_jump_pick_empty">No other saved servers</string>
     <string name="editor_jump_pick_failed">Cannot read that server\'s saved credentials. Edit it and save again.</string>
-    <string name="voice_settings_title">Voice input</string>
     <string name="voice_button">Voice input</string>
     <string name="voice_title">Offline voice input</string>
     <string name="voice_recording">Recording… %1$d s (maximum 60 s)</string>
@@ -470,7 +469,6 @@
     <string name="doctor_touch_on">Finger gestures can send wheel events to the remote terminal.</string>
     <string name="doctor_touch_off">Remote touch forwarding is off in this app. Gestures only browse local terminal history, even if tmux mouse support is on.</string>
     <string name="doctor_enable_touch">Enable remote touch forwarding</string>
-    <string name="voice_model_info">X-ASR INT8 · Offline Chinese/English recognition with native punctuation and casing.</string>
     <string name="home_summary_attention">%1$d waiting for reply</string>
     <string name="home_summary_running">%1$d running</string>
     <string name="home_check_fingerprint">Verify</string>

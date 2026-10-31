@@ -20,6 +20,10 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.runtime.*
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,6 +42,13 @@ private val keyPages = listOf(
     val pageLabel = stringResource(R.string.keys_page,terminalKeyPage(pager.currentPage)+1,TERMINAL_KEY_PAGE_COUNT)
     val pending = if(modifiers == 0) "" else stringResource(R.string.keys_modifier_pending,TerminalKeyStroke.label(modifiers))
     val indicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
+    // Page dots show while paging and fade out after 5s without a swipe.
+    var dotsVisible by remember { mutableStateOf(true) }
+    LaunchedEffect(pager.isScrollInProgress, pager.currentPage) {
+        dotsVisible = true
+        if (!pager.isScrollInProgress) { kotlinx.coroutines.delay(5000); dotsVisible = false }
+    }
+    val dotsAlpha by animateFloatAsState(if (dotsVisible) 1f else 0f, tween(if (dotsVisible) 120 else 400), label = "page-dots")
     // 2dp top, 38dp keys, then a 10dp gap to the action row that also holds the page dots.
     Box(Modifier.fillMaxWidth().height(50.dp)) {
         HorizontalPager(pager,reverseLayout=true,overscrollEffect=null,
@@ -54,13 +65,13 @@ private val keyPages = listOf(
                             contentColor=MaterialTheme.colorScheme.onSurface,disabledContainerColor=Color.Transparent),
                         contentPadding=PaddingValues(0.dp),modifier=Modifier.weight(1f).fillMaxHeight().testTag("terminal-key-$label")
                             .semantics { if(bit!=0) selected=latched }) {
-                        Text(label,maxLines=1,style=MaterialTheme.typography.labelLarge.copy(fontSize=11.sp,fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Medium),
+                        Text(label,maxLines=1,style=MaterialTheme.typography.labelLarge.copy(fontSize=12.sp,fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Medium),
                             color=if(enabled && (latched || modifiers!=0 && bit==0)) MaterialTheme.colorScheme.primary else LocalContentColor.current)
                     }
                 }
             }
         }
-        Row(Modifier.align(Alignment.BottomCenter).padding(bottom=3.5.dp).semantics {contentDescription=pageLabel;stateDescription=pending}
+        Row(Modifier.align(Alignment.BottomCenter).padding(bottom=5.5.dp).graphicsLayer { alpha = dotsAlpha }.testTag("terminal-key-dots").semantics {contentDescription=pageLabel;stateDescription=pending}
             .drawWithContent {
                 drawContent()
                 val step = 7.dp.toPx()

@@ -44,13 +44,6 @@ internal fun initializeVoiceFlavor(context: android.content.Context) {
     }
 }
 
-@Composable internal fun VoiceSettings() {
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-    SettingRow(stringResource(R.string.voice_settings_title), icon = UiSymbol.MIC)
-    Text(stringResource(R.string.voice_model_info), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.testTag("voice-model-info"))
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable internal fun VoiceInputControl(
     modifier: Modifier, enabled: Boolean, connectionToken: String, targetKey: String,

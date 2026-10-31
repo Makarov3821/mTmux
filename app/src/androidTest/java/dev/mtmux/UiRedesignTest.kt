@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -192,6 +193,18 @@ class UiRedesignComponentTest {
         val fp = "SHA256:ZgNwJk7mDemoFingerprintForUiCatalogOnly"
         compose.setContent { MaterialTheme { FingerprintBlock("[192.0.2.10]:22", fp, valueTag = "fp") } }
         compose.onNodeWithTag("fp").assertTextEquals(fp)
+    }
+
+    /** rc.2 feedback: the page dots fade out after 5s without paging. */
+    @Test fun keyPageDotsHideAfterFiveSecondsIdle() {
+        compose.mainClock.autoAdvance = false
+        compose.setContent { MaterialTheme { androidx.compose.material3.Surface { TerminalKeys(true, 0, {}, {}) } } }
+        fun distinctColors(): Int { val img = compose.onNodeWithTag("terminal-key-dots").captureToImage().toPixelMap()
+            return (0 until img.width).flatMap { x -> (0 until img.height).map { y -> img[x, y] } }.toSet().size }
+        compose.mainClock.advanceTimeBy(1000)
+        assertTrue("dots visible right after showing the keys", distinctColors() > 1)
+        compose.mainClock.advanceTimeBy(5000)
+        assertEquals("dots hidden after 5s idle", 1, distinctColors())
     }
 
     /** 0.9.2 phone feedback: when "Very many" wraps, the other options stay vertically centered. */

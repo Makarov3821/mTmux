@@ -26,6 +26,8 @@ fi
 { date -u '+UTC %FT%TZ'; git -C "$repo" rev-parse HEAD; git -C "$repo" status --short | head -20; echo "serial=$ANDROID_SERIAL variant=$variant"; } > "$out/context.txt"
 for c in $classes; do
   adb shell am force-stop dev.mtmux >/dev/null 2>&1
+  # Drop the previous class's results so a build failure is reported as NORUN, not as stale results.
+  rm -rf "app/build/outputs/androidTest-results/connected/debug/flavors/$variant"
   timeout 2400 python3 scripts/test_ssh.py --android --android-variant "$variant" --test-class "dev.mtmux.$c" > "$out/$c.console.log" 2>&1
   echo "rc=$?" >> "$out/$c.console.log"
   rm -rf "$out/$c"; cp -r "app/build/outputs/androidTest-results/connected/debug/flavors/$variant" "$out/$c" 2>/dev/null

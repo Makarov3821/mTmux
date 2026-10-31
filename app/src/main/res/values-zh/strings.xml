@@ -313,7 +313,6 @@
     <string name="editor_jump_pick_help">复制其地址、用户名和凭据到此链路；它自己的跳板会一并加在前面。之后修改该服务器不会同步到这里。</string>
     <string name="editor_jump_pick_empty">没有其他已保存的服务器</string>
     <string name="editor_jump_pick_failed">无法读取该服务器的已保存凭据，请编辑后重新保存</string>
-    <string name="voice_settings_title">语音输入</string>
     <string name="voice_button">语音输入</string>
     <string name="voice_title">离线语音输入</string>
     <string name="voice_recording">正在录音… %1$d 秒（最长 60 秒）</string>
@@ -464,7 +463,6 @@
     <string name="doctor_touch_on">手指滑动可以向远端终端发送滚轮事件。</string>
     <string name="doctor_touch_off">应用已关闭远端触摸转发；即使 tmux 开启鼠标，手势也只浏览本地终端历史。</string>
     <string name="doctor_enable_touch">开启远端触摸转发</string>
-    <string name="voice_model_info">X-ASR INT8 · 离线中英识别，原生标点与大小写。</string>
     <string name="home_summary_attention">%1$d 个等待回复</string>
     <string name="home_summary_running">%1$d 个运行中</string>
     <string name="home_check_fingerprint">核对</string>

@@ -11,7 +11,6 @@ import androidx.compose.ui.Modifier
     onStatus: (TerminalStatus) -> Unit
 ) = Unit
 
-@Composable internal fun VoiceSettings() = Unit
 
 internal fun initializeVoiceFlavor(context: android.content.Context) {
     // Switching from voice to standard must also release the extracted private voice models.
