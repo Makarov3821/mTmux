@@ -20,37 +20,35 @@ import androidx.compose.ui.unit.dp
     var value by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<UiText?>(null) }
     fun save(next: List<String>) { runCatching { store.save(next);replies=next;editIndex=null;error=null }.onFailure {error=errorText(it)} }
-    ModalBottomSheet(onDismissRequest=onDismiss,containerColor=MaterialTheme.colorScheme.surface,shape=MaterialTheme.shapes.extraLarge,sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true)) {
-        Column(Modifier.fillMaxWidth().heightIn(max=550.dp).verticalScroll(rememberScrollState()).padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-            Text(stringResource(R.string.terminal_quick_replies),style=MaterialTheme.typography.titleLarge)
-            Text(stringResource(R.string.quick_reply_help),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    AppSheet(onDismiss=onDismiss) {
+        SheetHeader(stringResource(R.string.terminal_quick_replies),stringResource(R.string.quick_reply_help),UiSymbol.REPLY)
+        Column(Modifier.fillMaxWidth().heightIn(max=460.dp).verticalScroll(rememberScrollState()).padding(horizontal=8.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
             replies.forEachIndexed { index, text ->
-                Surface(shape=MaterialTheme.shapes.medium,color=MaterialTheme.colorScheme.surfaceVariant) {
-                Row(Modifier.fillMaxWidth()) {
-                    TextButton(onClick={onPick(text)},modifier=Modifier.weight(1f).testTag("quick-reply-$index")) { Text(text,Modifier.fillMaxWidth(),style=MaterialTheme.typography.bodyMedium,maxLines=3,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
-                    TextButton(onClick={editIndex=index;value=text;error=null},modifier=Modifier.testTag("edit-quick-reply-$index")) { Text(stringResource(R.string.common_edit)) }
-                }
+                Surface(shape=androidx.compose.foundation.shape.RoundedCornerShape(14.dp),color=MaterialTheme.colorScheme.surfaceVariant) {
+                    Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                        TextButton(onClick={onPick(text)},shape=androidx.compose.foundation.shape.RoundedCornerShape(14.dp),modifier=Modifier.weight(1f).heightIn(min=48.dp).testTag("quick-reply-$index")) {
+                            Text(text,Modifier.fillMaxWidth(),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurface,maxLines=3,overflow=androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        }
+                        AppIconButton(UiSymbol.EDIT,stringResource(R.string.common_edit),{editIndex=index;value=text;error=null},Modifier.testTag("edit-quick-reply-$index"),tone=IconTone.PLAIN,iconSize=17.dp)
+                    }
                 }
             }
-            error?.let { Text(it.string(),color=MaterialTheme.colorScheme.error) }
-            Row {
-                TextButton(onClick={editIndex=replies.size;value="";error=null},enabled=replies.size<12,modifier=Modifier.testTag("add-quick-reply")) { Text(stringResource(R.string.quick_reply_add)) }
-                TextButton(onClick=onDismiss) { Text(stringResource(R.string.common_close)) }
-            }
+            error?.let { NoticeStrip(it.string(),Tone.DANGER,UiSymbol.ALERT_CIRCLE) }
+        }
+        Row(Modifier.padding(start=8.dp,end=8.dp,top=12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            TonalActionButton(DialogAction(stringResource(R.string.common_close),onDismiss),Modifier.weight(1f))
+            PrimaryActionButton(DialogAction(stringResource(R.string.quick_reply_add),{editIndex=replies.size;value="";error=null},"add-quick-reply",enabled=replies.size<12),Modifier.weight(1f))
         }
     }
     editIndex?.let { index ->
-        AlertDialog(onDismissRequest={editIndex=null},title={Text(stringResource(if(index<replies.size) R.string.quick_reply_edit_title else R.string.quick_reply_add_title))},text={
-            Column {
-                OutlinedTextField(value,{value=it},label={Text(stringResource(R.string.quick_reply_content))},maxLines=6,modifier=Modifier.testTag("quick-reply-editor"))
-                Text(stringResource(R.string.quick_reply_counter, value.length),style=MaterialTheme.typography.bodySmall)
-                error?.let { Text(it.string(),color=MaterialTheme.colorScheme.error) }
-            }
-        },confirmButton={TextButton(onClick={save(replies.toMutableList().apply {if(index<size) this[index]=value.trim() else add(value.trim())})},modifier=Modifier.testTag("save-quick-reply")){Text(stringResource(R.string.common_save))}},dismissButton={
-            Row {
-                if(index<replies.size) TextButton(onClick={save(replies.filterIndexed { i,_ -> i!=index })}) { Text(stringResource(R.string.common_delete)) }
-                TextButton(onClick={editIndex=null}) { Text(stringResource(R.string.common_cancel)) }
-            }
-        })
+        AppDialog(onDismiss={editIndex=null},title=stringResource(if(index<replies.size) R.string.quick_reply_edit_title else R.string.quick_reply_add_title),icon=UiSymbol.REPLY,
+            confirm=DialogAction(stringResource(R.string.common_save),{save(replies.toMutableList().apply {if(index<size) this[index]=value.trim() else add(value.trim())})},"save-quick-reply"),
+            dismiss=DialogAction(stringResource(R.string.common_cancel),{editIndex=null}),
+            extra=if(index<replies.size) DialogAction(stringResource(R.string.common_delete),{save(replies.filterIndexed { i,_ -> i!=index })},danger=true) else null) {
+            OutlinedTextField(value,{value=it},label={Text(stringResource(R.string.quick_reply_content))},maxLines=6,shape=appFieldShape,colors=appFieldColors(),
+                modifier=Modifier.fillMaxWidth().testTag("quick-reply-editor"))
+            Text(stringResource(R.string.quick_reply_counter, value.length),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            error?.let { Text(it.string(),color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
+        }
     }
 }

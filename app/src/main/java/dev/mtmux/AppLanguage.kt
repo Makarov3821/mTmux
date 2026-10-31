@@ -49,11 +49,6 @@ enum class AppLanguage(val tag: String, @StringRes val label: Int) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable fun LanguageSettings() {
     val selected = AppLanguage.current()
-    Text(stringResource(R.string.settings_language), color = MaterialTheme.colorScheme.primary)
-    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        AppLanguage.entries.forEach { option ->
-            FilterChip(selected = selected == option, onClick = { AppLanguage.select(option) },
-                label = { Text(stringResource(option.label)) }, modifier = Modifier.testTag("language-${option.name}"))
-        }
-    }
+    SettingRow(stringResource(R.string.settings_language), icon = UiSymbol.GLOBE)
+    SegmentedChoice(AppLanguage.entries, selected, { stringResource(it.label) }, { "language-${it.name}" }, { AppLanguage.select(it) })
 }

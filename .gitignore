@@ -64,3 +64,4 @@ __pycache__/
 /docs/screenshots/*
 !/docs/screenshots/README.md
 /app/src/androidTestVoice/assets/ui-catalog/*.png
+/docs/plan-ui/png/

@@ -38,21 +38,20 @@ data class TerminalSnapshot(val text: String, val clipped: Boolean, val viewport
             }
         }
         Surface(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)) {
-                Row(Modifier.fillMaxWidth()) {
-                    TextButton(onClick=onClose,modifier=Modifier.testTag("close-terminal-copy")) { Text(stringResource(R.string.copy_back)) }
-                    Spacer(Modifier.weight(1f))
-                    TextButton(onClick={
+            Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal=12.dp,vertical=4.dp)) {
+                Row(Modifier.fillMaxWidth().height(56.dp),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
+                    AppIconButton(UiSymbol.BACK,stringResource(R.string.copy_back),onClose,Modifier.testTag("close-terminal-copy"),tone=IconTone.PLAIN,iconSize=22.dp)
+                    Text(stringResource(R.string.tools_select_copy),Modifier.weight(1f),style=MaterialTheme.typography.titleLarge.copy(fontWeight=androidx.compose.ui.text.font.FontWeight.Bold))
+                    FilledTonalButton(shape=androidx.compose.foundation.shape.RoundedCornerShape(12.dp),onClick={
                         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
                             .setPrimaryClip(ClipData.newPlainText(context.getString(R.string.clip_terminal_text),snapshot.text))
                         copied=true
-                    },enabled=snapshot.text.isNotEmpty(),modifier=Modifier.testTag("copy-all-terminal")) { Text(stringResource(if(copied) R.string.copy_done else R.string.copy_all)) }
+                    },enabled=snapshot.text.isNotEmpty(),modifier=Modifier.testTag("copy-all-terminal")) { AppIcon(if(copied) UiSymbol.CHECK else UiSymbol.COPY,modifier=Modifier.size(16.dp));Spacer(Modifier.width(6.dp));Text(stringResource(if(copied) R.string.copy_done else R.string.copy_all)) }
                 }
-                Text(stringResource(R.string.tools_select_copy),style=MaterialTheme.typography.titleLarge)
-                Text(stringResource(R.string.copy_help),style=MaterialTheme.typography.bodySmall)
-                if(snapshot.clipped) Text(stringResource(R.string.copy_clipped),style=MaterialTheme.typography.bodySmall)
-                if(snapshot.text.isEmpty()) Text(stringResource(R.string.copy_empty),Modifier.padding(top=24.dp))
-                Surface(Modifier.weight(1f).fillMaxWidth().padding(top=12.dp),shape=MaterialTheme.shapes.large,color=MaterialTheme.colorScheme.surfaceVariant,border=BorderStroke(1.dp,MaterialTheme.colorScheme.outlineVariant)) {
+                Text(stringResource(R.string.copy_help),Modifier.padding(horizontal=4.dp),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                if(snapshot.clipped) NoticeStrip(stringResource(R.string.copy_clipped),Tone.WARNING,UiSymbol.INFO,Modifier.padding(top=8.dp))
+                if(snapshot.text.isEmpty()) Text(stringResource(R.string.copy_empty),Modifier.padding(start=4.dp,top=24.dp),color=MaterialTheme.colorScheme.onSurfaceVariant)
+                Surface(Modifier.weight(1f).fillMaxWidth().padding(top=12.dp,bottom=8.dp),shape=androidx.compose.foundation.shape.RoundedCornerShape(18.dp),color=MaterialTheme.colorScheme.surface) {
                 AndroidView(factory={ ctx ->
                     ScrollView(ctx).apply {
                         isFillViewport=true

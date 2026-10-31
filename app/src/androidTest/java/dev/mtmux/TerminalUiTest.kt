@@ -182,7 +182,7 @@ class TerminalUiTest {
             compose.onNodeWithTag("palette-EMERALD").performScrollTo().performClick()
             compose.onNodeWithTag("theme-LIGHT").performScrollTo().performClick().assertIsSelected()
             saveScreenshot("settings-light")
-            compose.onNodeWithText("‹ 返回").performClick()
+            compose.onNodeWithTag("settings-back").performClick()
             saveScreenshot("home-light")
             compose.activityRule.scenario.recreate()
             compose.onNodeWithTag("settings").performClick()
@@ -200,7 +200,7 @@ class TerminalUiTest {
             compose.onNodeWithTag("theme-DARK").performClick()
             compose.waitUntil(10000) { evaluate(view,"terminal.options.theme.foreground")=="\"#e9efec\"" }
             compose.onNodeWithTag("theme-LIGHT").performClick()
-            compose.onNodeWithText("‹ 返回").performClick()
+            compose.onNodeWithTag("settings-back").performClick()
             showTerminalForFixture()
             compose.runOnUiThread { view.connection("theme-test") }
             view.render("浅色终端 Light terminal\r\n\u001b[31mError red\u001b[0m / \u001b[32mSuccess green\u001b[0m".toByteArray(),"theme-test")
@@ -575,13 +575,13 @@ class TerminalUiTest {
             compose.onNodeWithTag("settings").performClick()
             compose.onNodeWithTag("privacy-display").performScrollTo().assertIsOn().performClick()
             assertSecure(true)
-            compose.onNodeWithText("‹ 返回").performClick()
+            compose.onNodeWithTag("settings-back").performClick()
             compose.onNodeWithTag("server-title-${profile.id}",useUnmergedTree=true).assertTextContains("private-user@192.0.2.67",substring=true)
             compose.activityRule.scenario.recreate()
             assertSecure(true)
             compose.onNodeWithTag("settings").performClick()
             compose.onNodeWithTag("privacy-display").performScrollTo().assertIsOff().performClick()
-            compose.onNodeWithText("‹ 返回").performClick()
+            compose.onNodeWithTag("settings-back").performClick()
             assertSecure(false)
             compose.onNodeWithTag("server-title-${profile.id}",useUnmergedTree=true).assertTextContains(label,substring=true)
             compose.onNodeWithTag("add-server").performClick()
@@ -597,7 +597,7 @@ class TerminalUiTest {
             // Close nested private-key dialog, then leave the protected editor.
             compose.onAllNodesWithText("取消").onLast().performClick()
             assertSecure(true)
-            compose.onNodeWithText("取消").performClick()
+            compose.onNodeWithTag("cancel-edit").performClick()
             assertSecure(false)
             compose.onNodeWithTag("more-${profile.id}").performClick()
             compose.onNodeWithText("编辑服务器").performClick()
@@ -780,7 +780,9 @@ class TerminalUiTest {
                 val bar=compose.onNodeWithTag("terminal-key-pages").fetchSemanticsNode().boundsInRoot
                 assertTrue(kotlin.math.abs(bounds.first().left-bar.left)<2)
                 assertTrue(kotlin.math.abs(bounds.last().right-bar.right)<2)
-                assertTrue(bounds.all {kotlin.math.abs(it.width-bar.width/6)<2})
+                // Keycaps have gaps since the 0.9 refresh: six equal keys still span the whole bar.
+                assertTrue(bounds.all {kotlin.math.abs(it.width-bounds.first().width)<2})
+                assertTrue(bounds.zipWithNext().all {(a,b) -> b.left>=a.right-1})
             }
             verifyWidth(listOf("Esc","Tab","Ctrl-C","↑","↓","Enter"))
             compose.onNodeWithTag("terminal-key-pages").performTouchInput {swipeRight()}
@@ -1057,8 +1059,8 @@ class TerminalUiTest {
             compose.activityRule.scenario.recreate()
             compose.waitUntil(45000) { ServerCache(compose.activity).read(profile)?.tasks?.isNotEmpty()==true }
             compose.onNodeWithTag("ssh-${profile.id}").assertExists()
-            compose.onNodeWithText("服务器",substring=false).assertExists()
-            compose.onNodeWithText("缓存会话 / 缓存窗口").assertExists()
+            compose.onNodeWithTag("home-title").assertExists()
+            compose.onNodeWithText("缓存会话").assertExists(); compose.onNodeWithText("缓存窗口",substring=true).assertExists()
             compose.waitUntil(15000) { compose.onAllNodesWithText("显示上次缓存",substring=true).fetchSemanticsNodes().isNotEmpty() }
             val before=ServerCache(compose.activity).read(profile)!!.updatedAt
             compose.onNodeWithTag("refresh-${profile.id}").performClick()
@@ -1070,7 +1072,7 @@ class TerminalUiTest {
             saveScreenshot("ui-settings")
             compose.onNodeWithTag("settings-speed").performScrollTo().performTouchInput { click(androidx.compose.ui.geometry.Offset(width*0.9f,height*0.5f)) }
             val updated=ServerCache(compose.activity).read(profile)!!.updatedAt
-            compose.onNodeWithText("‹ 返回").performClick()
+            compose.onNodeWithTag("settings-back").performClick()
             compose.waitForIdle()
             assertEquals(updated,ServerCache(compose.activity).read(profile)!!.updatedAt)
             compose.activityRule.scenario.recreate()
@@ -1079,7 +1081,7 @@ class TerminalUiTest {
             // Internal navigation never refreshes, even when the interval has expired.
             ServerCache(compose.activity).markAttempt(profile,System.currentTimeMillis()-5*60*1000L)
             compose.onNodeWithTag("settings").performClick()
-            compose.onNodeWithText("‹ 返回").performClick()
+            compose.onNodeWithTag("settings-back").performClick()
             compose.waitForIdle()
             assertEquals(updated,ServerCache(compose.activity).read(profile)!!.updatedAt)
             compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
@@ -1174,7 +1176,7 @@ class TerminalUiTest {
         compose.onNodeWithTag("profile-name").assertTextContains("测试服务器")
         compose.onNodeWithTag("server-host").assertTextContains("127.0.0.1")
         assertEquals("NEVER_PERSIST_SECRET",store.credentials(profile)!!.password)
-        compose.onNodeWithText("取消").performClick()
+        compose.onNodeWithTag("cancel-edit").performClick()
         compose.onNodeWithTag("more-${profile.id}").performClick()
         compose.onNodeWithText("删除服务器").performClick()
         compose.onNodeWithText("删除").performClick()
@@ -1251,7 +1253,7 @@ class TerminalUiTest {
         draftNode().performTextInput("exit")
         sendEditor()
         compose.waitUntil(30000) { compose.onAllNodesWithTag("add-server").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("服务器").assertIsDisplayed()
+        compose.onNodeWithTag("home-title").assertIsDisplayed()
         val field = MainActivity::class.java.getDeclaredField("wireToken\$delegate").apply { isAccessible = true }
         @Suppress("UNCHECKED_CAST")
         assertEquals("", (field.get(compose.activity) as androidx.compose.runtime.MutableState<String>).value)
@@ -1424,7 +1426,7 @@ class TerminalUiTest {
             assertTrue(store.recent().isEmpty())
             compose.onNodeWithTag("reconnect-recent").assertExists().performClick()
             compose.onNodeWithTag("connection-status").assertTextEquals(compose.activity.getString(R.string.status_credentials_unreadable))
-            compose.onNodeWithText("重新选择任务").performClick()
+            compose.onNodeWithTag("terminal-home").performClick()
             compose.onNodeWithTag("ssh-${failed.id}").performScrollTo().performClick()
             compose.onNodeWithTag("reconnect-recent").assertExists().performClick()
             compose.onNodeWithTag("connection-status").assertTextEquals(compose.activity.getString(R.string.status_credentials_unreadable))
@@ -1490,7 +1492,7 @@ class TerminalUiTest {
             draftNode().assertTextContains("UNSENT_DRAFT");closeEditor()
             assertEquals(original.identity,store.recent().first { it.profileId==profile.id }.identity)
             saveScreenshot("recent-task-stale-blocked")
-            compose.onNodeWithText("重新选择任务").performClick()
+            compose.onNodeWithTag("terminal-home").performClick()
             compose.onNodeWithTag("refresh-${profile.id}").performScrollTo().performClick()
             compose.waitUntil(30000) { ServerCache(compose.activity).read(profile)?.tasks?.any { it.binding?.pane==original.pane && it.identity!=original.identity } == true }
             compose.onNodeWithTag(tag).performScrollTo().performClick()
@@ -1773,7 +1775,7 @@ class TerminalUiTest {
         compose.onNodeWithTag("settings").performClick()
         if (voice) compose.onNodeWithTag("voice-model-info").performScrollTo().assertExists()
         else compose.onNodeWithTag("voice-model-info").assertDoesNotExist()
-        compose.onNodeWithText("‹ 返回").performClick()
+        compose.onNodeWithTag("settings-back").performClick()
         showTerminalForFixture()
         val control=compose.onNodeWithTag("voice-input")
         if (voice) {

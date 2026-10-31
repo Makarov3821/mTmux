@@ -21,27 +21,19 @@ fun savedSshRetention(context: android.content.Context) = SshRetention.fromCapac
 @Composable fun SshRetentionSettings(pool: WarmConnectionPool<SshClient>) {
     val context = LocalContext.current
     var selected by remember { mutableStateOf(savedSshRetention(context)) }
-    Text(stringResource(R.string.settings_ssh_retention), color = MaterialTheme.colorScheme.primary)
-    val large = androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.2f
-    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp),maxItemsInEachRow=if(large) 3 else 5) {
-        SshRetention.entries.forEach { option ->
-            val label = when (option) {
-                SshRetention.NONE -> R.string.ssh_retention_none
-                SshRetention.FEW -> R.string.ssh_retention_few
-                SshRetention.MEDIUM -> R.string.ssh_retention_medium
-                SshRetention.MANY -> R.string.ssh_retention_many
-                SshRetention.VERY_MANY -> R.string.ssh_retention_very_many
-            }
-            FilterChip(selected = selected == option, onClick = {
-                selected = option
-                context.getSharedPreferences("terminal-settings", 0).edit().putInt(RETENTION_KEY, option.capacity).apply()
-                pool.setCapacity(option.capacity)
-            }, label = { Text(stringResource(label), textAlign = TextAlign.Center, maxLines = 2,
-                style = MaterialTheme.typography.labelSmall) },
-                modifier = (if(large) Modifier.widthIn(min=80.dp) else Modifier.weight(1f)).testTag("ssh-retention-${option.name}"))
-        }
-    }
+    SettingRow(stringResource(R.string.settings_ssh_retention), icon = UiSymbol.LINK)
+    SegmentedChoice(SshRetention.entries, selected, { option -> stringResource(when (option) {
+        SshRetention.NONE -> R.string.ssh_retention_none
+        SshRetention.FEW -> R.string.ssh_retention_few
+        SshRetention.MEDIUM -> R.string.ssh_retention_medium
+        SshRetention.MANY -> R.string.ssh_retention_many
+        SshRetention.VERY_MANY -> R.string.ssh_retention_very_many
+    }) }, { "ssh-retention-${it.name}" }, { option ->
+        selected = option
+        context.getSharedPreferences("terminal-settings", 0).edit().putInt(RETENTION_KEY, option.capacity).apply()
+        pool.setCapacity(option.capacity)
+    })
     Text(stringResource(if (selected == SshRetention.NONE) R.string.ssh_retention_disabled else R.string.ssh_retention_enabled,
         selected.capacity), style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("ssh-retention-help"))
-    Text(stringResource(R.string.ssh_retention_help), style = MaterialTheme.typography.bodySmall)
+    Text(stringResource(R.string.ssh_retention_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }

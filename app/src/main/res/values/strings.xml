@@ -3,7 +3,7 @@
     <string name="app_name" translatable="false">mTmux</string>
     <string name="language_chinese" translatable="false">简体中文</string>
     <string name="language_english" translatable="false">English</string>
-    <string name="common_back">‹ Back</string>
+    <string name="common_back">Back</string>
     <string name="common_cancel">Cancel</string>
     <string name="common_clear">Clear</string>
     <string name="common_close">Close</string>
@@ -275,7 +275,7 @@
     <string name="quick_reply_counter">%1$d/1000 characters</string>
     <string name="quick_reply_invalid">Up to 12 replies of 1–1000 characters, without control characters</string>
     <string name="quick_reply_save_failed">Could not save quick replies</string>
-    <string name="copy_back">‹ Back to terminal</string>
+    <string name="copy_back">Back to terminal</string>
     <string name="copy_all">Copy all</string>
     <string name="copy_done">Copied</string>
     <string name="copy_help">Long-press text and drag the selection, then copy from the system menu. This is a static copy of loaded content; for older tmux history, scroll in the terminal first and reopen.</string>
@@ -388,7 +388,7 @@
     <string name="terminal_insert_text">Insert into terminal</string>
 
     <string name="doctor_title">tmux Doctor</string>
-    <string name="doctor_invite_title">Server saved · tmux Doctor</string>
+    <string name="doctor_invite_title">Check the tmux environment?</string>
     <string name="doctor_invite_body">Check tmux installation, version, scrolling and history? The diagnosis only reads the server. Configuration changes are offered separately.</string>
     <string name="doctor_run">Run Doctor</string>
     <string name="doctor_skip">Skip for now</string>
@@ -471,4 +471,64 @@
     <string name="doctor_touch_off">Remote touch forwarding is off in this app. Gestures only browse local terminal history, even if tmux mouse support is on.</string>
     <string name="doctor_enable_touch">Enable remote touch forwarding</string>
     <string name="voice_model_info">X-ASR INT8 · Offline Chinese/English recognition with native punctuation and casing.</string>
+    <string name="home_summary_attention">%1$d waiting for reply</string>
+    <string name="home_summary_running">%1$d running</string>
+    <string name="home_check_fingerprint">Verify</string>
+    <string name="doctor_unavailable_short">tmux unavailable</string>
+    <string name="doctor_title_short">Doctor</string>
+    <string name="doctor_last_checked">Last %1$s</string>
+    <string name="voice_discard_hint">%1$s · will be discarded</string>
+    <string name="voice_auto_stop">seconds left</string>
+    <string name="voice_bubble_time">%1$s · %2$d s left</string>
+    <string name="voice_slide_cancel_short">↑ Slide up to cancel</string>
+    <string name="voice_open_settings">Open settings</string>
+    <string name="step_hop_auth">%1$s · authenticate</string>
+    <string name="step_enter_tmux">Enter %1$s</string>
+    <string name="step_open_shell">Open terminal</string>
+    <string name="step_in_progress">In progress</string>
+    <string name="terminal_connect_failed">Connection failed</string>
+    <string name="terminal_connecting_title">Connecting</string>
+    <string name="terminal_back_home_short">Back to home</string>
+    <string name="terminal_retry">Retry</string>
+    <string name="terminal_reconnect">Reconnect</string>
+    <string name="terminal_disconnected_short">Disconnected</string>
+    <string name="route_phone">Phone</string>
+    <string name="editor_trust_continue">Matches, continue</string>
+    <string name="editor_hop_of">Host %1$d of %2$d</string>
+    <string name="editor_verifying_help">Saves after verification and records each host fingerprint</string>
+    <string name="editor_step_save">Save configuration</string>
+    <string name="editor_back_edit">Back to editing</string>
+    <string name="tmux_ready_version">tmux %1$s · ready</string>
+    <string name="doctor_readonly">Read-only check</string>
+    <string name="doctor_running">Checking tmux environment</string>
+    <string name="doctor_check_failed_title">Check did not finish</string>
+    <string name="doctor_summary_missing">tmux not found</string>
+    <string name="doctor_summary_ok">Environment looks good</string>
+    <string name="doctor_needs_attention">Needs attention</string>
+    <string name="doctor_expand">Show</string>
+    <string name="doctor_collapse">Hide</string>
+    <string name="doctor_history_custom">Custom (2000–500000)</string>
+    <string name="doctor_new_file">New file</string>
+    <string name="doctor_undo_title">Undo this setup?</string>
+    <string name="doctor_undo_short">Undo</string>
+    <string name="doctor_saved_title">Server saved</string>
+    <string name="doctor_saved_detail">Host fingerprints recorded, authentication passed</string>
+    <plurals name="doctor_summary_fail">
+        <item quantity="one">%1$d item needs fixing</item>
+        <item quantity="other">%1$d items need fixing</item>
+    </plurals>
+    <plurals name="doctor_summary_warn">
+        <item quantity="one">Usable, %1$d suggestion</item>
+        <item quantity="other">Usable, %1$d suggestions</item>
+    </plurals>
+    <plurals name="doctor_passed_count">
+        <item quantity="one">%1$d check passed</item>
+        <item quantity="other">%1$d checks passed</item>
+    </plurals>
+    <string name="settings_connection_terminal">Connection and terminal</string>
+    <string name="editor_keystore_note">Credentials are encrypted with Android Keystore and stay on this device</string>
+    <plurals name="doctor_unchecked_count">
+        <item quantity="one">%1$d check not run</item>
+        <item quantity="other">%1$d checks not run</item>
+    </plurals>
 </resources>

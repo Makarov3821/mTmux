@@ -1,0 +1,30 @@
+/* 模式图展板的公共样式：展板布局、手机外框、状态栏。各方案自己的界面样式写在各自 HTML 里。 */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-font-smoothing: antialiased; }
+body.board {
+  background: #e9e9ec; color: #222; padding: 40px 44px 60px;
+  font-family: "Ubuntu Sans", "Noto Sans CJK SC", sans-serif;
+}
+.board-head { max-width: 1900px; margin-bottom: 28px; }
+.board-head h1 { font-size: 30px; font-weight: 700; letter-spacing: .2px; }
+.board-head p { margin-top: 8px; font-size: 15px; color: #555; line-height: 1.6; max-width: 1100px; }
+.board-head .tags { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+.board-head .tags span { font-size: 12px; padding: 4px 10px; border-radius: 99px; background: #fff; color: #444; border: 1px solid #d6d6db; }
+.swatches { display: flex; gap: 6px; margin-top: 12px; align-items: center; font-size: 12px; color: #666; }
+.swatches b { width: 26px; height: 26px; border-radius: 6px; display: inline-block; border: 1px solid rgba(0,0,0,.12); }
+.grid { display: grid; grid-template-columns: repeat(6, 360px); gap: 36px 28px; }
+.shot { display: flex; flex-direction: column; gap: 10px; }
+.shot figcaption { font-size: 13px; color: #444; line-height: 1.45; min-height: 38px; }
+.shot figcaption b { color: #111; font-weight: 600; margin-right: 6px; }
+
+.phone { width: 360px; height: 800px; position: relative; overflow: hidden; display: flex; flex-direction: column;
+  border-radius: 22px; box-shadow: 0 1px 2px rgba(0,0,0,.12), 0 10px 30px rgba(0,0,0,.14); }
+.sbar { height: 26px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 18px 0 20px;
+  font: 600 12px "Ubuntu Sans", sans-serif; }
+.sbar .r { display: flex; gap: 5px; align-items: center; }
+.ic { flex: none; display: block; }
+.grow { flex: 1; min-height: 0; }
+.row { display: flex; align-items: center; }
+.col { display: flex; flex-direction: column; }
+.ell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.scrim { position: absolute; inset: 0; z-index: 5; }

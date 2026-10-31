@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>方案 A · 精修现状</title>
+<link rel="stylesheet" href="shared/board.css"><link rel="stylesheet" href="shared/a.css">
+<script src="shared/icons.js"></script><script src="shared/term.js"></script></head>
+<body class="board">
+<header class="board-head">
+  <h1>方案 A · 精修现状（Tokyo Night）</h1>
+  <p>保留现在的深色、圆角卡片和终端优先结构，只修执行问题：每张卡片只留一个主操作，状态改成“色点 + 文字”，连接过程和错误用固定位置的状态卡展示，弹窗按“图标 → 标题 → 关键数据 → 操作”排版，强调色只给主按钮和选中态。</p>
+  <div class="tags"><span>改动最小，可沿用现有 Compose 组件</span><span>色板沿用 AppPalette.TOKYO</span><span>圆角 18 / 12 / 10</span><span>终端贴边，不再内缩双色边框</span></div>
+  <div class="swatches"><b style="background:#13141C"></b><b style="background:#1B1D29"></b><b style="background:#24273A"></b><b style="background:#7AA2F7"></b><b style="background:#F7768E"></b><b style="background:#E0AF68"></b><b style="background:#9ECE6A"></b><b style="background:#565F89"></b><span>页面 / 卡片 / 内层 / 强调 / 需处理 / 运行 / 就绪 / 未知</span></div>
+</header>
+<div class="grid">
+
+<!-- 01 首页 -->
+<figure class="shot" data-id="01-home"><div class="phone A">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="hdr row"><div class="grow"><div class="h1">服务器</div><div class="sub">3 台 · 5 个任务 · <span style="color:var(--red)">1 个需处理</span></div></div>
+    <div class="ib"><i data-i="gear"></i></div><div class="ib fill" style="margin-left:6px"><i data-i="plus" data-w="2.2"></i></div></div>
+  <div class="search"><i data-i="search" data-s="18"></i><span class="ph">搜索服务器、会话或分组</span><div class="ib sm"><i data-i="sort" data-s="18"></i></div><span class="sep"></span><div class="ib sm"><i data-i="folderPlus" data-s="18"></i></div></div>
+  <div class="fh"><i data-i="chevD" data-s="14" data-w="2.2"></i><span>日常开发</span><span class="cnt">2</span><span class="grow"></span><div class="ib sm"><i data-i="refresh" data-s="17"></i></div><div class="ib sm"><i data-i="more" data-s="17"></i></div></div>
+  <div class="card">
+    <div class="ch"><div class="grow"><div class="nm">开发服务器</div><div class="mt"><i data-i="clock" data-s="12"></i>2 分钟前刷新</div></div>
+      <div class="ib sm tone"><i data-i="terminal" data-s="18" data-w="2"></i></div><div class="ib sm"><i data-i="more" data-s="18"></i></div></div>
+    <div class="task"><span class="dot d-r"></span><div class="grow"><div class="tn row" style="gap:6px">code-review <span class="tag">上次</span></div><div class="ts">窗口 0 · code-review · 2 个 pane</div></div><span class="pill p-r">需回复</span><span class="chev"><i data-i="chevD" data-s="16"></i></span></div>
+    <div class="pane"><span class="dot d-r"></span><span class="mono grow">%0</span><span style="font-size:12px;color:var(--red)">等待确认</span><i data-i="chevR" data-s="15"></i></div>
+    <div class="pane" style="margin-bottom:6px"><span class="dot d-g"></span><span class="mono grow">%9</span><span style="font-size:12px">已就绪</span><i data-i="chevR" data-s="15"></i></div>
+    <div class="task"><span class="dot d-y"></span><div class="grow"><div class="tn">api-service</div><div class="ts">窗口 1 · api-service</div></div><span class="pill p-y">运行中</span><span class="chev"><i data-i="chevR" data-s="16"></i></span></div>
+    <div class="task"><span class="dot d-g"></span><div class="grow"><div class="tn">daily-check</div><div class="ts">窗口 2 · daily-check</div></div><span class="pill p-g">已就绪</span><span class="chev"><i data-i="chevR" data-s="16"></i></span></div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="grow"><div class="nm">构建节点</div><div class="mt"><i data-i="clock" data-s="12"></i>2 分钟前刷新</div></div>
+      <div class="ib sm tone"><i data-i="terminal" data-s="18" data-w="2"></i></div><div class="ib sm"><i data-i="more" data-s="18"></i></div></div>
+    <div class="task"><span class="dot d-y"></span><div class="grow"><div class="tn">release-build</div><div class="ts">窗口 0 · build</div></div><span class="pill p-y">运行中</span><span class="chev"><i data-i="chevR" data-s="16"></i></span></div>
+  </div>
+  <div class="fh"><i data-i="chevD" data-s="14" data-w="2.2"></i><span>未分组</span><span class="cnt">1</span><span class="grow"></span><div class="ib sm"><i data-i="refresh" data-s="17"></i></div></div>
+  <div class="card">
+    <div class="ch"><div class="grow"><div class="nm">备用服务器</div><div class="mt"><i data-i="clock" data-s="12"></i>2 分钟前刷新</div></div>
+      <div class="ib sm tone"><i data-i="terminal" data-s="18" data-w="2"></i></div><div class="ib sm"><i data-i="more" data-s="18"></i></div></div>
+    <div class="empty"><span class="grow">暂无 tmux 会话</span><span class="link"><i data-i="plus" data-s="15" data-w="2.2"></i>新建会话</span></div>
+  </div>
+</div><figcaption><b>01 首页</b>卡片右侧只留 SSH 与更多；刷新时间改成元信息，新建会话放进列表。状态点旁加文字，多 pane 用缩进引导线。</figcaption></figure>
+
+<!-- 02 首页状态 -->
+<figure class="shot" data-id="02-home-states"><div class="phone A">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="hdr row"><div class="grow"><div class="h1">服务器</div><div class="sub">正在刷新 1 台…</div></div>
+    <div class="ib"><i data-i="gear"></i></div><div class="ib fill" style="margin-left:6px"><i data-i="plus" data-w="2.2"></i></div></div>
+  <div class="search"><i data-i="search" data-s="18"></i><span class="ph">搜索服务器、会话或分组</span><div class="ib sm"><i data-i="sort" data-s="18"></i></div><span class="sep"></span><div class="ib sm"><i data-i="folderPlus" data-s="18"></i></div></div>
+  <div class="fh"><i data-i="chevD" data-s="14" data-w="2.2"></i><span>日常开发</span><span class="cnt">2</span><span class="grow"></span><div class="ib sm"><i data-i="refresh" data-s="17"></i></div><div class="ib sm"><i data-i="more" data-s="17"></i></div></div>
+  <div class="card">
+    <div style="position:absolute;left:0;top:0;height:2px;width:46%;background:var(--ac)"></div>
+    <div class="ch"><div class="grow"><div class="nm">开发服务器</div><div class="mt" style="color:var(--ac)"><span class="spin" style="width:11px;height:11px;border-width:1.5px"></span>正在读取状态 1/2</div></div>
+      <div class="ib sm tone"><i data-i="terminal" data-s="18" data-w="2"></i></div><div class="ib sm"><i data-i="more" data-s="18"></i></div></div>
+    <div class="task"><span class="dot d-r"></span><div class="grow"><div class="tn">code-review</div><div class="ts">窗口 0 · 2 个 pane</div></div><span class="pill p-r">需回复</span><span class="chev"><i data-i="chevR" data-s="16"></i></span></div>
+    <div class="task"><span class="dot d-x"></span><div class="grow"><div class="tn">api-service</div><div class="ts">窗口 1 · 34 分钟前采样</div></div><span class="pill p-x">已过期</span><span class="chev"><i data-i="chevR" data-s="16"></i></span></div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="grow"><div class="nm">构建节点</div><div class="mt">首次连接</div></div>
+      <div class="ib sm tone"><i data-i="terminal" data-s="18" data-w="2"></i></div><div class="ib sm"><i data-i="more" data-s="18"></i></div></div>
+    <div class="row" style="gap:10px;margin:0 10px 10px;padding:10px 10px 10px 12px;border-radius:12px;background:var(--act)">
+      <span style="color:var(--ac)"><i data-i="shield" data-s="18"></i></span><div class="grow"><div style="font-size:13.5px;font-weight:600">需确认主机指纹</div><div style="font-size:12px;color:var(--mu);margin-top:2px">确认后才会读取任务列表</div></div><span class="btn b-p sm-btn">核对</span></div>
+  </div>
+  <div class="fh"><i data-i="chevD" data-s="14" data-w="2.2"></i><span>未分组</span><span class="cnt">1</span><span class="grow"></span><div class="ib sm"><i data-i="refresh" data-s="17"></i></div></div>
+  <div class="card">
+    <div class="ch"><div class="grow"><div class="nm">备用服务器</div><div class="mt">缓存 · 1 小时前</div></div>
+      <div class="ib sm tone"><i data-i="terminal" data-s="18" data-w="2"></i></div><div class="ib sm"><i data-i="more" data-s="18"></i></div></div>
+    <div class="row" style="gap:10px;margin:0 10px 10px;padding:10px 10px 10px 12px;border-radius:12px;background:rgba(247,118,142,.09)">
+      <span style="color:var(--red)"><i data-i="alertCircle" data-s="18"></i></span><div class="grow"><div style="font-size:13.5px;font-weight:600">刷新失败：连接超时</div><div style="font-size:12px;color:var(--mu);margin-top:2px">显示的是上次缓存</div></div><span class="btn b-t sm-btn">重试</span></div>
+    <div class="task"><span class="dot d-x"></span><div class="grow"><div class="tn">nightly</div><div class="ts">窗口 0 · 状态未知</div></div><span class="chev"><i data-i="chevR" data-s="16"></i></span></div>
+  </div>
+  <div style="position:absolute;left:12px;right:12px;bottom:18px;background:var(--hi);border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:center;font-size:13.5px;box-shadow:0 8px 24px rgba(0,0,0,.4)">
+    <span style="color:var(--grn)"><i data-i="check" data-s="18" data-w="2.2"></i></span><span class="grow">已在 tmux 中创建 code-review-2</span><span class="link">进入</span></div>
+</div><figcaption><b>02 首页状态</b>刷新进度、指纹待确认、刷新失败各用卡片内提示条，和任务状态点分开；操作结果用底部提示。</figcaption></figure>
+
+<!-- 03 服务器编辑 -->
+<figure class="shot" data-id="03-server-edit"><div class="phone A">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="row" style="height:56px;padding:0 10px 0 4px;gap:4px"><div class="ib"><i data-i="close"></i></div><div class="grow" style="font-size:17px;font-weight:600">编辑服务器</div><span class="btn b-p sm-btn" style="padding:0 18px">保存</span></div>
+  <div class="sec">连接</div>
+  <div class="grp">
+    <div class="fld"><div class="lb">别名</div><div class="v">开发服务器</div></div>
+    <div class="row" style="margin:0 12px;gap:8px"><div class="fld grow" style="margin:0"><div class="lb">地址</div><div class="v mono">192.0.2.10</div></div><div class="fld" style="margin:0;width:78px"><div class="lb">端口</div><div class="v mono">22</div></div></div>
+    <div class="fld focus"><div class="lb">用户名</div><div class="v mono">developer<span style="display:inline-block;width:1.5px;height:16px;background:var(--ac);vertical-align:-2px;margin-left:1px"></span></div></div>
+  </div>
+  <div class="sec">认证</div>
+  <div class="grp" style="padding:12px 12px 4px">
+    <div class="seg"><span>密码</span><span class="on">私钥</span></div>
+    <div class="row" style="gap:12px;margin:12px 0 8px;padding:12px;border-radius:12px;background:var(--rs)">
+      <div class="ib sm" style="background:var(--act);color:var(--ac)"><i data-i="key" data-s="18"></i></div>
+      <div class="grow"><div style="font-size:14px;font-weight:500">已导入私钥</div><div class="mono" style="font-size:11.5px;color:var(--fa);margin-top:2px">OpenSSH · ED25519 · 加密</div></div>
+      <span class="link" style="font-size:13px">更换</span></div>
+    <div class="fld" style="margin:0 0 8px"><div class="row"><div class="grow"><div class="lb">私钥口令</div><div class="v" style="letter-spacing:2px">••••••••</div></div><span style="color:var(--mu)"><i data-i="eye" data-s="18"></i></span></div></div>
+  </div>
+  <div class="sec">高级</div>
+  <div class="grp">
+    <div class="li"><span class="lic"><i data-i="folder" data-s="19"></i></span><div class="lt l1">分组</div><span class="val">日常开发<i data-i="chevR" data-s="16"></i></span></div>
+    <div class="li"><span class="lic"><i data-i="route" data-s="19"></i></span><div class="lt l1">Jump Host</div><span class="val">直连<i data-i="chevR" data-s="16"></i></span></div>
+    <div class="li"><span class="lic"><i data-i="terminal" data-s="19"></i></span><div class="lt l1">tmux 路径</div><span class="val mono">tmux<i data-i="chevR" data-s="16"></i></span></div>
+    <div class="li"><span class="lic"><i data-i="hand" data-s="19"></i></span><div class="lt"><div class="l1">会话鼠标</div><div class="l2">只设置所选 session 的 mouse on</div></div><span class="tg on"></span></div>
+  </div>
+  <div class="row" style="gap:6px;padding:14px 20px;font-size:11.5px;color:var(--fa)"><i data-i="lock" data-s="13"></i>凭据由 Android Keystore 加密，仅保存在本机</div>
+</div><figcaption><b>03 服务器编辑</b>填充式输入框替代描边框；私钥导入后显示类型摘要；高级选项改成列表行，值在右侧，可直接看到当前配置。</figcaption></figure>
+
+<!-- 04 指纹 -->
+<figure class="shot" data-id="04-host-key"><div class="phone A">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="hdr row"><div class="grow"><div class="h1">服务器</div><div class="sub">3 台 · 5 个任务</div></div><div class="ib"><i data-i="gear"></i></div><div class="ib fill" style="margin-left:6px"><i data-i="plus"></i></div></div>
+  <div class="search"><i data-i="search" data-s="18"></i><span class="ph">搜索服务器、会话或分组</span></div>
+  <div class="fh"><span>日常开发</span></div>
+  <div class="card"><div class="ch"><div class="grow"><div class="nm">开发服务器</div><div class="mt">2 分钟前刷新</div></div></div></div>
+  <div class="card"><div class="ch"><div class="grow"><div class="nm">构建节点</div><div class="mt">首次连接</div></div></div></div>
+  <div class="scrim"></div>
+  <div class="dlg" style="top:150px">
+    <div class="badge"><i data-i="shieldCheck" data-s="24"></i></div>
+    <h2>首次连接，核对主机指纹</h2>
+    <p>请通过服务器管理员或已信任的终端核对。一致后才会保存信任记录。</p>
+    <div style="margin-top:16px;border-radius:14px;background:var(--rs);padding:12px 14px">
+      <div class="row" style="gap:8px;font-size:12px;color:var(--mu)"><i data-i="server" data-s="14"></i><span class="grow">构建节点 · 目标服务器</span><span class="mono">192.0.2.40:22</span></div>
+      <div style="height:1px;background:var(--ln);margin:10px 0"></div>
+      <div class="row" style="justify-content:space-between;font-size:11px;color:var(--fa);margin-bottom:6px"><span>SHA256 · ED25519</span><span class="link" style="font-size:11.5px"><i data-i="copy" data-s="13"></i>复制</span></div>
+      <div class="mono" style="font-size:14px;line-height:1.7;letter-spacing:.6px;color:var(--fg)">ZgNw Jk7m Demo Fing<br>erpr intF orUi Cata<br>logO nly0 aB3x 9QpL</div>
+    </div>
+    <div class="col" style="gap:8px;margin-top:18px"><div class="btn b-p">指纹一致，信任并连接</div><div class="btn b-g">取消</div></div>
+  </div>
+</div><figcaption><b>04 主机指纹</b>说明哪一级主机、地址和算法；指纹按 4 字符分组便于逐段比对；主操作写清结果。密钥变化时同版式改红色盾牌，只留“关闭”。</figcaption></figure>
+
+<!-- 05 终端 -->
+<figure class="shot" data-id="05-terminal"><div class="phone A">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="tbar"><div class="ib"><i data-i="back"></i></div>
+    <div class="tt"><div class="t1"><span class="dot d-g" style="box-shadow:0 0 0 3px rgba(158,206,106,.16)"></span><span class="ell">开发服务器</span></div><div class="t2 mono ell">code-review · 0 · %0</div></div>
+    <div class="ib"><i data-i="keyboard"></i></div><div class="ib"><i data-i="edit"></i></div><div class="ib"><i data-i="toBottom"></i></div></div>
+  <div class="term" data-box="44" data-cursor="1"></div>
+  <div class="dock">
+    <div class="keys"><span class="key">Esc</span><span class="key">Tab</span><span class="key">^C</span><span class="key"><i data-i="arrowUp" data-s="16"></i></span><span class="key"><i data-i="arrowDn" data-s="16"></i></span><span class="key">Enter</span></div>
+    <div class="pg"><i class="on"></i><i></i><i></i><i></i></div>
+    <div class="acts"><div class="act"><i data-i="tool" data-s="18"></i>工具</div><div class="mic"><i data-i="wave" data-s="24" data-w="2.2"></i></div><div class="act"><i data-i="reply" data-s="18"></i>快捷回复</div></div>
+  </div>
+</div><figcaption><b>05 终端</b>顶栏两行：服务器名 + 等宽的会话/窗口/pane，连接状态点放名称前。终端贴满宽度；快捷键改成浅底键帽，翻页点改为长短指示。</figcaption></figure>
+
+<!-- 06 连接中 -->
+<figure class="shot" data-id="06-connecting"><div class="phone A">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="tbar"><div class="ib"><i data-i="back"></i></div>
+    <div class="tt"><div class="t1"><span class="spin" style="width:10px;height:10px;border-width:1.5px"></span><span class="ell">开发服务器</span></div><div class="t2 mono ell">code-review · 0 · %0</div></div>
+    <div class="ib off"><i data-i="keyboard"></i></div><div class="ib off"><i data-i="edit"></i></div><div class="ib off"><i data-i="toBottom"></i></div></div>
+  <div class="term" style="justify-content:center;align-items:stretch;white-space:normal;font-family:inherit;padding:0 18px">
+    <div style="background:var(--sf);border-radius:20px;padding:18px 18px 12px;color:var(--fg)">
+      <div style="font-size:16px;font-weight:700">正在连接</div>
+      <div class="row" style="gap:6px;font-size:12px;color:var(--mu);margin:6px 0 10px"><i data-i="route" data-s="14"></i>手机 → 跳板 1 → 目标服务器</div>
+      <div class="stp"><span class="si" style="background:rgba(158,206,106,.15);color:var(--grn)"><i data-i="check" data-s="14" data-w="2.6"></i></span>跳板 1 已认证<span class="ms mono">184 ms</span></div>
+      <div class="stp"><span class="si" style="background:rgba(158,206,106,.15);color:var(--grn)"><i data-i="check" data-s="14" data-w="2.6"></i></span>转发到 192.0.2.10:22<span class="ms mono">62 ms</span></div>
+      <div class="stp" style="font-weight:600"><span class="si"><span class="spin"></span></span>目标服务器认证<span class="ms">进行中</span></div>
+      <div class="stp" style="color:var(--fa)"><span class="si" style="border:1.5px solid var(--hi)"></span>核对 tmux 任务身份</div>
+      <div class="btn b-t" style="margin-top:12px">取消</div>
+    </div>
+  </div>
+  <div class="dock off">
+    <div class="keys"><span class="key">Esc</span><span class="key">Tab</span><span class="key">^C</span><span class="key">↑</span><span class="key">↓</span><span class="key">Enter</span></div>
+    <div class="pg"><i class="on"></i><i></i><i></i><i></i></div>
+    <div class="acts"><div class="act"><i data-i="tool" data-s="18"></i>工具</div><div class="mic"><i data-i="wave" data-s="24" data-w="2.2"></i></div><div class="act"><i data-i="reply" data-s="18"></i>快捷回复</div></div>
+  </div>
+</div><figcaption><b>06 连接中</b>原来是终端上方的一行浮条 + 正文占位句。改为终端区中央的步骤卡：每级跳板、认证、tmux 核对逐行打勾并显示耗时。</figcaption></figure>
+
+<!-- 07 认证失败 -->
+<figure class="shot" data-id="07-auth-failed"><div class="phone A">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="tbar"><div class="ib"><i data-i="back"></i></div>
+    <div class="tt"><div class="t1"><span class="dot" style="background:var(--red)"></span><span class="ell">开发服务器</span></div><div class="t2 mono ell">code-review · 0 · %0</div></div>
+    <div class="ib off"><i data-i="keyboard"></i></div><div class="ib off"><i data-i="edit"></i></div><div class="ib off"><i data-i="toBottom"></i></div></div>
+  <div class="term" style="justify-content:center;white-space:normal;font-family:inherit;padding:0 18px">
+    <div style="background:var(--sf);border-radius:20px;padding:20px 18px 14px;color:var(--fg)">
+      <div class="badge" style="width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:rgba(247,118,142,.14);color:var(--red);margin-bottom:12px"><i data-i="lock" data-s="22"></i></div>
+      <div style="font-size:17px;font-weight:700">目标服务器拒绝了登录</div>
+      <div style="font-size:13px;color:var(--mu);line-height:1.6;margin-top:6px">用户名或密码不正确，或服务器禁用了密码认证。跳板 1 已正常通过。</div>
+      <div class="row" style="gap:8px;margin-top:12px;font-size:12px"><span class="pill p-g">跳板 1 · 通过</span><span class="pill p-r">目标 · 认证失败</span></div>
+      <div class="row" style="gap:8px;margin-top:16px"><div class="btn b-t grow">编辑服务器</div><div class="btn b-p grow">重试</div></div>
+      <div class="btn b-g" style="margin-top:4px;height:36px;font-size:13px">返回首页</div>
+    </div>
+  </div>
+  <div class="dock off">
+    <div class="keys"><span class="key">Esc</span><span class="key">Tab</span><span class="key">^C</span><span class="key">↑</span><span class="key">↓</span><span class="key">Enter</span></div>
+    <div class="pg"><i class="on"></i><i></i><i></i><i></i></div>
+    <div class="acts"><div class="act"><i data-i="tool" data-s="18"></i>工具</div><div class="mic"><i data-i="wave" data-s="24" data-w="2.2"></i></div><div class="act"><i data-i="reply" data-s="18"></i>快捷回复</div></div>
+  </div>
+</div><figcaption><b>07 认证失败</b>同一张卡转为错误态：图标、一句结论、可能原因、哪一级失败，再给“编辑服务器 / 重试”。不再把“重连最近任务”作为认证错误的主操作。</figcaption></figure>
+
+<!-- 08 断线 -->
+<figure class="shot" data-id="08-disconnected"><div class="phone A">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="tbar"><div class="ib"><i data-i="back"></i></div>
+    <div class="tt"><div class="t1"><span class="dot d-x"></span><span class="ell">开发服务器</span></div><div class="t2 mono ell">code-review · 0 · %0</div></div>
+    <div class="ib"><i data-i="keyboard"></i></div><div class="ib"><i data-i="edit"></i></div><div class="ib"><i data-i="toBottom"></i></div></div>
+  <div class="banner" style="background:rgba(224,175,104,.12);border-top:1px solid rgba(224,175,104,.2);border-bottom:1px solid rgba(224,175,104,.2)">
+    <span style="color:var(--yel);margin-top:1px"><i data-i="unplug" data-s="20"></i></span>
+    <div class="grow"><div style="font-size:14px;font-weight:600">连接已断开</div><div style="font-size:12px;color:var(--mu);margin-top:2px">19:26 网络切换 · 以下为断开前的历史</div>
+      <div class="row" style="gap:8px;margin-top:10px"><span class="btn b-p sm-btn">重连此任务</span><span class="btn b-t sm-btn">重新选择</span></div></div>
+  </div>
+  <div class="term" data-box="44" style="filter:saturate(.35);opacity:.6"></div>
+  <div class="dock">
+    <div class="row" style="gap:8px;font-size:12px;color:var(--mu);padding:2px 4px 8px"><i data-i="info" data-s="14"></i>草稿会保留，重连后再发送</div>
+    <div class="keys off"><span class="key">Esc</span><span class="key">Tab</span><span class="key">^C</span><span class="key">↑</span><span class="key">↓</span><span class="key">Enter</span></div>
+    <div class="acts"><div class="act"><i data-i="tool" data-s="18"></i>工具</div><div class="mic off"><i data-i="wave" data-s="24" data-w="2.2"></i></div><div class="act"><i data-i="reply" data-s="18"></i>快捷回复</div></div>
+  </div>
+</div><figcaption><b>08 断线</b>提示条固定在顶栏下方、占独立一行，不再盖住第一行输出。历史内容降低饱和度；发送类按键置灰，工具仍可用。</figcaption></figure>
+
+<!-- 09 编辑卡片 -->
+<figure class="shot" data-id="09-editor"><div class="phone A">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="tbar"><div class="ib"><i data-i="back"></i></div>
+    <div class="tt"><div class="t1"><span class="dot d-g"></span><span class="ell">开发服务器</span></div><div class="t2 mono ell">code-review · 0 · %0</div></div>
+    <div class="ib"><i data-i="keyboard"></i></div><div class="ib" style="color:var(--ac);background:var(--act)"><i data-i="edit"></i></div><div class="ib"><i data-i="toBottom"></i></div></div>
+  <div class="term" data-box="44"></div>
+  <div class="scrim" style="background:rgba(5,6,12,.35)"></div>
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="row"><div class="grow" style="font-size:17px;font-weight:700">编辑文本</div><span class="pill p-a mono">→ %0 code-review</span></div>
+    <div class="row" style="gap:6px;margin-top:12px;overflow:hidden">
+      <span class="pill p-x" style="font-weight:500;padding:5px 10px">继续</span><span class="pill p-x" style="font-weight:500;padding:5px 10px">总结进展和剩余问题</span><span class="pill p-x" style="font-weight:500;padding:5px 10px">先解释方案</span></div>
+    <div style="margin-top:12px;border-radius:14px;background:var(--rs);box-shadow:inset 0 0 0 1.5px var(--ac);padding:12px 14px;font-size:15px;line-height:1.6;min-height:112px">请检查这次修改，重点关注 SSH 连接复用和中文输入。<br>完成后运行测试，并说明剩余问题。<span style="display:inline-block;width:1.5px;height:17px;background:var(--ac);vertical-align:-3px"></span></div>
+    <div class="row" style="font-size:11.5px;color:var(--fa);margin:8px 2px 14px;gap:6px"><span>2 行 · 47 字</span><span class="grow"></span><span>插入后不会自动回车</span></div>
+    <div class="row" style="gap:10px"><div class="mic" style="width:48px;height:48px;margin:0;box-shadow:none;background:var(--act);color:var(--ac)"><i data-i="wave" data-s="22" data-w="2.2"></i></div><span class="grow"></span><div class="btn b-g">关闭</div><div class="btn b-p" style="padding:0 22px">插入终端</div></div>
+  </div>
+</div><figcaption><b>09 编辑卡片</b>标题右侧显示插入目标；快捷回复以短标签放在输入框上方；字数与“不自动回车”放在输入框下方小字，不占标题说明位置。</figcaption></figure>
+
+<!-- 10 录音 -->
+<figure class="shot" data-id="10-voice"><div class="phone A">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="tbar"><div class="ib"><i data-i="back"></i></div>
+    <div class="tt"><div class="t1"><span class="dot d-g"></span><span class="ell">开发服务器</span></div><div class="t2 mono ell">code-review · 0 · %0</div></div>
+    <div class="ib"><i data-i="keyboard"></i></div><div class="ib"><i data-i="edit"></i></div><div class="ib"><i data-i="toBottom"></i></div></div>
+  <div class="term" data-box="44" style="opacity:.3"></div>
+  <div style="position:absolute;left:0;right:0;top:230px;display:flex;flex-direction:column;align-items:center;z-index:3">
+    <div style="width:150px;height:150px;border-radius:50%;background:conic-gradient(var(--grn) 0 80%, var(--rs) 80% 100%);display:grid;place-items:center">
+      <div style="width:138px;height:138px;border-radius:50%;background:var(--sf);display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div style="font-size:12px;color:var(--mu)">剩余</div><div style="font-size:38px;font-weight:700;line-height:1.1">48<span style="font-size:16px;margin-left:2px">秒</span></div></div></div>
+    <div class="row" style="gap:3px;height:28px;margin-top:18px">
+      <i style="width:4px;height:8px;background:var(--grn);border-radius:2px"></i><i style="width:4px;height:14px;background:var(--grn);border-radius:2px"></i><i style="width:4px;height:24px;background:var(--grn);border-radius:2px"></i><i style="width:4px;height:18px;background:var(--grn);border-radius:2px"></i><i style="width:4px;height:28px;background:var(--grn);border-radius:2px"></i><i style="width:4px;height:12px;background:var(--grn);border-radius:2px"></i><i style="width:4px;height:20px;background:var(--grn);border-radius:2px"></i><i style="width:4px;height:9px;background:var(--grn);border-radius:2px"></i><i style="width:4px;height:16px;background:var(--grn);border-radius:2px"></i></div>
+    <div style="margin-top:14px;font-size:15px;font-weight:600">松手转文字</div>
+    <div style="margin-top:4px;font-size:12px;color:var(--mu)">本机 X-ASR · 不上传音频</div>
+  </div>
+  <div style="position:absolute;left:50%;transform:translateX(-50%);bottom:178px;display:flex;align-items:center;gap:4px;color:var(--mu);font-size:12px;z-index:4;background:var(--sf);padding:5px 12px;border-radius:99px"><i data-i="arrowUp" data-s="14"></i>上滑取消</div>
+  <div class="dock" style="position:relative;z-index:3">
+    <div class="keys off"><span class="key">Esc</span><span class="key">Tab</span><span class="key">^C</span><span class="key">↑</span><span class="key">↓</span><span class="key">Enter</span></div>
+    <div class="pg"><i class="on"></i><i></i><i></i><i></i></div>
+    <div class="acts"><div class="act off"><i data-i="tool" data-s="18"></i>工具</div>
+      <div class="mic" style="background:var(--grn);box-shadow:0 0 0 10px rgba(158,206,106,.14),0 0 0 22px rgba(158,206,106,.07)"><i data-i="wave" data-s="24" data-w="2.2"></i></div>
+      <div class="act off"><i data-i="reply" data-s="18"></i>快捷回复</div></div>
+  </div>
+</div><figcaption><b>10 按住录音</b>倒计时环、实时音量条和“松手转文字”上下排列；“上滑取消”提示放在按钮正上方，对应手指方向。最后 10 秒环变橙，取消区变红。</figcaption></figure>
+
+<!-- 11 设置 -->
+<figure class="shot" data-id="11-settings"><div class="phone A">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="row" style="height:56px;padding:0 10px 0 4px;gap:4px"><div class="ib"><i data-i="back"></i></div><div class="grow" style="font-size:17px;font-weight:600">设置</div></div>
+  <div class="sec" style="padding-top:6px">外观</div>
+  <div class="grp" style="padding:12px 12px 8px">
+    <div class="seg"><span>跟随系统</span><span>浅色</span><span class="on">深色</span></div>
+    <div class="row" style="gap:10px;margin-top:14px;padding:0 2px">
+      <div class="col" style="align-items:center;gap:5px;font-size:10.5px;color:var(--fg)"><span style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#1B1D29 50%,#7AA2F7 50%);box-shadow:0 0 0 2px var(--sf),0 0 0 4px var(--ac)"></span>Tokyo</div>
+      <div class="col" style="align-items:center;gap:5px;font-size:10.5px;color:var(--mu)"><span style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#1E1E2E 50%,#CBA6F7 50%)"></span>Catppuccin</div>
+      <div class="col" style="align-items:center;gap:5px;font-size:10.5px;color:var(--mu)"><span style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#17221C 50%,#79D5B0 50%)"></span>Emerald</div>
+      <div class="col" style="align-items:center;gap:5px;font-size:10.5px;color:var(--mu)"><span style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#18181D 50%,#E4E4E7 50%)"></span>Zinc</div>
+      <div class="col" style="align-items:center;gap:5px;font-size:10.5px;color:var(--mu)"><span style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#282E39 50%,#88C0D0 50%)"></span>Nord</div>
+      <div class="col" style="align-items:center;gap:5px;font-size:10.5px;color:var(--mu)"><span style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#1D2228 50%,#70CFC4 50%)"></span>Paper</div>
+    </div>
+    <div class="li" style="padding:6px 4px 0;margin-top:8px;border-top:1px solid var(--ln)"><span class="lic"><i data-i="globe" data-s="19"></i></span><div class="lt l1">语言</div><span class="val">跟随系统<i data-i="chevR" data-s="16"></i></span></div>
+  </div>
+  <div class="sec">连接与终端</div>
+  <div class="grp">
+    <div class="li"><span class="lic"><i data-i="link" data-s="19"></i></span><div class="lt"><div class="l1">空闲 SSH 保留</div><div class="l2">前台保留 1 分钟，退后台关闭</div></div><span class="val">中等 · 2 条<i data-i="chevR" data-s="16"></i></span></div>
+    <div class="li"><span class="lic"><i data-i="terminal" data-s="19"></i></span><div class="lt l1">字号</div><div class="row" style="gap:4px;background:var(--rs);border-radius:10px;padding:2px"><div class="ib sm" style="width:30px;height:30px">−</div><span class="mono" style="width:24px;text-align:center">14</span><div class="ib sm" style="width:30px;height:30px">＋</div></div></div>
+    <div class="li"><span class="lic"><i data-i="hand" data-s="19"></i></span><div class="lt"><div class="l1">触摸滚轮和点击</div><div class="l2">轻点左键，长按右键</div></div><span class="tg on"></span></div>
+    <div class="li" style="display:block;padding-top:12px;padding-bottom:12px"><div class="row"><span class="l1 grow" style="font-size:15px;padding-left:31px">远端滚动倍率</span><span class="mono" style="color:var(--ac);font-weight:600">3×</span></div>
+      <div style="margin:12px 0 0 31px;position:relative;height:18px"><div style="position:absolute;left:0;right:0;top:7px;height:4px;border-radius:2px;background:var(--rs)"></div><div style="position:absolute;left:0;width:22%;top:7px;height:4px;border-radius:2px;background:var(--ac)"></div><div style="position:absolute;left:calc(22% - 9px);top:0;width:18px;height:18px;border-radius:50%;background:var(--ac);box-shadow:0 0 0 4px var(--act)"></div></div>
+      <div class="row mono" style="justify-content:space-between;margin:6px 0 0 31px;font-size:10.5px;color:var(--fa)"><span>1×</span><span>5×</span><span>10×</span></div></div>
+  </div>
+  <div class="sec">隐私与语音</div>
+  <div class="grp">
+    <div class="li"><span class="lic"><i data-i="eye" data-s="19"></i></span><div class="lt"><div class="l1">隐私展示</div><div class="l2">隐藏地址和用户名，允许截图</div></div><span class="tg on"></span></div>
+  </div>
+</div><figcaption><b>11 设置</b>分组标题改为灰色小字，强调色只留给控件；长说明压缩成一行副标题，细节放二级页。主题色用对角色块预览。</figcaption></figure>
+
+</div>
+</body></html>

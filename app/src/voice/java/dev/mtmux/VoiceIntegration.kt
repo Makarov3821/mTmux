@@ -10,6 +10,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
@@ -42,8 +43,9 @@ internal fun initializeVoiceFlavor(context: android.content.Context) {
 }
 
 @Composable internal fun VoiceSettings() {
-    Text(stringResource(R.string.voice_settings_title), color = MaterialTheme.colorScheme.primary)
-    Text(stringResource(R.string.voice_model_info), style = MaterialTheme.typography.bodySmall,
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    SettingRow(stringResource(R.string.voice_settings_title), icon = UiSymbol.MIC)
+    Text(stringResource(R.string.voice_model_info), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.testTag("voice-model-info"))
 }
 
@@ -223,44 +225,54 @@ internal fun initializeVoiceFlavor(context: android.content.Context) {
             if(state.phase in listOf(VoicePhase.STARTING,VoicePhase.RECORDING)) finishRecording(state.generation)
             else requestStart(accessibility=true)
         })
-    if(state.phase==VoicePhase.STARTING || state.phase==VoicePhase.RECORDING) VoiceRecordingFeedback(state)
+    if(state.phase==VoicePhase.STARTING || state.phase==VoicePhase.RECORDING) VoiceRecordingFeedback(state) {recorder.level}
 
-    if(state.phase in listOf(VoicePhase.TRANSCRIBING,VoicePhase.RESULT,VoicePhase.ERROR)) {
-        ModalBottomSheet(onDismissRequest={cancelAll()},containerColor=MaterialTheme.colorScheme.surface,
-            shape=MaterialTheme.shapes.extraLarge,sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true)) {
-            Column(Modifier.fillMaxWidth().heightIn(max=540.dp).verticalScroll(rememberScrollState()).padding(20.dp),
-                verticalArrangement=Arrangement.spacedBy(14.dp)) {
-                Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-                    AppIcon(UiSymbol.MIC,tint=MaterialTheme.colorScheme.primary)
-                    Text(stringResource(R.string.voice_title),style=MaterialTheme.typography.titleLarge)
-                }
-                Text(stringResource(R.string.voice_local_badge),style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.primary)
-                InsetPanel {
-                    when(state.phase) {
-                        VoicePhase.TRANSCRIBING -> {
-                            Text(stringResource(R.string.voice_transcribing),Modifier.testTag("voice-transcribing"))
-                            LinearProgressIndicator(Modifier.fillMaxWidth())
-                        }
-                        VoicePhase.RESULT -> {
-                            Text(stringResource(R.string.voice_result_help),Modifier.testTag("voice-result"))
-                            SelectionContainer {Text(resultText,style=MaterialTheme.typography.bodyLarge)}
-                        }
-                        VoicePhase.ERROR -> Text(stringResource(errorText),Modifier.testTag("voice-error"),color=MaterialTheme.colorScheme.error)
-                        else -> Unit
+    when(state.phase) {
+        VoicePhase.TRANSCRIBING -> VoiceTranscribingBubble(onCancel={cancelAll()})
+        VoicePhase.ERROR -> if(errorText==R.string.voice_error_permission) AppSheet(onDismiss={cancelAll()}) {
+            SheetHeader(stringResource(R.string.voice_title),stringResource(R.string.voice_local_badge),UiSymbol.MIC,Tone.WARNING)
+            Text(stringResource(errorText),Modifier.padding(horizontal=12.dp,vertical=8.dp).testTag("voice-error"),style=MaterialTheme.typography.bodyMedium)
+            Row(Modifier.fillMaxWidth().padding(12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                TonalActionButton(DialogAction(stringResource(R.string.common_close),{cancelAll()}),Modifier.weight(1f))
+                PrimaryActionButton(DialogAction(stringResource(R.string.voice_open_settings),{
+                    cancelAll()
+                    runCatching {context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,android.net.Uri.fromParts("package",context.packageName,null)))}
+                }),Modifier.weight(1f))
+            }
+        } else VoiceErrorHint(stringResource(errorText)) {cancelAll()}
+        VoicePhase.RESULT -> AppSheet(onDismiss={cancelAll()}) {
+            SheetHeader(stringResource(R.string.voice_title),stringResource(R.string.voice_result_help),UiSymbol.MIC,Tone.ACCENT)
+            InsetPanel(Modifier.padding(horizontal=12.dp).testTag("voice-result")) {SelectionContainer {Text(resultText,style=MaterialTheme.typography.bodyLarge)}}
+            Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                PrimaryActionButton(DialogAction(stringResource(R.string.quick_reply_append),{
+                    if(latestCommit(capturedToken,capturedTarget,resultText,true)) state.complete(state.generation)
+                    else {errorText=R.string.voice_error_target_changed;state.error(state.generation)}
+                },"voice-append"),Modifier.fillMaxWidth())
+                TonalActionButton(DialogAction(stringResource(R.string.quick_reply_replace),{
+                    if(latestCommit(capturedToken,capturedTarget,resultText,false)) state.complete(state.generation)
+                    else {errorText=R.string.voice_error_target_changed;state.error(state.generation)}
+                },"voice-replace"),Modifier.fillMaxWidth())
+                QuietActionButton(DialogAction(stringResource(R.string.common_cancel),{cancelAll()}),Modifier.fillMaxWidth())
+            }
+        }
+        else -> Unit
+    }
+}
+
+/** Transcription in place of the recording bubble; tapping outside cancels. */
+@Composable internal fun VoiceTranscribingBubble(onCancel: () -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest=onCancel,properties=androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth=false)) {
+        Box(Modifier.fillMaxSize().clickable(interactionSource=null,indication=null,onClick=onCancel),contentAlignment=androidx.compose.ui.Alignment.Center) {
+            Surface(Modifier.padding(horizontal=32.dp).widthIn(max=360.dp).fillMaxWidth(),shape=androidx.compose.foundation.shape.RoundedCornerShape(22.dp),
+                color=MaterialTheme.colorScheme.surfaceVariant,shadowElevation=10.dp) {
+                Column(Modifier.padding(horizontal=16.dp,vertical=14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                        CircularProgressIndicator(Modifier.size(14.dp),strokeWidth=2.dp)
+                        Text(stringResource(R.string.voice_transcribing),Modifier.weight(1f).testTag("voice-transcribing"),style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        TextButton(onClick=onCancel){Text(stringResource(R.string.common_cancel))}
                     }
-                }
-                if(state.phase==VoicePhase.RESULT) {
-                    Button(onClick={
-                        if(latestCommit(capturedToken,capturedTarget,resultText,true)) state.complete(state.generation)
-                        else {errorText=R.string.voice_error_target_changed;state.error(state.generation)}
-                    },modifier=Modifier.fillMaxWidth().testTag("voice-append")) {Text(stringResource(R.string.quick_reply_append))}
-                    OutlinedButton(onClick={
-                        if(latestCommit(capturedToken,capturedTarget,resultText,false)) state.complete(state.generation)
-                        else {errorText=R.string.voice_error_target_changed;state.error(state.generation)}
-                    },modifier=Modifier.fillMaxWidth().testTag("voice-replace")) {Text(stringResource(R.string.quick_reply_replace))}
-                }
-                TextButton(onClick={cancelAll()},modifier=Modifier.fillMaxWidth()) {
-                    Text(stringResource(if(state.phase==VoicePhase.ERROR) R.string.common_close else R.string.common_cancel))
+                    LinearProgressIndicator(Modifier.fillMaxWidth().height(8.dp),trackColor=MaterialTheme.colorScheme.surface,strokeCap=androidx.compose.ui.graphics.StrokeCap.Round)
+                    Text(stringResource(R.string.voice_result_help),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

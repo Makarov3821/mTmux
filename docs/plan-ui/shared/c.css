@@ -1,0 +1,70 @@
+/* 方案 C：安静纸面（暖白纸色、衬线标题、墨黑主操作、细线列表、浅色终端） */
+.C { --bg:#F5F1E8; --sf:#FBF8F1; --rs:#EDE7DA; --ln:#DDD5C4; --lh:#C9BFAB;
+  --fg:#22201B; --mu:#6E675B; --fa:#9A9282; --ink:#22201B; --ac:#B4532A; --act:rgba(180,83,42,.10);
+  --red:#C2410C; --yel:#B7791F; --grn:#4D7C3A; --gry:#A39C8E; --term:#FBF8F1;
+  background:var(--bg); color:var(--fg); font:14px/1.5 "Ubuntu Sans","Noto Sans CJK SC",sans-serif; }
+.C .sbar { color:var(--fg); }
+.C .serif { font-family:"Noto Serif CJK SC",serif; }
+.C .mono { font-family:"Ubuntu Sans Mono","Noto Sans Mono CJK SC",monospace; }
+.C .ib { width:40px; height:40px; border-radius:50%; display:grid; place-items:center; color:var(--mu); }
+.C .ib.ink { background:var(--ink); color:var(--bg); }
+.C .hdr { padding:18px 20px 6px; }
+.C .h1 { font:700 30px/1.15 "Noto Serif CJK SC",serif; letter-spacing:1px; }
+.C .kick { font-size:12px; color:var(--fa); letter-spacing:1.5px; }
+.C .sub { font-size:13px; color:var(--mu); margin-top:6px; }
+.C .search { margin:10px 20px 4px; height:42px; border-bottom:1px solid var(--lh); display:flex; align-items:center; gap:10px; color:var(--fa); }
+.C .fh { display:flex; align-items:baseline; gap:8px; padding:22px 20px 6px; }
+.C .fh .t { font:600 13px "Noto Serif CJK SC",serif; color:var(--mu); letter-spacing:2px; }
+.C .fh .n { font-size:12px; color:var(--fa); }
+.C .srv { margin:0 20px; border-top:1px solid var(--fg); padding:12px 0 4px; }
+.C .srv .nm { font:600 18px "Noto Serif CJK SC",serif; }
+.C .srv .mt { font-size:12px; color:var(--fa); }
+.C .task { display:flex; align-items:center; gap:12px; min-height:50px; border-bottom:1px solid var(--ln); margin:0 20px; }
+.C .task .tn { font-size:15px; } .C .task .ts { font-size:12px; color:var(--fa); }
+.C .mark { width:3px; height:30px; border-radius:2px; flex:none; }
+.C .m-r { background:var(--red); } .C .m-y { background:var(--yel); } .C .m-g { background:var(--grn); } .C .m-x { background:var(--gry); }
+.C .stt { font-size:12.5px; font-weight:600; white-space:nowrap; }
+.C .s-r { color:var(--red); } .C .s-y { color:var(--yel); } .C .s-g { color:var(--grn); } .C .s-x { color:var(--fa); }
+.C .note { font-size:13px; color:var(--mu); line-height:1.6; }
+.C .lk { color:var(--ac); font-weight:600; }
+.C .btn { height:46px; border-radius:23px; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:600; padding:0 20px; }
+.C .b-i { background:var(--ink); color:var(--bg); } .C .b-o { border:1px solid var(--lh); color:var(--fg); } .C .b-g { color:var(--mu); }
+.C .sm { height:34px; border-radius:17px; padding:0 14px; font-size:13px; }
+.C .scrim { background:rgba(40,34,24,.36); }
+.C .dlg { position:absolute; left:16px; right:16px; z-index:6; background:var(--sf); border-radius:6px; padding:26px 22px 18px; box-shadow:0 18px 40px rgba(40,34,24,.22); }
+.C .dlg h2 { font:700 21px/1.35 "Noto Serif CJK SC",serif; }
+.C .sheet { position:absolute; left:0; right:0; bottom:0; z-index:6; background:var(--sf); border-top:1px solid var(--lh); padding:18px 20px 18px; box-shadow:0 -12px 30px rgba(40,34,24,.12); }
+.C .sec { font:600 12px "Noto Serif CJK SC",serif; color:var(--fa); letter-spacing:2px; padding:22px 20px 6px; }
+.C .fld { margin:0 20px; border-bottom:1px solid var(--ln); padding:10px 0 9px; }
+.C .fld .lb { font-size:12px; color:var(--fa); } .C .fld .v { font-size:16px; margin-top:2px; }
+.C .fld.focus { border-bottom:2px solid var(--fg); }
+.C .li { display:flex; align-items:center; gap:12px; min-height:54px; margin:0 20px; border-bottom:1px solid var(--ln); }
+.C .li .lt { flex:1; min-width:0; } .C .li .l1 { font-size:15px; } .C .li .l2 { font-size:12px; color:var(--fa); }
+.C .li .val { color:var(--mu); font-size:14px; display:flex; align-items:center; gap:2px; }
+.C .seg { display:flex; gap:18px; font-size:14px; color:var(--fa); }
+.C .seg .on { color:var(--fg); font-weight:600; border-bottom:2px solid var(--fg); padding-bottom:2px; }
+.C .tg { width:42px; height:24px; border-radius:12px; background:var(--rs); border:1px solid var(--lh); position:relative; flex:none; }
+.C .tg::after { content:""; position:absolute; left:2px; top:2px; width:18px; height:18px; border-radius:50%; background:var(--sf); box-shadow:0 1px 2px rgba(0,0,0,.2); }
+.C .tg.on { background:var(--ink); border-color:var(--ink); } .C .tg.on::after { left:20px; }
+/* 终端 */
+.C .tbar { height:58px; display:flex; align-items:center; gap:2px; padding:0 6px; flex:none; border-bottom:1px solid var(--ln); }
+.C .tbar .tt { flex:1; min-width:0; padding-left:2px; }
+.C .tbar .t1 { font:600 16px "Noto Serif CJK SC",serif; }
+.C .tbar .t2 { font-size:11.5px; color:var(--fa); }
+.C .term { background:var(--term); color:#3B372F; font:12px/1.6 "Noto Sans Mono CJK SC",monospace; padding:12px 14px; white-space:pre; display:flex; flex-direction:column; justify-content:space-between; flex:1; min-height:0; overflow:hidden; }
+.C .t-b { color:var(--ac); } .C .t-g { color:var(--grn); } .C .t-y { color:var(--yel); } .C .t-r { color:var(--red); } .C .t-m { color:#A39C8E; } .C .t-w { color:#22201B; font-weight:700; }
+.C .t-box { border:1px solid var(--lh); border-radius:4px; padding:6px 10px; margin-bottom:4px; color:#22201B; white-space:pre-wrap; }
+.C .t-cur { display:inline-block; width:7px; height:14px; vertical-align:-2px; background:#22201B; }
+.C .dock { padding:8px 14px 12px; flex:none; border-top:1px solid var(--ln); background:var(--bg); }
+.C .keys { display:grid; grid-template-columns:repeat(6,1fr); }
+.C .key { height:38px; display:grid; place-items:center; font:500 13px "Ubuntu Sans Mono",monospace; color:var(--fg); }
+.C .key + .key { border-left:1px solid var(--ln); }
+.C .key.on { color:var(--ac); font-weight:700; text-decoration:underline; text-underline-offset:4px; }
+.C .pg { text-align:center; font-size:10.5px; color:var(--fa); letter-spacing:1px; margin:2px 0 4px; }
+.C .acts { display:grid; grid-template-columns:1fr 64px 1fr; align-items:center; height:58px; }
+.C .act { display:flex; align-items:center; justify-content:center; gap:7px; color:var(--mu); font-size:14px; }
+.C .mic { width:56px; height:56px; border-radius:50%; background:var(--ink); color:var(--bg); display:grid; place-items:center; margin:0 auto; }
+.C .off { opacity:.4; }
+.C .stp { display:flex; gap:14px; align-items:baseline; padding:10px 0; border-bottom:1px solid var(--ln); font-size:14px; }
+.C .stp .n { font:600 13px "Noto Serif CJK SC",serif; color:var(--fa); width:18px; }
+.C .stp .ms { margin-left:auto; color:var(--fa); font-size:12px; }

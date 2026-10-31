@@ -10,7 +10,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.platform.testTag
@@ -104,24 +107,17 @@ fun terminalTheme(dark: Boolean, palette: AppPalette): JSONObject {
 }
 
 @Composable fun PaletteSettings(selected: AppPalette, onSelect: (AppPalette) -> Unit) {
-    Text(stringResource(R.string.settings_palette), style = MaterialTheme.typography.labelLarge)
-    val columns = if (androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.2f) 2 else 3
-    AppPalette.entries.chunked(columns).forEach { options ->
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            options.forEach { palette ->
-                Surface(Modifier.weight(1f).selectable(selected == palette, role = Role.RadioButton, onClick = { onSelect(palette) })
-                    .testTag("palette-${palette.name}"), shape = MaterialTheme.shapes.medium,
-                    color = if (selected == palette) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.background,
-                    border = BorderStroke(1.dp, if (selected == palette) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)) {
-                    Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            listOf(appColors(true,palette).primary, appColors(false,palette).primary, appColors(true,palette).surfaceVariant).forEach {
-                                Box(Modifier.size(10.dp).background(it,CircleShape))
-                            }
-                        }
-                        Text(palette.label, style = MaterialTheme.typography.labelMedium, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                    }
-                }
+    SettingRow(stringResource(R.string.settings_palette), icon = UiSymbol.PALETTE)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        AppPalette.entries.forEach { palette ->
+            val on = selected == palette
+            val dark = appColors(true, palette)
+            Column(Modifier.selectable(on, role = Role.RadioButton, onClick = { onSelect(palette) }).testTag("palette-${palette.name}").padding(2.dp),
+                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Box(Modifier.size(40.dp).then(if (on) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(14.dp)) else Modifier).padding(if (on) 4.dp else 0.dp)
+                    .background(Brush.linearGradient(0f to dark.surface, .5f to dark.surface, .5f to dark.primary, 1f to dark.primary), RoundedCornerShape(if (on) 10.dp else 12.dp)))
+                Text(palette.label.substringBefore(' '), style = MaterialTheme.typography.labelSmall,
+                    color = if (on) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
         }
     }

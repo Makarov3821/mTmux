@@ -17,6 +17,9 @@ class VoiceRecorder : AutoCloseable {
     private val running = AtomicBoolean(false)
     @Volatile private var recorder: AudioRecord? = null
     @Volatile private var future: Future<ByteArray>? = null
+    /** Peak of the latest buffer in 0..1, only for the on-screen level meter; never stored. */
+    @Volatile var level: Float = 0f
+        private set
 
     @SuppressLint("MissingPermission") // voice flavor UI requests RECORD_AUDIO before calling.
     @Synchronized fun start(onLimit: () -> Unit) {
@@ -39,7 +42,7 @@ class VoiceRecorder : AutoCloseable {
                         val wanted = minOf(buffer.size, MAX_BYTES - result.size())
                         val count = audio.read(buffer, 0, wanted, AudioRecord.READ_BLOCKING)
                         when {
-                            count > 0 -> result.write(buffer, 0, count)
+                            count > 0 -> { result.write(buffer, 0, count); level = peak(buffer, count) }
                             count == 0 || !running.get() -> Unit
                             else -> error("VOICE_AUDIO_READ_$count")
                         }
@@ -47,6 +50,7 @@ class VoiceRecorder : AutoCloseable {
                     if (result.size() >= MAX_BYTES && running.getAndSet(false)) Handler(Looper.getMainLooper()).post(onLimit)
                     result.toByteArray()
                 } finally {
+                    level = 0f
                     running.set(false)
                     if (audio.recordingState == AudioRecord.RECORDSTATE_RECORDING) runCatching { audio.stop() }
                     audio.release()
@@ -89,6 +93,17 @@ class VoiceRecorder : AutoCloseable {
         val job = future ?: return
         try { job.get(3, TimeUnit.SECONDS) }
         finally { if (job.isDone) synchronized(this) { if (future === job) future = null } }
+    }
+
+    private fun peak(buffer: ByteArray, count: Int): Float {
+        var max = 0
+        var i = 0
+        while (i + 1 < count) {
+            val sample = kotlin.math.abs(((buffer[i + 1].toInt() shl 8) or (buffer[i].toInt() and 255)).toShort().toInt())
+            if (sample > max) max = sample
+            i += 8 // every 4th sample is enough for a meter
+        }
+        return (max / 32768f).coerceIn(0f, 1f)
     }
 
     fun isRecording() = running.get()

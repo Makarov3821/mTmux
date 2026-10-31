@@ -29,10 +29,9 @@ import kotlinx.coroutines.*
             finally { busy = false }
         } else result = if(uri==null) R.string.log_save_cancelled else R.string.log_snapshot_stale
     }
-    Text(stringResource(R.string.log_title),color=MaterialTheme.colorScheme.primary)
-    Text(stringResource(R.string.log_help),style=MaterialTheme.typography.bodySmall)
-    Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-        OutlinedButton(enabled=!busy && payload==null,onClick={
+    Text(stringResource(R.string.log_help),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        FilledTonalButton(shape=androidx.compose.foundation.shape.RoundedCornerShape(12.dp),enabled=!busy && payload==null,onClick={
             scope.launch {
                 busy=true
                 try {
@@ -42,7 +41,7 @@ import kotlinx.coroutines.*
                 finally {busy=false}
             }
         },modifier=Modifier.testTag("export-debug-log")) { Text(stringResource(if(busy) R.string.log_busy else R.string.log_generate)) }
-        TextButton(enabled=!busy && payload==null,onClick={scope.launch {
+        TextButton(shape=androidx.compose.foundation.shape.RoundedCornerShape(12.dp),colors=ButtonDefaults.textButtonColors(contentColor=MaterialTheme.colorScheme.error),enabled=!busy && payload==null,onClick={scope.launch {
             busy=true
             result=try { withContext(Dispatchers.IO) {DebugLog.clear()};R.string.log_cleared }
                 catch (_: Exception) {R.string.log_clear_failed}

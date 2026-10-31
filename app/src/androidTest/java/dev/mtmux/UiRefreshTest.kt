@@ -63,7 +63,7 @@ class UiRefreshTest {
             screenshot("settings-tokyo")
             compose.onNodeWithTag("settings-speed").performScrollTo().performSemanticsAction(SemanticsActions.SetProgress){it(10f)}
             assertEquals(10f,compose.activity.getSharedPreferences("terminal-settings",0).getFloat("scrollSensitivity",0f))
-            compose.onNodeWithText("‹ 返回").performClick()
+            compose.onNodeWithTag("settings-back").performClick()
             compose.onNodeWithTag("profile-${profile.id}").assertIsDisplayed()
             screenshot("home-tokyo")
             compose.onNodeWithTag("task-${profile.id}-%1").performClick()
@@ -73,7 +73,7 @@ class UiRefreshTest {
             for(palette in AppPalette.entries) compose.onNodeWithTag("palette-${palette.name}").performScrollTo().performClick().assertIsSelected()
             compose.onNodeWithTag("theme-LIGHT").performScrollTo().performClick()
             screenshot("settings-paper")
-            compose.onNodeWithText("‹ 返回").performClick()
+            compose.onNodeWithTag("settings-back").performClick()
             screenshot("home-paper")
             compose.activityRule.scenario.recreate()
             compose.onNodeWithTag("settings").performClick()

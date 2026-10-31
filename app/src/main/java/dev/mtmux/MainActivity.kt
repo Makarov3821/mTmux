@@ -13,6 +13,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.core.view.WindowCompat
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -47,6 +52,9 @@ import kotlinx.coroutines.*
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+
+/** Staged connection progress shown by the floating connection card. */
+internal data class ConnectStep(val label: UiText, val state: StepState, val millis: Long? = null)
 
 class MainActivity : AppCompatActivity() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -88,6 +96,19 @@ class MainActivity : AppCompatActivity() {
     private var homeRefreshProfileId: String? = null
     private var reopenSettings = false
     private val pins by lazy { getSharedPreferences("host-pins", MODE_PRIVATE) }
+    private var connectSteps by mutableStateOf(emptyList<ConnectStep>())
+    private var connectRoute by mutableStateOf(emptyList<UiText>())
+    private var connectFailure by mutableStateOf<Throwable?>(null)
+    private var stepStartedAt = 0L
+    private fun advanceStep(index: Int) {
+        val now = android.os.SystemClock.elapsedRealtime()
+        connectSteps = connectSteps.mapIndexed { i, step -> when {
+            i < index && step.state != StepState.DONE -> step.copy(state = StepState.DONE, millis = if (i == index - 1) now - stepStartedAt else step.millis)
+            i == index && step.state != StepState.ACTIVE -> step.copy(state = StepState.ACTIVE)
+            else -> step
+        } }
+        if (connectSteps.getOrNull(index)?.state == StepState.ACTIVE) stepStartedAt = now
+    }
 
     private val privacySettings by lazy { PrivacyDisplay(this) }
     private var privacyDisplay by mutableStateOf(true)
@@ -247,6 +268,16 @@ class MainActivity : AppCompatActivity() {
             reconnectTarget = profile?.let { TaskConnection(it, recent) }
         }
         disconnect(TerminalStatus(uiText(R.string.status_connecting)), clear = true)
+        connectFailure = null
+        if (!discoverOnly) {
+            val hops = login.jumps.size
+            connectRoute = (1..hops).map { hopText(it) } + hopText(0)
+            connectSteps = (1..hops).map { ConnectStep(uiText(R.string.step_hop_auth, hopText(it)), StepState.PENDING) } +
+                ConnectStep(uiText(R.string.step_hop_auth, hopText(0)), StepState.PENDING) +
+                ConnectStep(if (session != null) uiText(R.string.step_enter_tmux, session) else uiText(R.string.step_open_shell), StepState.PENDING)
+            stepStartedAt = android.os.SystemClock.elapsedRealtime()
+            advanceStep(0)
+        }
         renderedBytes = 0L
         panes = emptyList()
         challenge = null
@@ -272,8 +303,14 @@ class MainActivity : AppCompatActivity() {
                         if (pins.getString(login.trustEndpoint, null) != recent.hostKey) throw AppError(R.string.err_trust_changed)
                     }
                     if (pooled != null) connection.reportReuse()
-                    else connection.connect(login) { progress -> DebugLog.stage(progress,attempt.toInt()); scope.launch { if (attempt == generation && busy) status = TerminalStatus(progressText(progress)) } }
-                    withContext(Dispatchers.Main) { if (attempt == generation) status = TerminalStatus(uiText(if (session != null || discoverOnly) R.string.status_ssh_checking_tmux else R.string.status_ssh_opening_terminal)) }
+                    else connection.connect(login) { progress -> DebugLog.stage(progress,attempt.toInt()); scope.launch { if (attempt == generation && busy) {
+                        status = TerminalStatus(progressText(progress))
+                        if (!discoverOnly) advanceStep(if (progress.hop == 0) login.jumps.size else progress.hop - 1)
+                    } } }
+                    withContext(Dispatchers.Main) { if (attempt == generation) {
+                        status = TerminalStatus(uiText(if (session != null || discoverOnly) R.string.status_ssh_checking_tmux else R.string.status_ssh_opening_terminal))
+                        if (!discoverOnly) advanceStep(login.jumps.size + 1)
+                    } }
                     if (attempt != generation) { connection.close(); throw MtmuxException(ErrorCode.CANCELLED) }
                     if (discoverOnly) {
                         connection.discoverPanes(path)
@@ -318,6 +355,7 @@ class MainActivity : AppCompatActivity() {
                     target = "${login.user}@${login.host}:${login.port}"
                     targetSession = found.firstOrNull()?.sessionName
                     wireToken = "$attempt:${connection.token()}"
+                    connectSteps = emptyList()
                     terminalView?.resetScreen()
                     terminalView?.connection(wireToken)
                     status = TerminalStatus(uiText(if (session == null) R.string.status_connected_shell else R.string.status_connected_tmux))
@@ -345,6 +383,16 @@ class MainActivity : AppCompatActivity() {
                     pastePending = false
                     terminalView?.connection("")
                     client = null
+                    if (!cancelled) {
+                        connectFailure = error
+                        val failedAt = (error as? ConnectionFailure)?.hop?.let { if (it == 0) login.jumps.size else it - 1 }
+                            ?: connectSteps.indexOfFirst { it.state == StepState.ACTIVE }
+                        connectSteps = connectSteps.mapIndexed { i, step -> when {
+                            i < failedAt -> step.copy(state = StepState.DONE)
+                            i == failedAt -> step.copy(state = StepState.FAILED)
+                            else -> step.copy(state = StepState.PENDING)
+                        } }
+                    } else connectSteps = emptyList()
                     if (error is HostKeyRejected) {
                         challenge = error.challenge
                         status = TerminalStatus(uiText(R.string.status_host_key_blocked))
@@ -539,26 +587,33 @@ class MainActivity : AppCompatActivity() {
                 // IME only clips the visible lower part. The WebView/grid keeps its full
                 // keyboard-free size, so focus changes cannot resize/reflow remote tmux.
                 val gridHeight = (maxHeight - 148.dp).coerceAtLeast(48.dp)
-                Column(Modifier.fillMaxSize().imePadding().padding(horizontal = 12.dp)) {
+                Column(Modifier.fillMaxSize().imePadding()) {
                     val backHomeLabel = stringResource(R.string.terminal_back_home)
                     val keyboardLabel = stringResource(R.string.terminal_direct_keyboard)
                     val latestLabel = stringResource(R.string.terminal_latest)
-                    Row(Modifier.fillMaxWidth().height(48.dp), verticalAlignment = Alignment.CenterVertically) {
-                        AppIconButton(UiSymbol.BACK,backHomeLabel,{home()},Modifier.testTag("terminal-home"))
+                    Row(Modifier.fillMaxWidth().height(48.dp).padding(horizontal=2.dp), verticalAlignment = Alignment.CenterVertically) {
+                        AppIconButton(UiSymbol.BACK,backHomeLabel,{home()},Modifier.testTag("terminal-home"),tone=IconTone.PLAIN,iconSize=22.dp)
                         val server = activeProfile?.let { privacySettings.label(it, privacyDisplay) } ?: target?.let { if (privacyDisplay) stringResource(R.string.terminal_current_server) else it } ?: stringResource(R.string.terminal_not_connected)
                         val pane = panes.firstOrNull { it.id == replyPane?.pane }
-                        val taskName = pane?.let { "${it.sessionName} / ${it.windowName}" } ?: if (connectedSession != null) "tmux" else "SSH"
-                        Surface(Modifier.weight(1f).clickable {showDetails=true}.testTag("terminal-title"),shape=RoundedCornerShape(20.dp),color=MaterialTheme.colorScheme.surface) {
-                            Row(Modifier.padding(horizontal=10.dp,vertical=8.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                                AppIcon(if(wireToken.isNotEmpty()) UiSymbol.TERMINAL else UiSymbol.CLOSE,modifier=Modifier.size(14.dp),tint=if(wireToken.isNotEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("$server · $taskName", Modifier.weight(1f),style=MaterialTheme.typography.titleSmall,maxLines=1,overflow=TextOverflow.Ellipsis)
+                        val taskName = pane?.let { if (it.windowName == it.sessionName) it.sessionName else "${it.sessionName} · ${it.windowName}" } ?: if (connectedSession != null) "tmux" else "SSH"
+                        val connected = wireToken.isNotEmpty()
+                        Column(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable {showDetails=true}.padding(horizontal=4.dp,vertical=2.dp).testTag("terminal-title")) {
+                            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(7.dp)) {
+                                when {
+                                    busy -> CircularProgressIndicator(Modifier.size(9.dp),strokeWidth=1.5.dp)
+                                    else -> TaskStateDot(when { connected -> StatusColors.ready(); connectFailure != null -> StatusColors.attention(); else -> StatusColors.unknown() })
+                                }
+                                Text(server,style=MaterialTheme.typography.titleSmall.copy(fontWeight=FontWeight.SemiBold),maxLines=1,overflow=TextOverflow.Ellipsis)
                             }
+                            Text((if (!connected && renderedBytes > 0 && !busy) stringResource(R.string.terminal_disconnected_short) + " · " else "") + taskName,
+                                style=MaterialTheme.typography.labelSmall.copy(fontFamily=FontFamily.Monospace),color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
                         }
-                        AppIconButton(UiSymbol.KEYBOARD,keyboardLabel,{showTerminalKeyboard()},Modifier.testTag("terminal-keyboard"),enabled=keysEnabled)
-                        AppIconButton(UiSymbol.EDIT,stringResource(R.string.terminal_edit_text),{openEditor()},Modifier.testTag("terminal-editor"),enabled=terminalReady && !pastePending)
-                        AppIconButton(UiSymbol.LATEST,latestLabel,{latest()},Modifier.testTag("terminal-latest"))
+                        AppIconButton(UiSymbol.KEYBOARD,keyboardLabel,{showTerminalKeyboard()},Modifier.testTag("terminal-keyboard"),enabled=keysEnabled,tone=IconTone.PLAIN,iconSize=20.dp)
+                        AppIconButton(UiSymbol.EDIT,stringResource(R.string.terminal_edit_text),{openEditor()},Modifier.testTag("terminal-editor"),enabled=terminalReady && !pastePending,
+                            tone=if(editorOpen) IconTone.ACCENT else IconTone.PLAIN,iconSize=20.dp)
+                        AppIconButton(UiSymbol.LATEST,latestLabel,{latest()},Modifier.testTag("terminal-latest"),tone=IconTone.PLAIN,iconSize=20.dp)
                     }
-                    Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().onSizeChanged { visibleTerminalHeight = it.height; terminalView?.viewport(it.height / density.density) }.testTag("terminal-panel")) {
+                    Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp).clipToBounds().onSizeChanged { visibleTerminalHeight = it.height; terminalView?.viewport(it.height / density.density) }.testTag("terminal-panel")) {
                     AndroidView(factory = { context ->
                         TerminalView(context,
                             onReady = { c, r -> cols = c; rows = r; terminalReady = true; terminalView?.appearance(currentDark,force=true,palette=currentPalette); terminalView?.scrollSensitivity(scrollSensitivity); terminalView?.font(fontSize); terminalView?.remoteTouch(remoteTouch); terminalView?.viewport(visibleTerminalHeight / density.density) },
@@ -597,7 +652,7 @@ class MainActivity : AppCompatActivity() {
                             onFocusInput = {currentFocusInput()}
                         ).also { terminalView = it }
                     }, update = { it.appearance(dark,palette=palette); it.viewport(visibleTerminalHeight / density.density) }, modifier = Modifier.fillMaxWidth().wrapContentHeight(Alignment.Top, unbounded = true).requiredHeight(gridHeight).align(Alignment.TopStart).testTag("terminal-webview"))
-                    if (renderedBytes == 0L) {
+                    if (renderedBytes == 0L && !(busy && wireToken.isEmpty() && connectSteps.isNotEmpty()) && !(!busy && wireToken.isEmpty() && connectFailure != null)) {
                         Text(
                             stringResource(when {
                                 !terminalReady -> R.string.terminal_placeholder_loading
@@ -612,25 +667,83 @@ class MainActivity : AppCompatActivity() {
                     // The native IME endpoint has no visible text field or persistent draft.
                     AndroidView(factory={directInput},modifier=Modifier.size(1.dp).align(Alignment.BottomStart).testTag("terminal-ime"))
                     // Status overlays do not change terminal size or move its reading anchor.
-                    if (!status.isEmpty && (wireToken.isEmpty() || status.alert)) {
-                        Surface(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(top=8.dp),shape=MaterialTheme.shapes.large,
-                            border=BorderStroke(1.dp,if(status.alert || renderedBytes>0) MaterialTheme.colorScheme.error.copy(alpha=.5f) else MaterialTheme.colorScheme.outlineVariant),color=MaterialTheme.colorScheme.surface) {
-                            Column(Modifier.padding(12.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
-                                Text(status.text.string(), modifier=Modifier.testTag("connection-status"), style=MaterialTheme.typography.bodySmall)
-                                if(wireToken.isEmpty() && renderedBytes>0) Text(stringResource(R.string.terminal_disconnected_history),modifier=Modifier.testTag("disconnected-history"),color=MaterialTheme.colorScheme.error)
-                                if(wireToken.isEmpty() && !busy) Row {
-                                    val selection = reconnectTarget ?: recentTasks.firstOrNull()?.let { task ->
-                                        profileStore.all().firstOrNull { task.matches(it) }?.let { TaskConnection(it, task) }
+                    val selection = reconnectTarget ?: recentTasks.firstOrNull()?.let { task ->
+                        profileStore.all().firstOrNull { task.matches(it) }?.let { TaskConnection(it, task) }
+                    }
+                    val connectingCard = busy && wireToken.isEmpty() && connectSteps.isNotEmpty()
+                    val failedCard = !busy && wireToken.isEmpty() && connectFailure != null
+                    val disconnectedCard = !busy && wireToken.isEmpty() && connectFailure == null && renderedBytes > 0
+                    val idleCard = !busy && wireToken.isEmpty() && connectFailure == null && renderedBytes == 0L && !status.isEmpty
+                    if (connectingCard || failedCard) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background.copy(alpha=.84f)))
+                    when {
+                        connectingCard || failedCard -> FloatingCard(Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal=2.dp).testTag("connection-card")) {
+                            Column(Modifier.padding(start=18.dp,end=18.dp,top=18.dp,bottom=12.dp)) {
+                                val failure = connectFailure
+                                if (failedCard) Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                                    val reason = (failure as? ConnectionFailure)?.reason
+                                    ToneBadge(when (reason) { FailureReason.AUTH, FailureReason.PRIVATE_KEY -> UiSymbol.LOCK; FailureReason.TIMEOUT -> UiSymbol.CLOCK
+                                        else -> if (failure is HostKeyRejected) UiSymbol.SHIELD_ALERT else UiSymbol.ALERT_CIRCLE }, Tone.DANGER)
+                                    Column(Modifier.weight(1f)) {
+                                        Text(stringResource(reason?.text() ?: R.string.terminal_connect_failed),style=MaterialTheme.typography.titleMedium.copy(fontWeight=FontWeight.Bold))
+                                        Text(status.text.string(),Modifier.testTag("connection-status"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
-                                    if (selection != null) TextButton(onClick={resumeTask(selection)},enabled=terminalReady,modifier=Modifier.testTag("reconnect-recent")){Text(stringResource(R.string.terminal_reconnect_recent))}
-                                    TextButton(onClick={home()}){Text(stringResource(R.string.terminal_reselect_task))}
+                                } else Row(verticalAlignment=Alignment.CenterVertically) {
+                                    Text(stringResource(R.string.terminal_connecting_title),Modifier.weight(1f),style=MaterialTheme.typography.titleMedium.copy(fontWeight=FontWeight.Bold))
+                                    Text(status.text.string(),Modifier.size(1.dp).testTag("connection-status"),color=Color.Transparent)
                                 }
+                                val failedIndex = connectSteps.indexOfFirst { it.state == StepState.FAILED }
+                                val activeIndex = connectSteps.indexOfFirst { it.state == StepState.ACTIVE }
+                                if (connectRoute.size > 1) RouteChips(connectRoute.mapIndexed { i, hop -> hop.string() to when {
+                                    failedIndex >= 0 && i == failedIndex -> RouteState.FAILED
+                                    failedIndex >= 0 && i < failedIndex || failedIndex < 0 && activeIndex >= 0 && i < activeIndex || activeIndex >= connectRoute.size -> RouteState.DONE
+                                    i == activeIndex -> RouteState.CURRENT
+                                    else -> RouteState.NORMAL
+                                } }, Modifier.padding(top=10.dp,bottom=4.dp))
+                                Spacer(Modifier.height(6.dp))
+                                connectSteps.forEach { step -> StepRow(step.label.string(), step.state,
+                                    when { step.millis != null -> "${step.millis} ms"; step.state == StepState.ACTIVE -> stringResource(R.string.step_in_progress); else -> null }) }
+                                Spacer(Modifier.height(12.dp))
+                                if (failedCard) Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                                    TonalActionButton(DialogAction(stringResource(R.string.terminal_back_home_short),{home()}),Modifier.weight(1f))
+                                    if (selection != null) PrimaryActionButton(DialogAction(stringResource(R.string.terminal_retry),{resumeTask(selection)},"reconnect-recent",enabled=terminalReady),Modifier.weight(1f))
+                                } else TonalActionButton(DialogAction(stringResource(R.string.common_cancel),{home()},"cancel-connect"),Modifier.fillMaxWidth())
+                            }
+                        }
+                        disconnectedCard && reading -> Surface(Modifier.align(Alignment.TopCenter).padding(top=10.dp).testTag("disconnected-pill"),shape=CircleShape,
+                            color=MaterialTheme.colorScheme.surfaceVariant.copy(alpha=.96f),shadowElevation=8.dp) {
+                            Row(Modifier.padding(start=14.dp,end=5.dp,top=5.dp,bottom=5.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                                TaskStateDot(StatusColors.unknown())
+                                Text(stringResource(R.string.terminal_disconnected_history),Modifier.testTag("disconnected-history"),style=MaterialTheme.typography.labelMedium)
+                                Text(status.text.string(),Modifier.size(1.dp).testTag("connection-status"),color=Color.Transparent)
+                                if (selection != null) Button(onClick={resumeTask(selection)},enabled=terminalReady,shape=CircleShape,contentPadding=PaddingValues(horizontal=12.dp),
+                                    modifier=Modifier.height(28.dp).testTag("reconnect-recent")) { Text(stringResource(R.string.terminal_reconnect),style=MaterialTheme.typography.labelMedium) }
+                            }
+                        }
+                        disconnectedCard || idleCard -> FloatingCard(Modifier.align(if (idleCard) Alignment.TopCenter else Alignment.BottomCenter).fillMaxWidth().padding(top=if (idleCard) 10.dp else 0.dp,bottom=if (idleCard) 0.dp else 12.dp)) {
+                            Row(Modifier.padding(start=14.dp,end=12.dp,top=12.dp,bottom=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                                ToneBadge(if (disconnectedCard) UiSymbol.UNPLUG else UiSymbol.INFO, if (disconnectedCard) Tone.WARNING else Tone.NEUTRAL, 40.dp, 20.dp)
+                                Column(Modifier.weight(1f)) {
+                                    if (disconnectedCard) Text(stringResource(R.string.terminal_disconnected_history),Modifier.testTag("disconnected-history"),style=MaterialTheme.typography.titleSmall.copy(fontWeight=FontWeight.SemiBold))
+                                    Text(status.text.string(),Modifier.testTag("connection-status"),style=if (disconnectedCard) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyMedium,
+                                        color=if (disconnectedCard) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,maxLines=3,overflow=TextOverflow.Ellipsis)
+                                }
+                                if (selection != null) Button(onClick={resumeTask(selection)},enabled=terminalReady,shape=CircleShape,contentPadding=PaddingValues(horizontal=16.dp),
+                                    modifier=Modifier.height(36.dp).testTag("reconnect-recent")) {
+                                    AppIcon(UiSymbol.REFRESH,modifier=Modifier.size(15.dp)); Spacer(Modifier.width(6.dp)); Text(stringResource(R.string.terminal_reconnect),style=MaterialTheme.typography.labelLarge)
+                                }
+                            }
+                        }
+                        !status.isEmpty && status.alert -> FloatingCard(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(top=10.dp),shape=RoundedCornerShape(16.dp)) {
+                            Row(Modifier.padding(horizontal=14.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                                AppIcon(UiSymbol.ALERT,modifier=Modifier.size(18.dp),tint=StatusColors.running())
+                                Text(status.text.string(),Modifier.weight(1f).testTag("connection-status"),style=MaterialTheme.typography.bodySmall)
+                                AppIconButton(UiSymbol.CLOSE,stringResource(R.string.common_close),{status=TerminalStatus.NONE},tone=IconTone.PLAIN,size=28.dp,iconSize=16.dp)
                             }
                         }
                     }
                     }
-                    Surface(Modifier.fillMaxWidth().height(100.dp),color=MaterialTheme.colorScheme.surface) {
-                        Column {
+                    Surface(Modifier.fillMaxWidth().height(100.dp),color=MaterialTheme.colorScheme.surface,shape=RoundedCornerShape(topStart=24.dp,topEnd=24.dp)) {
+                        Column(Modifier.padding(horizontal=8.dp)) {
                             TerminalKeys(enabled=keysEnabled,modifiers=sticky.modifiers,onModifier={bit ->
                                 directInput.finishComposition()
                                 sticky.toggle(bit)
@@ -663,12 +776,20 @@ class MainActivity : AppCompatActivity() {
                     })
                 }
                 if (showDetails) ProtectSensitiveContent()
-                if (showDetails) AlertDialog(properties=protectedDialogProperties,onDismissRequest={showDetails=false},title={Text(stringResource(R.string.terminal_details_title))},text={Text("${activeProfile?.name.orEmpty()}\n${target ?: stringResource(R.string.terminal_not_connected)} · ${targetSession ?: stringResource(R.string.terminal_plain_shell)}\n${panes.firstOrNull { it.id == replyPane?.pane }?.let { "${it.sessionName} / ${it.windowName}" }.orEmpty()}\n${status.text.string()}")},confirmButton={TextButton(onClick={showDetails=false}){Text(stringResource(R.string.common_close))}})
+                if (showDetails) AppDialog(onDismiss={showDetails=false},properties=protectedDialogProperties,title=stringResource(R.string.terminal_details_title),
+                    icon=UiSymbol.SERVER,tone=if(wireToken.isNotEmpty()) Tone.SUCCESS else Tone.NEUTRAL,dismiss=DialogAction(stringResource(R.string.common_close),{showDetails=false})) {
+                    InsetPanel {
+                        Text(activeProfile?.name.orEmpty(),style=MaterialTheme.typography.titleSmall.copy(fontWeight=FontWeight.SemiBold))
+                        Text("${target ?: stringResource(R.string.terminal_not_connected)} · ${targetSession ?: stringResource(R.string.terminal_plain_shell)}",style=MaterialTheme.typography.bodySmall.copy(fontFamily=FontFamily.Monospace),color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        panes.firstOrNull { it.id == replyPane?.pane }?.let { Text("${it.sessionName} / ${it.windowName}",style=MaterialTheme.typography.bodySmall.copy(fontFamily=FontFamily.Monospace),color=MaterialTheme.colorScheme.onSurfaceVariant) }
+                    }
+                    Text(status.text.string(),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 if (showTools) {
-                    ModalBottomSheet(onDismissRequest = { showTools = false }, containerColor=MaterialTheme.colorScheme.surface,shape=MaterialTheme.shapes.extraLarge,sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-                        Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).padding(horizontal=16.dp)) {
+                    AppSheet(onDismiss = { showTools = false }, floating = false) {
+                        Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).padding(horizontal=8.dp)) {
                         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                            Text(stringResource(R.string.tools_title),style=MaterialTheme.typography.titleLarge)
+                            Text(stringResource(R.string.tools_title),Modifier.padding(start=4.dp,top=4.dp),style=MaterialTheme.typography.titleLarge.copy(fontWeight=FontWeight.Bold))
                     replyPane?.let { bound ->
                         InsetPanel {
                             Text(stringResource(R.string.tools_reply_target, bound.pane), modifier = Modifier.testTag("reply-target"),style=MaterialTheme.typography.titleSmall,color=MaterialTheme.colorScheme.primary)
@@ -694,7 +815,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
 
-                            OutlinedButton(onClick={showTools=false;openEditor()},enabled=keysEnabled,modifier=Modifier.fillMaxWidth().testTag("open-text-editor")){AppIcon(UiSymbol.REPLY);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.terminal_edit_text))}
+                            FilledTonalButton(onClick={showTools=false;openEditor()},enabled=keysEnabled,shape=RoundedCornerShape(14.dp),modifier=Modifier.fillMaxWidth().height(48.dp).testTag("open-text-editor")){AppIcon(UiSymbol.EDIT,modifier=Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(stringResource(R.string.terminal_edit_text))}
                             InsetPanel {
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -712,15 +833,15 @@ class MainActivity : AppCompatActivity() {
                                 TextButton(onClick = { fontSize = (fontSize + 1).coerceAtMost(28); terminalView?.font(fontSize); terminalPreferences.edit { putInt("fontSize", fontSize) } }) { Text(stringResource(R.string.tools_font_larger)) }
                             }
                             }
-                            OutlinedButton(onClick = {
+                            FilledTonalButton(onClick = {
                                 showTools = false; keyboard?.hide()
                                 terminalView?.snapshot { snapshot -> copySnapshot = snapshot }
-                            }, modifier=Modifier.fillMaxWidth().testTag("select-terminal-text")) { AppIcon(UiSymbol.COPY);Spacer(Modifier.width(8.dp));Text(stringResource(R.string.tools_select_copy)) }
+                            }, shape=RoundedCornerShape(14.dp), modifier=Modifier.fillMaxWidth().height(48.dp).testTag("select-terminal-text")) { AppIcon(UiSymbol.COPY,modifier=Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(stringResource(R.string.tools_select_copy)) }
                             
                             TextButton(onClick = { draft.text = ""; showTools = false }) { Text(stringResource(R.string.tools_clear_draft),color=MaterialTheme.colorScheme.error) }
-                            Text(stringResource(R.string.tools_terminal_info, cols, rows, renderedBytes), style = MaterialTheme.typography.bodySmall)
+                            Text(stringResource(R.string.tools_terminal_info, cols, rows, renderedBytes), style = MaterialTheme.typography.bodySmall.copy(fontFamily=FontFamily.Monospace),color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                            TextButton(onClick = { showTools = false }) { Text(stringResource(R.string.common_close)) }
+                            TonalActionButton(DialogAction(stringResource(R.string.common_close),{ showTools = false }),Modifier.fillMaxWidth().padding(top=8.dp))
                         }
                     }
                 }
@@ -730,35 +851,42 @@ class MainActivity : AppCompatActivity() {
                     else if(draft.text.isEmpty()) {draft.text=text;openEditor()}
                     else pendingReply=openedToken to text
                 }) }
-                pendingReply?.let { (token,text) -> AlertDialog(onDismissRequest={pendingReply=null},title={Text(stringResource(R.string.quick_reply_keep_title))},text={Text(stringResource(R.string.quick_reply_keep_body))},confirmButton={
-                    TextButton(onClick={if(token==wireToken && token.isNotEmpty() && !pastePending) {draft.text=if(draft.text.isEmpty()) text else draft.text+"\n"+text;openEditor()} else status=TerminalStatus(uiText(R.string.status_quick_reply_stale), alert = true);pendingReply=null},modifier=Modifier.testTag("append-quick-reply")){Text(stringResource(R.string.quick_reply_append))}
-                },dismissButton={FlowRow {
-                    TextButton(onClick={if(token==wireToken && token.isNotEmpty() && !pastePending) {draft.text=text;openEditor()} else status=TerminalStatus(uiText(R.string.status_quick_reply_stale), alert = true);pendingReply=null},modifier=Modifier.testTag("replace-quick-reply")){Text(stringResource(R.string.quick_reply_replace))}
-                    TextButton(onClick={pendingReply=null}){Text(stringResource(R.string.common_cancel))}
-                }}) }
+                pendingReply?.let { (token,text) ->
+                    fun stale() { status=TerminalStatus(uiText(R.string.status_quick_reply_stale), alert = true) }
+                    val usable = token==wireToken && token.isNotEmpty() && !pastePending
+                    AppDialog(onDismiss={pendingReply=null},title=stringResource(R.string.quick_reply_keep_title),body=stringResource(R.string.quick_reply_keep_body),icon=UiSymbol.REPLY,
+                        confirm=DialogAction(stringResource(R.string.quick_reply_append),{if(usable) {draft.text=if(draft.text.isEmpty()) text else draft.text+"\n"+text;openEditor()} else stale();pendingReply=null},"append-quick-reply"),
+                        dismiss=DialogAction(stringResource(R.string.quick_reply_replace),{if(usable) {draft.text=text;openEditor()} else stale();pendingReply=null},"replace-quick-reply"),
+                        extra=DialogAction(stringResource(R.string.common_cancel),{pendingReply=null}))
+                }
                 copySnapshot?.let { snapshot -> TerminalCopyDialog(snapshot, fontSize, dark, onClose={copySnapshot=null}) }
                 if (editorOpen) {
                     val valid=editorToken==wireToken && editorTarget==draftScopeKey && wireToken.isNotEmpty()
-                    ModalBottomSheet(onDismissRequest={if(!pastePending) editorOpen=false},
-                        containerColor=MaterialTheme.colorScheme.surface,
-                        sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true)) {
-                        Column(Modifier.fillMaxWidth().imePadding().padding(horizontal=20.dp).padding(bottom=16.dp),
-                            verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                            Text(stringResource(R.string.terminal_edit_text),style=MaterialTheme.typography.titleLarge)
-                            Text(stringResource(R.string.terminal_editor_help),style=MaterialTheme.typography.bodySmall,
-                                color=MaterialTheme.colorScheme.onSurfaceVariant)
-                            OutlinedTextField(value=draft.text,onValueChange={draft.text=it},enabled=!pastePending,
+                    AppSheet(onDismiss={if(!pastePending) editorOpen=false},floating=false,dismissible=!pastePending) {
+                        Column(Modifier.fillMaxWidth().imePadding().padding(horizontal=8.dp).padding(bottom=8.dp),
+                            verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                                Text(stringResource(R.string.terminal_edit_text),Modifier.weight(1f),style=MaterialTheme.typography.titleMedium.copy(fontWeight=FontWeight.Bold))
+                                val targetName=panes.firstOrNull { it.id == replyPane?.pane }?.sessionName ?: if(connectedSession!=null) "tmux" else "SSH"
+                                Surface(shape=CircleShape,color=MaterialTheme.colorScheme.primary.copy(alpha=.14f)) {
+                                    Text("→ $targetName",Modifier.padding(horizontal=10.dp,vertical=3.dp),style=MaterialTheme.typography.labelMedium.copy(fontFamily=FontFamily.Monospace),color=MaterialTheme.colorScheme.primary,maxLines=1,overflow=TextOverflow.Ellipsis)
+                                }
+                                AppIconButton(UiSymbol.CLOSE,stringResource(R.string.common_close),{editorOpen=false},Modifier.testTag("close-text-editor"),enabled=!pastePending,tone=IconTone.PLAIN,size=30.dp,iconSize=16.dp)
+                            }
+                            OutlinedTextField(value=draft.text,onValueChange={draft.text=it},enabled=!pastePending,shape=RoundedCornerShape(14.dp),colors=appFieldColors(),
+                                textStyle=MaterialTheme.typography.bodyLarge,
                                 modifier=Modifier.fillMaxWidth().heightIn(max=260.dp).testTag("command-input"),
                                 minLines=3,maxLines=8)
+                            Text(stringResource(R.string.terminal_editor_help),Modifier.padding(horizontal=4.dp),style=MaterialTheme.typography.labelSmall,
+                                color=MaterialTheme.colorScheme.onSurfaceVariant)
                             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
-                                horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                                horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                                 VoiceInputControl(modifier=Modifier,enabled=valid && !pastePending,
                                     connectionToken=wireToken,targetKey=draftScopeKey,onHideKeyboard=hideVoiceKeyboard,
                                     onOfferDraft=offerVoice,onCommitDraft=commitVoice,onStatus={status=it})
                                 Spacer(Modifier.weight(1f))
-                                TextButton(onClick={editorOpen=false},enabled=!pastePending,modifier=Modifier.testTag("close-text-editor")) {Text(stringResource(R.string.common_close))}
                                 Button(onClick={sendDraft(draft.text,false,editorToken)},enabled=valid && draft.text.isNotEmpty() && !pastePending,
-                                    modifier=Modifier.testTag("insert-terminal")) {
+                                    shape=RoundedCornerShape(14.dp),modifier=Modifier.height(46.dp).testTag("insert-terminal")) {
                                     Text(stringResource(if(pastePending) R.string.terminal_sending else R.string.terminal_insert_text))
                                 }
                             }
@@ -767,18 +895,11 @@ class MainActivity : AppCompatActivity() {
                 }
                 challenge?.let { item ->
                     ProtectSensitiveContent()
-                    AlertDialog(properties=protectedDialogProperties,onDismissRequest = { challenge = null },
-                        icon={AppIcon(UiSymbol.SHIELD,modifier=Modifier.size(28.dp),tint=if(item.changed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)},
-                        title = { Text(stringResource(if (item.changed) R.string.host_key_changed_title else R.string.host_key_first_title)) },
-                        text = { Text("${item.endpoint}\n${item.fingerprint}\n" + stringResource(R.string.host_key_verify_hint) + "\n" + stringResource(if (item.changed) R.string.host_key_changed_hint else R.string.host_key_first_hint)) },
-                        confirmButton = {
-                            if (!item.changed) TextButton(onClick = {
-                                pins.edit { putString(item.endpoint, item.key) }
-                                challenge = null
-                                status = TerminalStatus(uiText(R.string.status_host_key_saved))
-                            }) { Text(stringResource(R.string.host_key_trust)) }
-                        },
-                        dismissButton = { TextButton(onClick = { challenge = null }) { Text(stringResource(R.string.common_close)) } })
+                    HostKeyDialog(item,onDismiss={challenge=null},onTrust={
+                        pins.edit { putString(item.endpoint, item.key) }
+                        challenge = null
+                        status = TerminalStatus(uiText(R.string.status_host_key_saved))
+                    },subtitle=stringResource(R.string.host_key_verify_hint)+" "+stringResource(if (item.changed) R.string.host_key_changed_hint else R.string.host_key_first_hint))
                 }
             }
         }

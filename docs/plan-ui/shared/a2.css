@@ -1,0 +1,92 @@
+/* 方案 A 第二版：在 a.css 基础上补充的交互组件 */
+.A .appbar { height:56px; display:flex; align-items:center; gap:10px; padding:0 8px 0 16px; flex:none; }
+.A .logo { width:30px; height:30px; border-radius:9px; display:grid; place-items:center; color:var(--aci);
+  background:linear-gradient(140deg,#9DB8FA,#7AA2F7 55%,#6B8FE6); box-shadow:0 2px 8px rgba(122,162,247,.35); }
+.A .brand { font-size:17px; font-weight:700; letter-spacing:.2px; }
+.A .chip { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 11px 0 9px; border-radius:99px; font-size:12.5px; font-weight:500; background:var(--sf); color:var(--mu); white-space:nowrap; }
+.A .chip.r { color:var(--red); background:rgba(247,118,142,.10); }
+.A .ring { position:relative; }
+.A .ring::after { content:""; position:absolute; inset:-4px; border-radius:50%; border:1.5px solid rgba(247,118,142,.45); }
+/* 任务行：无状态文字，仅色点 */
+.A .trow { display:flex; align-items:center; gap:12px; height:46px; padding:0 12px 0 16px; border-top:1px solid var(--ln); }
+.A .trow .tn { font-size:14.5px; font-weight:500; }
+.A .trow .tw { font-size:12.5px; color:var(--fa); margin-left:6px; font-weight:400; }
+.A .trow .last { font-size:10.5px; color:var(--ac); background:var(--act); border-radius:5px; padding:1px 6px; margin-left:8px; }
+/* 动作面板 */
+.A .asheet { position:absolute; left:8px; right:8px; bottom:8px; z-index:6; background:var(--sf); border-radius:28px; padding:8px 8px 10px; box-shadow:0 18px 50px rgba(0,0,0,.5); }
+.A .asheet .ahead { display:flex; align-items:center; gap:12px; padding:12px 12px 14px; }
+.A .arow { display:flex; align-items:center; gap:14px; height:52px; padding:0 14px; border-radius:16px; font-size:15px; }
+.A .arow .aic { width:36px; height:36px; border-radius:12px; display:grid; place-items:center; background:var(--rs); color:var(--fg); }
+.A .arow.hl { background:var(--rs); }
+.A .arow.dn { color:var(--red); } .A .arow.dn .aic { background:rgba(247,118,142,.12); color:var(--red); }
+/* 浮动卡片（终端内） */
+.A .float { position:absolute; left:12px; right:12px; z-index:4; background:rgba(36,39,58,.92); backdrop-filter:blur(14px);
+  border-radius:20px; box-shadow:0 12px 36px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.05); }
+.A .tpill { position:absolute; left:50%; transform:translateX(-50%); z-index:4; display:flex; align-items:center; gap:8px; height:36px; padding:0 6px 0 14px;
+  border-radius:99px; background:rgba(36,39,58,.94); box-shadow:0 8px 24px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.06); font-size:13px; white-space:nowrap; }
+/* 终端底栏（第二版：浮起面板） */
+.A .dock2 { background:var(--sf); border-radius:24px 24px 0 0; padding:10px 10px 8px; flex:none; box-shadow:0 -1px 0 var(--ln); position:relative; z-index:3; }
+.A .dock2 .key { background:var(--rs); }
+.A .handle-s { width:28px; height:3px; border-radius:2px; background:var(--hi); margin:0 auto 8px; }
+/* 语音浮层 */
+.A .vshade { position:absolute; left:0; right:0; bottom:0; height:62%; z-index:5;
+  background:linear-gradient(to bottom, rgba(10,11,18,0) 0%, rgba(10,11,18,.92) 24%, rgba(10,11,18,.99) 40%); }
+.A .vbubble { position:absolute; left:50%; transform:translateX(-50%); z-index:6; border-radius:22px; padding:16px 20px; display:flex; flex-direction:column; align-items:center; }
+.A .vbubble::after { content:""; position:absolute; bottom:-7px; left:50%; margin-left:-8px; width:16px; height:16px; background:inherit; transform:rotate(45deg); border-radius:3px; z-index:-1; }
+.A .wave { display:flex; align-items:center; gap:3px; height:34px; }
+.A .wave i { width:3.5px; border-radius:2px; background:currentColor; display:block; }
+.A .varc { position:absolute; left:-40px; right:-40px; bottom:-260px; height:420px; border-radius:50%; z-index:6; display:flex; justify-content:center; }
+.A .vlabel { position:absolute; left:0; right:0; z-index:7; text-align:center; font-size:13px; }
+.A .vtarget { position:absolute; z-index:7; width:72px; height:72px; border-radius:50%; display:grid; place-items:center; }
+/* 系统键盘示意 */
+.A .kbd { background:#1C1D24; padding:8px 4px 6px; flex:none; position:relative; z-index:6; }
+.A .kbd .kr { display:flex; gap:5px; justify-content:center; margin-bottom:9px; }
+.A .kbd .kk { height:40px; flex:1; max-width:31px; border-radius:6px; background:#2D2F3A; color:#E6E7EE; display:grid; place-items:center; font-size:16px; }
+.A .kbd .kk.w { max-width:none; flex:1.5; background:#3A3D4B; font-size:13px; }
+.A .kbd .kk.sp { max-width:none; flex:5; font-size:12px; color:#9AA0B8; }
+.A .kbd .cand { display:flex; gap:22px; padding:2px 14px 10px; font-size:15px; color:#E6E7EE; }
+.A .kbd .cand span:first-child { color:var(--ac); }
+.A .kbd .nav { height:22px; display:flex; justify-content:center; align-items:center; } .A .kbd .nav i { width:110px; height:4px; border-radius:2px; background:#5A5D6B; display:block; }
+/* 表单里的验证 sheet */
+.A .vsheet { position:absolute; left:0; right:0; bottom:0; z-index:6; background:var(--sf); border-radius:28px 28px 0 0; padding:10px 20px 22px; box-shadow:0 -12px 40px rgba(0,0,0,.45); }
+.A .route { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--mu); }
+.A .route .nd { padding:3px 9px; border-radius:99px; background:var(--rs); color:var(--fg); font-weight:500; }
+.A .route .nd.ok { color:var(--grn); background:rgba(158,206,106,.12); }
+.A .route .nd.cur { color:var(--ac); background:var(--act); box-shadow:inset 0 0 0 1px rgba(122,162,247,.4); }
+.A .route .nd.bad { color:var(--red); background:rgba(247,118,142,.12); }
+.A .toast { position:absolute; left:12px; right:12px; z-index:6; background:var(--hi); border-radius:16px; padding:12px 12px 12px 14px; display:flex; gap:10px; align-items:center; font-size:13.5px; box-shadow:0 10px 28px rgba(0,0,0,.45); }
+/* 服务器卡片右侧操作：[新建 | 刷新] 组 + SSH + 更多 */
+.A .cact { display:flex; align-items:center; height:34px; border-radius:11px; background:var(--rs); flex:none; }
+.A .cact > span { width:34px; height:34px; display:grid; place-items:center; color:var(--mu); }
+.A .cact > .dv { width:1px; height:16px; background:var(--hi); }
+.A .ssh { width:34px; height:34px; border-radius:11px; display:grid; place-items:center; background:var(--act); color:var(--ac); flex:none; }
+.A .cbtn { width:34px; height:34px; border-radius:11px; display:grid; place-items:center; background:var(--rs); color:var(--mu); flex:none; margin-left:6px; }
+.A .more { width:26px; height:34px; display:grid; place-items:center; color:var(--fa); flex:none; }
+/* tmux Doctor */
+.A .full { position:absolute; left:0; right:0; top:34px; bottom:0; z-index:6; background:var(--sf); border-radius:28px 28px 0 0; display:flex; flex-direction:column; box-shadow:0 -12px 40px rgba(0,0,0,.45); }
+.A .full .fbody { flex:1; min-height:0; overflow:hidden; padding:0 16px; }
+.A .full .ffoot { flex:none; padding:12px 16px 16px; display:flex; gap:8px; border-top:1px solid var(--ln); }
+.A .sumcard { border-radius:18px; padding:14px 16px; display:flex; gap:14px; align-items:center; }
+.A .gauge { width:52px; height:52px; border-radius:50%; display:grid; place-items:center; flex:none; font-weight:700; font-size:15px; }
+.A .gh { font-size:12px; font-weight:600; color:var(--mu); padding:16px 4px 8px; display:flex; gap:6px; align-items:center; }
+.A .finding { background:var(--rs); border-radius:14px; padding:12px 14px; margin-bottom:8px; }
+.A .finding .ft { display:flex; gap:10px; align-items:center; font-size:14.5px; font-weight:600; }
+.A .finding .fd { font-size:12.5px; color:var(--mu); line-height:1.55; margin:4px 0 0 28px; }
+.A .finding .fv { font:12px "Ubuntu Sans Mono",monospace; color:var(--fa); margin:6px 0 0 28px; }
+.A .finding .fa2 { margin:10px 0 0 28px; display:flex; gap:8px; }
+.A .gi { width:18px; height:18px; border-radius:50%; display:grid; place-items:center; flex:none; }
+.A .gi.w { background:rgba(224,175,104,.18); color:var(--yel); } .A .gi.f { background:rgba(247,118,142,.18); color:var(--red); }
+.A .gi.p { background:rgba(158,206,106,.15); color:var(--grn); } .A .gi.u { background:var(--hi); color:var(--fa); }
+.A .passgrid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.A .passgrid span { display:flex; gap:8px; align-items:center; font-size:12.5px; color:var(--mu); background:var(--rs); border-radius:10px; padding:8px 10px; white-space:nowrap; overflow:hidden; }
+.A .codef { border-radius:14px; background:var(--term); overflow:hidden; box-shadow:inset 0 0 0 1px var(--ln); }
+.A .codef .cfh { display:flex; align-items:center; gap:8px; padding:8px 12px; font:12px "Ubuntu Sans Mono",monospace; color:var(--mu); background:var(--rs); }
+.A .codef pre { margin:0; padding:10px 12px; font:12px/1.75 "Ubuntu Sans Mono",monospace; color:#C0CAF5; }
+.A .codef pre b { color:#565F89; font-weight:400; display:inline-block; width:18px; }
+.A .codef pre .c { color:#565F89; } .A .codef pre .k { color:var(--ac); } .A .codef pre .n { color:var(--yel); }
+.A .opts { display:flex; gap:6px; } .A .opts span { flex:1; text-align:center; font-size:13px; padding:8px 0; border-radius:10px; background:var(--rs); color:var(--mu); }
+.A .opts span.on { background:var(--act); color:var(--ac); font-weight:600; box-shadow:inset 0 0 0 1.5px rgba(122,162,247,.5); }
+.A .cbx { width:20px; height:20px; border-radius:6px; display:grid; place-items:center; flex:none; background:var(--ac); color:var(--aci); }
+.A .cbx.off { background:transparent; box-shadow:inset 0 0 0 1.5px var(--fa); opacity:1; }
+.A .cmd { display:flex; align-items:center; gap:10px; background:var(--term); border-radius:10px; padding:9px 12px; font:12.5px "Ubuntu Sans Mono",monospace; margin-bottom:6px; }
+.A .cmd .pm { color:var(--fa); width:44px; flex:none; font-size:11.5px; }

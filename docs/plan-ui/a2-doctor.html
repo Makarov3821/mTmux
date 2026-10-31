@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>方案 A 第二版 · tmux Doctor 与 0.9 新界面</title>
+<link rel="stylesheet" href="shared/board.css"><link rel="stylesheet" href="shared/a.css"><link rel="stylesheet" href="shared/a2.css">
+<script src="shared/icons.js"></script>
+<script>
+const SB = '<div class="sbar"><span>20:38</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>';
+const BTNS = '<div class="ssh"><i data-i="terminal" data-s="18" data-w="2.1"></i></div><div class="cbtn"><i data-i="plus" data-s="17" data-w="2.1"></i></div><div class="cbtn"><i data-i="refresh" data-s="16"></i></div><div class="more"><i data-i="more" data-s="18"></i></div>';
+const HOME = `<div class="appbar"><div class="logo"><i data-i="terminal" data-s="18" data-w="2.4"></i></div><span class="brand grow">mtmux</span><div class="ib"><i data-i="gear"></i></div><div class="ib fill" style="width:38px;height:38px"><i data-i="plus" data-w="2.2"></i></div></div>
+  <div class="search"><i data-i="search" data-s="18"></i><span class="ph">搜索服务器或会话</span><div class="ib sm"><i data-i="sort" data-s="18"></i></div><span class="sep"></span><div class="ib sm"><i data-i="folderPlus" data-s="18"></i></div></div>
+  <div class="fh"><i data-i="chevD" data-s="14" data-w="2.2"></i><span>日常开发</span><span class="cnt">2</span><span class="grow"></span><div class="ib sm"><i data-i="refresh" data-s="17"></i></div></div>
+  <div class="card"><div class="ch"><div class="grow"><div class="nm">开发服务器</div><div class="mt">2 分钟前</div></div>${BTNS}</div>
+    <div class="trow"><span class="dot d-r ring"></span><div class="grow row"><span class="tn">code-review</span><span class="tw">0</span></div><span style="color:var(--fa)"><i data-i="chevR" data-s="16"></i></span></div>
+    <div class="trow"><span class="dot d-y"></span><div class="grow row"><span class="tn">api-service</span><span class="tw">1</span></div><span style="color:var(--fa)"><i data-i="chevR" data-s="16"></i></span></div></div>
+  <div class="card"><div class="ch"><div class="grow"><div class="nm">构建节点</div><div class="mt">2 分钟前</div></div>${BTNS}</div>
+    <div class="trow"><span class="dot d-y"></span><div class="grow row"><span class="tn">release-build</span><span class="tw">0 · build</span></div><span style="color:var(--fa)"><i data-i="chevR" data-s="16"></i></span></div></div>`;
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-sb]').forEach(e => e.outerHTML = SB);
+  document.querySelectorAll('[data-home]').forEach(e => e.outerHTML = HOME);
+  renderIcons();
+});
+</script></head>
+<body class="board">
+<header class="board-head">
+  <h1>方案 A 第二版 · tmux Doctor 与 0.9 新增界面</h1>
+  <p>0.9.0 新增 tmux Doctor（保存后邀请、诊断报告、最小配置、撤销）、服务器菜单里的 Doctor 入口和“tmux 不可用”状态。现在这些界面都是默认 AlertDialog：一长串 ✓ / ⚠ 文字、操作按钮散落在正文里。这一版沿用第二版的底部面板、阶段卡和浮动卡片：结论放在最前，问题项展开、正常项收起，每个问题旁边直接给出可做的操作。</p>
+  <div class="tags"><span>Doctor 使用接近全屏的底部面板，文字和规则不变</span><span>报告顺序：总结 → 需要注意 → 正常（收起）</span><span>配置预览按文件样式展示</span></div>
+</header>
+<div class="grid">
+
+<!-- D1 保存成功后邀请 -->
+<figure class="shot" data-id="d1-saved-invite"><div class="phone A">
+  <div data-sb></div>
+  <div class="row" style="height:56px;padding:0 10px 0 4px;gap:4px"><div class="ib"><i data-i="close"></i></div><div class="grow" style="font-size:17px;font-weight:600">添加服务器</div><span class="btn b-p sm-btn off" style="padding:0 18px">保存</span></div>
+  <div class="sec">连接</div>
+  <div class="grp"><div class="fld"><div class="lb">别名</div><div class="v">构建节点</div></div><div class="fld"><div class="lb">用户名</div><div class="v mono">builder</div></div></div>
+  <div class="scrim" style="background:rgba(5,6,12,.5)"></div>
+  <div class="vsheet">
+    <div class="handle"></div>
+    <div class="row" style="gap:12px"><div style="width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:rgba(158,206,106,.15);color:var(--grn);flex:none"><i data-i="check" data-s="24" data-w="2.4"></i></div>
+      <div class="grow"><div style="font-size:18px;font-weight:700">已保存“构建节点”</div><div style="font-size:12.5px;color:var(--mu);margin-top:2px">两级主机指纹已记录，认证通过</div></div></div>
+    <div class="route" style="margin:14px 0 4px"><span class="nd ok">手机</span><i data-i="chevR" data-s="13"></i><span class="nd ok">跳板 1 ✓</span><i data-i="chevR" data-s="13"></i><span class="nd ok">构建节点 ✓</span></div>
+    <div style="margin-top:16px;border-radius:18px;background:var(--rs);padding:14px">
+      <div class="row" style="gap:12px"><div class="ib sm" style="background:var(--act);color:var(--ac);border-radius:12px"><i data-i="sparkle" data-s="18"></i></div>
+        <div class="grow"><div style="font-size:14.5px;font-weight:600">检查 tmux 环境？</div><div style="font-size:12px;color:var(--mu);margin-top:2px;line-height:1.5">安装、版本、滚动和历史记录。只读取，不修改服务器。</div></div></div>
+      <div class="row" style="gap:8px;margin-top:12px"><div class="btn b-g grow" style="height:40px">以后再说</div><div class="btn b-p grow" style="height:40px">运行 Doctor</div></div>
+    </div>
+  </div>
+</div><figcaption><b>D1 保存后邀请</b>不再回到首页后再弹一个对话框。验证面板直接转为成功态，Doctor 邀请作为面板里的一张卡，跳过即关闭面板回首页。</figcaption></figure>
+
+<!-- D2 Doctor 运行中 -->
+<figure class="shot" data-id="d2-running"><div class="phone A">
+  <div data-sb></div><div data-home></div>
+  <div class="scrim" style="background:rgba(5,6,12,.55)"></div>
+  <div class="full">
+    <div class="handle" style="margin-top:10px"></div>
+    <div class="row" style="padding:2px 16px 4px;gap:10px"><div class="grow"><div style="font-size:18px;font-weight:700">tmux Doctor</div><div style="font-size:12px;color:var(--fa);margin-top:2px">构建节点 · 只读检查</div></div></div>
+    <div class="fbody">
+      <div class="sumcard" style="background:var(--act);margin-top:12px">
+        <div class="gauge" style="background:conic-gradient(var(--ac) 0 38%, var(--hi) 38% 100%)"><div style="width:44px;height:44px;border-radius:50%;background:var(--sf);display:grid;place-items:center;font-size:13px">5/13</div></div>
+        <div class="grow"><div style="font-size:15px;font-weight:600">正在读取 tmux 环境</div><div style="font-size:12px;color:var(--mu);margin-top:2px">命令预算 5 秒，不会创建会话</div></div></div>
+      <div class="gh">检查项</div>
+      <div class="stp"><span class="si" style="background:rgba(158,206,106,.15);color:var(--grn)"><i data-i="check" data-s="14" data-w="2.6"></i></span>SSH 身份与认证</div>
+      <div class="stp"><span class="si" style="background:rgba(158,206,106,.15);color:var(--grn)"><i data-i="check" data-s="14" data-w="2.6"></i></span>tmux 可执行文件<span class="ms mono">/usr/bin/tmux</span></div>
+      <div class="stp"><span class="si" style="background:rgba(158,206,106,.15);color:var(--grn)"><i data-i="check" data-s="14" data-w="2.6"></i></span>版本<span class="ms mono">3.4</span></div>
+      <div class="stp"><span class="si" style="background:rgba(224,175,104,.18);color:var(--yel)"><i data-i="alert" data-s="12" data-w="2.4"></i></span>server 与会话访问<span class="ms">需注意</span></div>
+      <div class="stp" style="font-weight:600"><span class="si"><span class="spin"></span></span>鼠标与滚轮绑定<span class="ms">读取中</span></div>
+      <div class="stp" style="color:var(--fa)"><span class="si" style="border:1.5px solid var(--hi)"></span>历史容量</div>
+      <div class="stp" style="color:var(--fa)"><span class="si" style="border:1.5px solid var(--hi)"></span>断开后的会话保留</div>
+      <div class="stp" style="color:var(--fa)"><span class="si" style="border:1.5px solid var(--hi)"></span>其余 6 项</div>
+    </div>
+    <div class="ffoot"><div class="btn b-t grow">取消</div></div>
+  </div>
+</div><figcaption><b>D2 检查中</b>和连接阶段卡同一套逐项打勾的样式；顶部圆环显示已完成项数。原来是一条进度条加一行文字，检查项全是“— 标题”。</figcaption></figure>
+
+<!-- D3 诊断报告 -->
+<figure class="shot" data-id="d3-report"><div class="phone A">
+  <div data-sb></div><div data-home></div>
+  <div class="scrim" style="background:rgba(5,6,12,.55)"></div>
+  <div class="full">
+    <div class="handle" style="margin-top:10px"></div>
+    <div class="row" style="padding:2px 16px 4px;gap:10px"><div class="grow"><div style="font-size:18px;font-weight:700">tmux Doctor</div><div style="font-size:12px;color:var(--fa);margin-top:2px">开发服务器 · 检查于 20:37</div></div><div class="ib sm"><i data-i="close" data-s="18"></i></div></div>
+    <div class="fbody">
+      <div class="sumcard" style="background:rgba(224,175,104,.10);margin-top:12px">
+        <div class="gauge" style="background:rgba(224,175,104,.18);color:var(--yel)"><i data-i="alert" data-s="24" data-w="2"></i></div>
+        <div class="grow"><div style="font-size:15px;font-weight:600">可以使用，3 项建议调整</div><div style="font-size:12px;color:var(--mu);margin-top:2px">tmux 3.4 · 10 项正常</div></div></div>
+      <div class="gh">需要注意</div>
+      <div class="finding"><div class="ft"><span class="gi w"><i data-i="alert" data-s="11" data-w="2.6"></i></span>滚轮转发与历史模式</div>
+        <div class="fd">未发现部分历史滚轮绑定；root 中没有显式 WheelDownPane 本身不属于问题。</div></div>
+      <div class="finding"><div class="ft"><span class="gi w"><i data-i="alert" data-s="11" data-w="2.6"></i></span>历史容量</div>
+        <div class="fd">部分低于建议的 2000 行，不影响新建会话。</div><div class="fv">default 2000 · 抽查最小 500</div></div>
+      <div class="finding"><div class="ft"><span class="gi w"><i data-i="alert" data-s="11" data-w="2.6"></i></span>断开后的会话保留</div>
+        <div class="fd">部分设置可能在客户端离开后销毁会话。</div></div>
+      <div class="gh">正常 · 10 项<span class="grow"></span><span style="color:var(--ac);font-weight:500">展开</span></div>
+      <div class="passgrid"><span><span class="gi p"><i data-i="check" data-s="10" data-w="3"></i></span>SSH 认证</span><span><span class="gi p"><i data-i="check" data-s="10" data-w="3"></i></span>可执行文件</span><span><span class="gi p"><i data-i="check" data-s="10" data-w="3"></i></span>版本 3.4</span><span><span class="gi p"><i data-i="check" data-s="10" data-w="3"></i></span>会话访问 · 2</span><span><span class="gi p"><i data-i="check" data-s="10" data-w="3"></i></span>鼠标支持</span><span><span class="gi p"><i data-i="check" data-s="10" data-w="3"></i></span>触摸转发</span></div>
+    </div>
+    <div class="ffoot"><div class="btn b-t grow"><i data-i="copy" data-s="16"></i>复制配置建议</div><div class="btn b-p grow"><i data-i="refresh" data-s="16"></i>重新检查</div></div>
+  </div>
+</div><figcaption><b>D3 诊断报告</b>顶部一句结论；需要注意的项展开显示原因和数值，正常项收成两列小标签。“复制配置建议”和“重新检查”固定在底部，不再混在正文里。</figcaption></figure>
+
+<!-- D4 未安装 tmux -->
+<figure class="shot" data-id="d4-missing"><div class="phone A">
+  <div data-sb></div><div data-home></div>
+  <div class="scrim" style="background:rgba(5,6,12,.55)"></div>
+  <div class="full">
+    <div class="handle" style="margin-top:10px"></div>
+    <div class="row" style="padding:2px 16px 4px;gap:10px"><div class="grow"><div style="font-size:18px;font-weight:700">tmux Doctor</div><div style="font-size:12px;color:var(--fa);margin-top:2px">备用服务器 · 检查于 20:37</div></div><div class="ib sm"><i data-i="close" data-s="18"></i></div></div>
+    <div class="fbody">
+      <div class="sumcard" style="background:rgba(247,118,142,.10);margin-top:12px">
+        <div class="gauge" style="background:rgba(247,118,142,.16);color:var(--red)"><i data-i="close" data-s="24" data-w="2.4"></i></div>
+        <div class="grow"><div style="font-size:15px;font-weight:600">没有找到 tmux</div><div style="font-size:12px;color:var(--mu);margin-top:2px;line-height:1.5">/usr/bin/tmux 和 PATH 中都没有可执行文件</div></div></div>
+      <div class="finding" style="margin-top:14px;background:var(--act);box-shadow:inset 0 0 0 1px rgba(122,162,247,.3)">
+        <div class="ft"><span class="gi" style="background:var(--ac);color:var(--aci)"><i data-i="sparkle" data-s="11" data-w="2.4"></i></span>发现其他路径</div>
+        <div class="fd mono" style="color:var(--fg)">/opt/homebrew/bin/tmux</div>
+        <div class="fa2"><span class="btn b-p sm-btn">改用此路径</span></div></div>
+      <div class="gh">或在服务器上安装</div>
+      <div class="cmd"><span class="pm">apt</span><span class="grow">sudo apt install tmux</span><i data-i="copy" data-s="15"></i></div>
+      <div class="cmd"><span class="pm">dnf</span><span class="grow">sudo dnf install tmux</span><i data-i="copy" data-s="15"></i></div>
+      <div class="cmd"><span class="pm">apk</span><span class="grow">sudo apk add tmux</span><i data-i="copy" data-s="15"></i></div>
+      <div style="font-size:12px;color:var(--fa);margin:8px 4px 0;line-height:1.5">应用不会自动安装软件。安装后点“重新检查”。</div>
+      <div class="gh">其余项未检查</div>
+      <div style="font-size:12.5px;color:var(--fa);padding:0 4px">找到 tmux 后才能检查会话、鼠标和历史设置。</div>
+    </div>
+    <div class="ffoot"><div class="btn b-t grow">编辑 tmux 路径</div><div class="btn b-p grow"><i data-i="refresh" data-s="16"></i>重新检查</div></div>
+  </div>
+</div><figcaption><b>D4 未安装 tmux</b>失败时只讲这一件事：发现备选路径就直接给“改用此路径”，否则列出可复制的安装命令。后续检查项合并成一行“未检查”。</figcaption></figure>
+
+<!-- D5 最小配置预览 -->
+<figure class="shot" data-id="d5-config"><div class="phone A">
+  <div data-sb></div><div data-home></div>
+  <div class="scrim" style="background:rgba(5,6,12,.55)"></div>
+  <div class="full">
+    <div class="handle" style="margin-top:10px"></div>
+    <div class="row" style="padding:2px 8px 4px 6px;gap:4px"><div class="ib"><i data-i="back"></i></div><div class="grow"><div style="font-size:18px;font-weight:700">创建最小配置</div><div style="font-size:12px;color:var(--fa);margin-top:2px">开发服务器 · developer</div></div></div>
+    <div class="fbody">
+      <div style="font-size:13px;color:var(--mu);line-height:1.6;margin:10px 2px 12px">这台服务器还没有 tmux 配置。将新建下面这个文件，已有文件不会被覆盖。</div>
+      <div class="codef"><div class="cfh"><i data-i="file" data-s="14"></i><span class="grow">~/.tmux.conf</span><span class="pill p-a" style="font-family:inherit">新文件</span></div>
+<pre><b>1</b><span class="c"># mTmux minimal config v1</span>
+<b>2</b><span class="k">set</span> -g mouse on
+<b>3</b><span class="k">set</span> -g history-limit <span class="n">10000</span>
+<b>4</b><span class="k">set</span> -g destroy-unattached off
+<b>5</b><span class="k">set</span> -s exit-unattached off</pre></div>
+      <div class="gh" style="padding-top:18px">历史行数</div>
+      <div class="opts"><span>2000</span><span class="on">10000</span><span>50000</span><span>自定义</span></div>
+      <div style="font-size:12px;color:var(--fa);margin:8px 2px 0">范围 2000–500000，只影响之后新建的窗口</div>
+      <div class="row" style="gap:12px;margin-top:16px;padding:12px 14px;border-radius:14px;background:var(--rs);align-items:flex-start">
+        <span class="cbx"><i data-i="check" data-s="14" data-w="3"></i></span>
+        <div style="font-size:13.5px;line-height:1.5">这是我的首次配置，没有其他自定义 tmux 配置或 socket</div></div>
+      <div class="row" style="gap:6px;font-size:12px;color:var(--fa);margin:12px 4px 0"><i data-i="info" data-s="14"></i>tmux 下次启动时加载；之后可以撤销</div>
+    </div>
+    <div class="ffoot"><div class="btn b-g">取消</div><div class="btn b-p grow">创建配置</div></div>
+  </div>
+</div><figcaption><b>D5 最小配置预览</b>配置以带文件名、行号和高亮的代码块展示；历史行数从输入框改为常用档位 + 自定义。确认勾选放在一张卡里，未勾选时“创建配置”不可点。</figcaption></figure>
+
+<!-- D6 创建成功 + 撤销 -->
+<figure class="shot" data-id="d6-created"><div class="phone A">
+  <div data-sb></div><div data-home></div>
+  <div class="scrim" style="background:rgba(5,6,12,.55)"></div>
+  <div class="vsheet">
+    <div class="handle"></div>
+    <div class="row" style="gap:12px"><div style="width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:rgba(158,206,106,.15);color:var(--grn);flex:none"><i data-i="check" data-s="24" data-w="2.4"></i></div>
+      <div class="grow"><div style="font-size:18px;font-weight:700">已创建 ~/.tmux.conf</div><div style="font-size:12.5px;color:var(--mu);margin-top:2px">tmux 下次启动时加载</div></div></div>
+    <div style="font-size:13px;color:var(--mu);line-height:1.6;margin:14px 0 16px">现在可以新建第一个会话。会话建立后再运行 Doctor，可以确认滚动和历史容量是否生效。</div>
+    <div class="col" style="gap:8px"><div class="btn b-p"><i data-i="plus" data-s="17" data-w="2.2"></i>新建会话</div>
+      <div class="row" style="gap:8px"><div class="btn b-t grow">完成</div><div class="btn b-g grow" style="color:var(--red)">撤销本次初始化</div></div></div>
+  </div>
+</div><figcaption><b>D6 创建成功</b>成功后给下一步“新建会话”；撤销作为红色文字按钮留在同一面板里，点按后再弹 D7 确认。</figcaption></figure>
+
+<!-- D7 撤销确认 -->
+<figure class="shot" data-id="d7-undo"><div class="phone A">
+  <div data-sb></div><div data-home></div>
+  <div class="scrim" style="background:rgba(5,6,12,.66)"></div>
+  <div class="dlg" style="top:220px">
+    <div class="badge" style="background:rgba(247,118,142,.14);color:var(--red)"><i data-i="arrowL" data-s="22"></i></div>
+    <h2>撤销本次初始化？</h2>
+    <p>~/.tmux.conf 会移到同一主目录下的备份，不会删除。只处理应用创建且之后没改动过的文件。</p>
+    <div style="margin-top:14px;border-radius:14px;background:var(--rs);padding:10px 12px;font:12px/1.7 'Ubuntu Sans Mono',monospace;color:var(--mu)">~/.tmux.conf<br><span style="color:var(--fa)">→</span> ~/.mtmux-doctor-undo.20261030/</div>
+    <div class="row" style="gap:6px;font-size:12px;color:var(--fa);margin-top:10px"><i data-i="info" data-s="14"></i>运行中的 tmux 会话和设置不受影响</div>
+    <div class="row" style="gap:8px;margin-top:18px"><div class="btn b-t grow">取消</div><div class="btn b-d grow">撤销</div></div>
+  </div>
+</div><figcaption><b>D7 撤销确认</b>用和其他危险操作一致的红色按钮；文件会移到哪里直接画出来，代替长段说明。</figcaption></figure>
+
+<!-- D8 首页：tmux 不可用 + 菜单入口 -->
+<figure class="shot" data-id="d8-home-unavailable"><div class="phone A">
+  <div data-sb></div>
+  <div class="appbar"><div class="logo"><i data-i="terminal" data-s="18" data-w="2.4"></i></div><span class="brand grow">mtmux</span><div class="ib"><i data-i="gear"></i></div><div class="ib fill" style="width:38px;height:38px"><i data-i="plus" data-w="2.2"></i></div></div>
+  <div class="search"><i data-i="search" data-s="18"></i><span class="ph">搜索服务器或会话</span><div class="ib sm"><i data-i="sort" data-s="18"></i></div><span class="sep"></span><div class="ib sm"><i data-i="folderPlus" data-s="18"></i></div></div>
+  <div class="fh"><i data-i="chevD" data-s="14" data-w="2.2"></i><span>日常开发</span><span class="cnt">2</span><span class="grow"></span><div class="ib sm"><i data-i="refresh" data-s="17"></i></div></div>
+  <div class="card"><div class="ch"><div class="grow"><div class="nm">开发服务器</div><div class="mt">2 分钟前</div></div><div class="ssh"><i data-i="terminal" data-s="18" data-w="2.1"></i></div><div class="cbtn"><i data-i="plus" data-s="17" data-w="2.1"></i></div><div class="cbtn"><i data-i="refresh" data-s="16"></i></div><div class="more"><i data-i="more" data-s="18"></i></div></div>
+    <div class="trow"><span class="dot d-r ring"></span><div class="grow row"><span class="tn">code-review</span><span class="tw">0</span></div><span style="color:var(--fa)"><i data-i="chevR" data-s="16"></i></span></div></div>
+  <div class="card"><div class="ch"><div class="grow"><div class="nm">备用服务器</div><div class="mt" style="color:var(--yel)"><i data-i="alert" data-s="12"></i>tmux 不可用</div></div><div class="ssh"><i data-i="terminal" data-s="18" data-w="2.1"></i></div><div class="cbtn off"><i data-i="plus" data-s="17" data-w="2.1"></i></div><div class="cbtn"><i data-i="refresh" data-s="16"></i></div><div class="more"><i data-i="more" data-s="18"></i></div></div>
+    <div class="trow" style="height:auto;padding:12px 12px 12px 16px;gap:12px"><span style="color:var(--yel)"><i data-i="sparkle" data-s="18"></i></span><div class="grow"><div style="font-size:13.5px;font-weight:500">近期检查未找到 tmux</div><div style="font-size:12px;color:var(--fa);margin-top:2px">5 分钟后自动解除，可以先用 SSH 终端</div></div><span class="btn b-t sm-btn">Doctor</span></div></div>
+  <div class="scrim" style="background:rgba(5,6,12,.5)"></div>
+  <div class="asheet">
+    <div class="handle" style="margin-bottom:4px"></div>
+    <div class="ahead"><div class="ib tone" style="border-radius:14px"><i data-i="server" data-s="20"></i></div><div class="grow"><div style="font-size:16px;font-weight:700">备用服务器</div><div style="font-size:12px;color:var(--fa);margin-top:2px">未分组 · tmux 不可用</div></div></div>
+    <div class="arow hl"><span class="aic" style="background:var(--act);color:var(--ac)"><i data-i="sparkle" data-s="18"></i></span><span class="grow">tmux Doctor</span><span style="font-size:12px;color:var(--fa)">上次 20:37</span></div>
+    <div class="arow"><span class="aic"><i data-i="edit" data-s="18"></i></span><span class="grow">编辑服务器</span></div>
+    <div class="arow"><span class="aic"><i data-i="shieldCheck" data-s="18"></i></span><span class="grow">查看主机指纹</span></div>
+    <div class="arow"><span class="aic"><i data-i="folder" data-s="18"></i></span><span class="grow">移动到分组</span></div>
+    <div style="height:1px;background:var(--ln);margin:6px 14px"></div>
+    <div class="arow dn"><span class="aic"><i data-i="close" data-s="18"></i></span><span class="grow">删除服务器</span></div>
+  </div>
+</div><figcaption><b>D8 tmux 不可用 + 菜单入口</b>“tmux 不可用”是黄色副标题加卡片内一行提示，新建按钮置灰，SSH 终端仍可用。⋮ 面板第一项是 tmux Doctor，显示上次检查时间。</figcaption></figure>
+
+<!-- D9 新建会话 + 快速检查 -->
+<figure class="shot" data-id="d9-new-session"><div class="phone A">
+  <div data-sb></div><div data-home></div>
+  <div class="scrim" style="background:rgba(5,6,12,.5)"></div>
+  <div class="vsheet" style="padding-bottom:0">
+    <div class="handle"></div>
+    <div class="row"><div class="grow"><div style="font-size:18px;font-weight:700">新建 tmux 会话</div><div style="font-size:12px;color:var(--fa);margin-top:2px">构建节点</div></div></div>
+    <div class="row" style="gap:8px;margin-top:12px;font-size:12px;color:var(--mu)"><span class="gi p"><i data-i="check" data-s="10" data-w="3"></i></span>tmux 3.4 · 可以创建<span class="grow"></span><span style="color:var(--fa)">刚刚检查</span></div>
+    <div class="fld focus" style="margin:12px 0 0"><div class="lb">会话名称</div><div class="v mono">code-review-2<span style="display:inline-block;width:1.5px;height:16px;background:var(--ac);vertical-align:-2px;margin-left:1px"></span></div></div>
+    <div style="font-size:11.5px;color:var(--fa);margin:6px 4px 0">创建同名会话和第一个窗口，然后进入终端</div>
+    <div class="row" style="gap:8px;margin:14px 0 12px"><div class="btn b-g">取消</div><div class="btn b-p grow">创建并进入</div></div>
+    <div class="kbd" style="margin:0 -20px">
+      <div class="kr"><span class="kk">q</span><span class="kk">w</span><span class="kk">e</span><span class="kk">r</span><span class="kk">t</span><span class="kk">y</span><span class="kk">u</span><span class="kk">i</span><span class="kk">o</span><span class="kk">p</span></div>
+      <div class="kr" style="padding:0 14px"><span class="kk">a</span><span class="kk">s</span><span class="kk">d</span><span class="kk">f</span><span class="kk">g</span><span class="kk">h</span><span class="kk">j</span><span class="kk">k</span><span class="kk">l</span></div>
+      <div class="kr"><span class="kk w">⇧</span><span class="kk">z</span><span class="kk">x</span><span class="kk">c</span><span class="kk">v</span><span class="kk">b</span><span class="kk">n</span><span class="kk">m</span><span class="kk w">⌫</span></div>
+      <div class="kr" style="margin-bottom:4px"><span class="kk w">?123</span><span class="kk w">-</span><span class="kk sp">English</span><span class="kk w">.</span><span class="kk w" style="background:var(--ac);color:var(--aci)">↵</span></div>
+      <div class="nav"><i></i></div>
+    </div>
+  </div>
+</div><figcaption><b>D9 新建会话</b>改为贴着键盘的底部面板。创建前的 Doctor 快速检查（4 项）缩成标题下的一行结果；检查失败时这一行变红，并换成“打开 Doctor”。</figcaption></figure>
+
+</div>
+</body></html>

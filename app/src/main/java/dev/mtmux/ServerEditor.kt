@@ -9,6 +9,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -65,24 +71,23 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
     BentoCard(title=stringResource(R.string.editor_target)) {
         alias()
         Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {
-            OutlinedTextField(fields.host,{fields.host=it;changed()},label={Text(stringResource(R.string.editor_host))},singleLine=true,shape=MaterialTheme.shapes.medium,modifier=Modifier.weight(2.2f).testTag("$prefix-host"))
-            OutlinedTextField(fields.port,{fields.port=it;changed()},label={Text(stringResource(R.string.editor_port))},singleLine=true,shape=MaterialTheme.shapes.medium,modifier=Modifier.weight(1f).testTag("$prefix-port"))
+            OutlinedTextField(fields.host,{fields.host=it;changed()},label={Text(stringResource(R.string.editor_host))},singleLine=true,shape=appFieldShape,colors=appFieldColors(),modifier=Modifier.weight(2.2f).testTag("$prefix-host"))
+            OutlinedTextField(fields.port,{fields.port=it;changed()},label={Text(stringResource(R.string.editor_port))},singleLine=true,shape=appFieldShape,colors=appFieldColors(),modifier=Modifier.weight(1f).testTag("$prefix-port"))
         }
-        OutlinedTextField(fields.user,{fields.user=it;changed()},label={Text(stringResource(R.string.editor_user))},singleLine=true,shape=MaterialTheme.shapes.medium,modifier=Modifier.fillMaxWidth().testTag("$prefix-user"))
+        OutlinedTextField(fields.user,{fields.user=it;changed()},label={Text(stringResource(R.string.editor_user))},singleLine=true,shape=appFieldShape,colors=appFieldColors(),modifier=Modifier.fillMaxWidth().testTag("$prefix-user"))
     }
     BentoCard(title=stringResource(R.string.editor_auth)) {
-    Row {
-        FilterChip(selected = fields.key, onClick = { fields.key = true; changed() }, label = { Text(stringResource(R.string.editor_auth_key)) })
-        Spacer(Modifier.width(12.dp))
-        FilterChip(selected = !fields.key, onClick = { fields.key = false; changed() }, label = { Text(stringResource(R.string.editor_auth_password)) })
-    }
+    SegmentedChoice(listOf(true,false),fields.key,{stringResource(if(it) R.string.editor_auth_key else R.string.editor_auth_password)},{"$prefix-auth-${if(it) "key" else "password"}"},{fields.key=it;changed()})
     if (fields.key) {
-        Surface(color=MaterialTheme.colorScheme.surfaceVariant,shape=MaterialTheme.shapes.medium) {
-            Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(if(fields.privateKey==null) R.string.editor_key_missing else R.string.editor_key_ready),style=MaterialTheme.typography.bodyMedium)
+        Surface(color=MaterialTheme.colorScheme.surfaceVariant,shape=RoundedCornerShape(14.dp)) {
+            Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                    ToneBadge(UiSymbol.KEY,if(fields.privateKey==null) Tone.NEUTRAL else Tone.ACCENT,36.dp,18.dp)
+                    Text(stringResource(if(fields.privateKey==null) R.string.editor_key_missing else R.string.editor_key_ready),Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium.copy(fontWeight=FontWeight.Medium))
+                }
                 Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick={picker.launch(arrayOf("*/*"))},modifier=Modifier.weight(1f).testTag("$prefix-key-file")) {Text(stringResource(R.string.editor_key_file))}
-                    OutlinedButton(onClick={pasteKey=true},modifier=Modifier.weight(1f).testTag("$prefix-key-paste")) {Text(stringResource(R.string.editor_key_paste))}
+                    FilledTonalButton(onClick={picker.launch(arrayOf("*/*"))},shape=RoundedCornerShape(12.dp),colors=ButtonDefaults.filledTonalButtonColors(containerColor=MaterialTheme.colorScheme.surface),modifier=Modifier.weight(1f).testTag("$prefix-key-file")) {AppIcon(UiSymbol.FILE,modifier=Modifier.size(16.dp));Spacer(Modifier.width(6.dp));Text(stringResource(R.string.editor_key_file))}
+                    FilledTonalButton(onClick={pasteKey=true},shape=RoundedCornerShape(12.dp),colors=ButtonDefaults.filledTonalButtonColors(containerColor=MaterialTheme.colorScheme.surface),modifier=Modifier.weight(1f).testTag("$prefix-key-paste")) {AppIcon(UiSymbol.COPY,modifier=Modifier.size(16.dp));Spacer(Modifier.width(6.dp));Text(stringResource(R.string.editor_key_paste))}
                 }
             }
         }
@@ -91,9 +96,10 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
         { if (fields.key) fields.passphrase = it else fields.password = it; changed() },
         label = { Text(stringResource(if (fields.key) R.string.editor_passphrase else R.string.editor_auth_password)) }, singleLine = true,
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
+        shape = appFieldShape, colors = appFieldColors(),
         trailingIcon = { TextButton(onClick = { visible = !visible }) { Text(stringResource(if (visible) R.string.common_hide else R.string.common_show)) } },
         modifier = Modifier.fillMaxWidth().testTag("$prefix-secret"))
-    fields.error?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
+    fields.error?.let { NoticeStrip(stringResource(it), Tone.DANGER, UiSymbol.ALERT_CIRCLE) }
     }
 }
 
@@ -131,11 +137,11 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
     var verification by remember { mutableStateOf<ServerDraft?>(null) }
     fun close() { if (dirty) abandon = true else onClose() }
     BackHandler { close() }
-    Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(horizontal = 16.dp)) {
-        Row(Modifier.fillMaxWidth().height(56.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            TextButton(onClick = { close() }) { Text(stringResource(R.string.common_cancel)) }
-            Text(stringResource(if (initial == null) R.string.home_add_server else R.string.home_edit_server), style = MaterialTheme.typography.titleMedium)
-            Button(onClick = {
+    Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding().padding(horizontal = 12.dp)) {
+        Row(Modifier.fillMaxWidth().height(56.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            AppIconButton(UiSymbol.CLOSE, stringResource(R.string.common_cancel), { close() }, Modifier.testTag("cancel-edit"), tone = IconTone.PLAIN, iconSize = 22.dp)
+            Text(stringResource(if (initial == null) R.string.home_add_server else R.string.home_edit_server), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+            Button(shape = RoundedCornerShape(12.dp), contentPadding = PaddingValues(horizontal = 20.dp), onClick = {
                 val targetOk = target.validate()
                 val hopsOk = if (jumpsEnabled) hops.map { it.validate() }.all { it } && hops.isNotEmpty() else true
                 if (!hopsOk) { advanced = true; error = R.string.editor_err_jumps }
@@ -155,23 +161,28 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
                 }.onFailure { error = R.string.editor_err_save }
             }, modifier = Modifier.testTag("save-server")) { Text(stringResource(R.string.common_save)) }
         }
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            error?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            error?.let { NoticeStrip(stringResource(it), Tone.DANGER, UiSymbol.ALERT_CIRCLE, Modifier.padding(top = 4.dp)) }
             AuthEditor(target, {dirty=true}, "server", alias={
-                OutlinedTextField(name,{name=it;dirty=true},label={Text(stringResource(R.string.editor_alias))},singleLine=true,shape=MaterialTheme.shapes.medium,modifier=Modifier.fillMaxWidth().testTag("profile-name"))
+                OutlinedTextField(name,{name=it;dirty=true},label={Text(stringResource(R.string.editor_alias))},singleLine=true,shape=appFieldShape,colors=appFieldColors(),modifier=Modifier.fillMaxWidth().testTag("profile-name"))
             })
-            BentoCard {
-            TextButton(onClick = { advanced = !advanced }, modifier = Modifier.fillMaxWidth().testTag("advanced")) {
-                Text("${if (advanced) "⌄" else "›"} " + stringResource(R.string.editor_advanced) + if (jumpsEnabled) " · " + pluralStringResource(R.plurals.editor_jump_count, hops.size, hops.size) else "")
+            BentoCard(Modifier.padding(top = 12.dp)) {
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { advanced = !advanced }.heightIn(min = 44.dp).testTag("advanced"),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(stringResource(R.string.editor_advanced) + if (jumpsEnabled) " · " + pluralStringResource(R.plurals.editor_jump_count, hops.size, hops.size) else "",
+                    Modifier.weight(1f), style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                AppIcon(if (advanced) UiSymbol.DOWN else UiSymbol.NEXT, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (advanced) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(stringResource(R.string.editor_folder))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    AppIcon(UiSymbol.FOLDER, modifier = Modifier.size(19.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.editor_folder), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
                     Box {
                         TextButton(onClick = { folderMenu = true }, enabled = folders.isNotEmpty(), modifier = Modifier.testTag("editor-folder")) {
-                            Text((folders.firstOrNull { it.id == folderId }?.name ?: stringResource(R.string.home_ungrouped)) + " ▾")
+                            Text(folders.firstOrNull { it.id == folderId }?.name ?: stringResource(R.string.home_ungrouped), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            AppIcon(UiSymbol.NEXT, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        DropdownMenu(expanded = folderMenu, onDismissRequest = { folderMenu = false }) {
+                        DropdownMenu(expanded = folderMenu, onDismissRequest = { folderMenu = false }, shape = RoundedCornerShape(14.dp)) {
                             (listOf<ServerFolder?>(null) + folders).forEach { folder ->
                                 DropdownMenuItem(text = { Text((if (folder?.id == folderId) "✓ " else "") + (folder?.name ?: stringResource(R.string.home_ungrouped))) },
                                     onClick = { folderId = folder?.id; folderMenu = false; dirty = true },
@@ -181,12 +192,13 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
                     }
                 }
                 if (folders.isEmpty()) Text(stringResource(R.string.editor_folder_none_hint), style = MaterialTheme.typography.bodySmall)
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Jump Host")
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    AppIcon(UiSymbol.ROUTE, modifier = Modifier.size(19.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Jump Host", Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
                     Switch(checked = jumpsEnabled, onCheckedChange = { jumpsEnabled = it; dirty = true; if (it && hops.isEmpty()) hops.add(AuthFields()) }, modifier = Modifier.testTag("jump-enabled"))
                 }
                 if (jumpsEnabled) {
-                    Text((listOf(stringResource(R.string.editor_route_phone)) + hops.indices.map { stringResource(R.string.hop_jump, it+1) } + stringResource(R.string.hop_target)).joinToString(" → "), style = MaterialTheme.typography.bodySmall)
+                    RouteChips((listOf(stringResource(R.string.editor_route_phone)) + hops.indices.map { stringResource(R.string.hop_jump, it+1) } + stringResource(R.string.hop_target)).map { it to RouteState.NORMAL })
                     hops.toList().forEachIndexed { index, hop -> key(hop.id) {
                         InsetPanel {
                             TextButton(onClick = { hop.expanded = !hop.expanded },modifier=Modifier.fillMaxWidth()) {
@@ -205,15 +217,20 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
                         }
                     } }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { hops.add(AuthFields()); dirty = true }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.editor_add_jump)) }
-                        OutlinedButton(onClick = { pickJump = true }, modifier = Modifier.weight(1f).testTag("jump-from-saved")) { Text(stringResource(R.string.editor_jump_from_saved)) }
+                        FilledTonalButton(onClick = { hops.add(AuthFields()); dirty = true }, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) { Text(stringResource(R.string.editor_add_jump), textAlign = TextAlign.Center) }
+                        FilledTonalButton(onClick = { pickJump = true }, shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f).testTag("jump-from-saved")) { Text(stringResource(R.string.editor_jump_from_saved), textAlign = TextAlign.Center) }
                     }
                 }
-                OutlinedTextField(path, { path = it; dirty = true }, label = { Text(stringResource(R.string.editor_tmux_path)) }, modifier = Modifier.fillMaxWidth().testTag("server-tmux-path"))
-                Row(verticalAlignment = Alignment.CenterVertically) { Switch(mouse, { mouse = it; dirty = true }); Text(stringResource(R.string.editor_tmux_mouse), style = MaterialTheme.typography.bodyMedium) }
+                OutlinedTextField(path, { path = it; dirty = true }, label = { Text(stringResource(R.string.editor_tmux_path)) }, shape = appFieldShape, colors = appFieldColors(),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Monospace), modifier = Modifier.fillMaxWidth().testTag("server-tmux-path"))
+                SettingRow(stringResource(R.string.editor_tmux_mouse), icon = UiSymbol.HAND) { Switch(mouse, { mouse = it; dirty = true }) }
             }
             }
-            Spacer(Modifier.height(24.dp))
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                AppIcon(UiSymbol.LOCK, modifier = Modifier.size(13.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.editor_keystore_note), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(Modifier.height(12.dp))
         }
     }
     verification?.let { draft ->
@@ -226,23 +243,24 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
     if (pickJump) {
         val privacy = remember { PrivacyDisplay(context) }
         val candidates = remember { store.all().filter { it.id != initial?.id } }
-        AlertDialog(properties = protectedDialogProperties, onDismissRequest = { pickJump = false },
-            title = { Text(stringResource(R.string.editor_jump_pick_title)) },
-            text = { Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
-                Text(stringResource(R.string.editor_jump_pick_help), style = MaterialTheme.typography.bodySmall)
-                if (candidates.isEmpty()) Text(stringResource(R.string.editor_jump_pick_empty), Modifier.padding(top = 12.dp))
+        AppSheet(onDismiss = { pickJump = false }, secure = true) {
+            SheetHeader(stringResource(R.string.editor_jump_pick_title), stringResource(R.string.editor_jump_pick_help), UiSymbol.ROUTE)
+            Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
+                if (candidates.isEmpty()) Text(stringResource(R.string.editor_jump_pick_empty), Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 candidates.forEach { candidate ->
-                    TextButton(onClick = {
+                    SheetAction(UiSymbol.SERVER, privacy.label(candidate, privacy.enabled()), {
                         if (!importJump(candidate)) error = R.string.editor_jump_pick_failed
                         pickJump = false
-                    }, modifier = Modifier.fillMaxWidth().testTag("jump-pick-${candidate.id}")) {
-                        Text(privacy.label(candidate, privacy.enabled()) + if (candidate.jumps.isNotEmpty()) " · " + pluralStringResource(R.plurals.editor_jump_count, candidate.jumps.size, candidate.jumps.size) else "",
-                            Modifier.fillMaxWidth())
-                    }
+                    }, Modifier.testTag("jump-pick-${candidate.id}"),
+                        trailing = if (candidate.jumps.isNotEmpty()) pluralStringResource(R.plurals.editor_jump_count, candidate.jumps.size, candidate.jumps.size) else null)
                 }
-            } },
-            confirmButton = { TextButton(onClick = { pickJump = false }) { Text(stringResource(R.string.common_cancel)) } })
+            }
+            SheetDivider()
+            SheetAction(UiSymbol.CLOSE, stringResource(R.string.common_cancel), { pickJump = false })
+        }
     }
-    if (abandon) AlertDialog(properties=protectedDialogProperties,onDismissRequest = { abandon = false }, title = { Text(stringResource(R.string.editor_abandon_title)) },
-        confirmButton = { TextButton(onClick = onClose) { Text(stringResource(R.string.editor_abandon)) } }, dismissButton = { TextButton(onClick = { abandon = false }) { Text(stringResource(R.string.editor_keep_editing)) } })
+    if (abandon) AppDialog(onDismiss = { abandon = false }, properties = protectedDialogProperties, title = stringResource(R.string.editor_abandon_title),
+        icon = UiSymbol.ALERT, tone = Tone.WARNING,
+        confirm = DialogAction(stringResource(R.string.editor_abandon), onClose, danger = true),
+        dismiss = DialogAction(stringResource(R.string.editor_keep_editing), { abandon = false }))
 }

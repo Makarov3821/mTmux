@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="common_back">‹ 返回</string>
+    <string name="common_back">返回</string>
     <string name="common_cancel">取消</string>
     <string name="common_clear">清除</string>
     <string name="common_close">关闭</string>
@@ -272,7 +272,7 @@
     <string name="quick_reply_counter">%1$d/1000 字</string>
     <string name="quick_reply_invalid">最多 12 条，每条 1–1000 字，不能含控制字符</string>
     <string name="quick_reply_save_failed">快捷回复保存失败</string>
-    <string name="copy_back">‹ 返回终端</string>
+    <string name="copy_back">返回终端</string>
     <string name="copy_all">复制全部</string>
     <string name="copy_done">已复制</string>
     <string name="copy_help">长按文字并拖动选区，使用系统菜单复制。这里是已加载内容的静态副本；更早的 tmux 历史需返回终端滚动后再打开。</string>
@@ -382,7 +382,7 @@
     <string name="terminal_insert_text">插入终端</string>
 
     <string name="doctor_title">tmux Doctor</string>
-    <string name="doctor_invite_title">服务器已保存 · tmux Doctor</string>
+    <string name="doctor_invite_title">检查 tmux 环境？</string>
     <string name="doctor_invite_body">要检查 tmux 的安装、版本、滚动和历史记录吗？诊断只读取服务器，配置修改会单独提供选项。</string>
     <string name="doctor_run">运行 Doctor</string>
     <string name="doctor_skip">暂时跳过</string>
@@ -465,4 +465,60 @@
     <string name="doctor_touch_off">应用已关闭远端触摸转发；即使 tmux 开启鼠标，手势也只浏览本地终端历史。</string>
     <string name="doctor_enable_touch">开启远端触摸转发</string>
     <string name="voice_model_info">X-ASR INT8 · 离线中英识别，原生标点与大小写。</string>
+    <string name="home_summary_attention">%1$d 个等待回复</string>
+    <string name="home_summary_running">%1$d 个运行中</string>
+    <string name="home_check_fingerprint">核对</string>
+    <string name="doctor_unavailable_short">tmux 不可用</string>
+    <string name="doctor_title_short">Doctor</string>
+    <string name="doctor_last_checked">上次 %1$s</string>
+    <string name="voice_discard_hint">%1$s · 录音将丢弃</string>
+    <string name="voice_auto_stop">秒后自动结束</string>
+    <string name="voice_bubble_time">%1$s · 剩余 %2$d 秒</string>
+    <string name="voice_slide_cancel_short">↑ 上滑取消</string>
+    <string name="voice_open_settings">去设置</string>
+    <string name="step_hop_auth">%1$s 认证</string>
+    <string name="step_enter_tmux">进入 %1$s</string>
+    <string name="step_open_shell">打开终端</string>
+    <string name="step_in_progress">进行中</string>
+    <string name="terminal_connect_failed">连接失败</string>
+    <string name="terminal_connecting_title">正在连接</string>
+    <string name="terminal_back_home_short">返回首页</string>
+    <string name="terminal_retry">重试</string>
+    <string name="terminal_reconnect">重连</string>
+    <string name="terminal_disconnected_short">已断开</string>
+    <string name="route_phone">手机</string>
+    <string name="editor_trust_continue">指纹一致，继续验证</string>
+    <string name="editor_hop_of">第 %1$d / %2$d 台</string>
+    <string name="editor_verifying_help">验证通过后保存，并记录每一级的主机指纹</string>
+    <string name="editor_step_save">保存配置</string>
+    <string name="editor_back_edit">返回修改</string>
+    <string name="tmux_ready_version">tmux %1$s · 可以创建</string>
+    <string name="doctor_readonly">只读检查</string>
+    <string name="doctor_running">正在检查 tmux 环境</string>
+    <string name="doctor_check_failed_title">检查未完成</string>
+    <string name="doctor_summary_missing">没有找到 tmux</string>
+    <string name="doctor_summary_ok">环境正常</string>
+    <string name="doctor_needs_attention">需要注意</string>
+    <string name="doctor_expand">展开</string>
+    <string name="doctor_collapse">收起</string>
+    <string name="doctor_history_custom">自定义（2000～500000）</string>
+    <string name="doctor_new_file">新文件</string>
+    <string name="doctor_undo_title">撤销本次初始化？</string>
+    <string name="doctor_undo_short">撤销</string>
+    <string name="doctor_saved_title">服务器已保存</string>
+    <string name="doctor_saved_detail">主机指纹已记录，认证通过</string>
+    <plurals name="doctor_summary_fail">
+        <item quantity="other">%1$d 项需要处理</item>
+    </plurals>
+    <plurals name="doctor_summary_warn">
+        <item quantity="other">可以使用，%1$d 项建议调整</item>
+    </plurals>
+    <plurals name="doctor_passed_count">
+        <item quantity="other">正常 · %1$d 项</item>
+    </plurals>
+    <string name="settings_connection_terminal">连接与终端</string>
+    <string name="editor_keystore_note">凭据由 Android Keystore 加密，仅保存在本机</string>
+    <plurals name="doctor_unchecked_count">
+        <item quantity="other">未检查 · %1$d 项</item>
+    </plurals>
 </resources>

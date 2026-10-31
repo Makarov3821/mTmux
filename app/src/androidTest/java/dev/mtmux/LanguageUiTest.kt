@@ -66,7 +66,7 @@ class LanguageUiTest {
         cache.markAttempt(profile) // Keep the fixture offline: no automatic refresh on entry.
         try {
             compose.activityRule.scenario.recreate()
-            compose.onNodeWithText("Servers").assertIsDisplayed()
+            compose.onNodeWithTag("home-title").assertIsDisplayed()
             compose.onNodeWithTag("server-title-${profile.id}", useUnmergedTree = true).assertTextContains("Server ", substring = true)
             compose.onNodeWithTag("task-status-${profile.id}-%0", useUnmergedTree = true).assertContentDescriptionEquals("Last refresh: running")
             compose.onNodeWithTag("settings").assertContentDescriptionEquals("Settings")
@@ -81,7 +81,7 @@ class LanguageUiTest {
             assertTrue(visibleText().filter { cjk.containsMatchIn(it) }.all { it == "简体中文" })
             compose.onNodeWithTag("export-debug-log").performScrollTo().assertTextEquals("Generate log")
             saveScreenshot("english-settings")
-            compose.onNodeWithText("‹ Back").performClick()
+            compose.onNodeWithTag("settings-back").performClick()
 
             compose.onNodeWithTag("more-${profile.id}").performClick()
             compose.onNodeWithText("Edit server").performClick()
@@ -89,7 +89,7 @@ class LanguageUiTest {
             compose.onNodeWithTag("advanced").performScrollTo().performClick()
             compose.onNodeWithText("Enable mouse when connecting").performScrollTo().assertIsDisplayed()
             assertNoChinese("Editor")
-            compose.onNodeWithText("Cancel").performClick()
+            compose.onNodeWithTag("cancel-edit").performClick()
 
             // Terminal: failed connection text, bottom bar labels on a 360dp-wide screen.
             compose.onNodeWithTag("ssh-${profile.id}").performClick()
@@ -128,8 +128,8 @@ class LanguageUiTest {
             assertEquals(AppLanguage.CHINESE, AppLanguage.current())
             saveScreenshot("language-switched-chinese")
 
-            compose.onNodeWithText("‹ 返回").performClick()
-            compose.onNodeWithText("服务器").assertExists()
+            compose.onNodeWithTag("settings-back").performClick()
+            compose.onNodeWithTag("home-title").assertExists()
             Thread.sleep(1500)
             assertEquals("Language switch must not refresh servers", before, prefs.getString("probe:${profile.id}", null))
             assertTrue(cache.shouldRefresh(profile))
@@ -146,7 +146,7 @@ class LanguageUiTest {
             InstrumentationRegistry.getInstrumentation().runOnMainSync {
                 AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("fr"))
             }
-            compose.waitUntil(15000) { compose.onAllNodesWithText("Servers").fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(15000) { compose.onAllNodesWithTag("home-title").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithTag("settings").performClick()
             compose.onNodeWithText("Language").assertExists()
             compose.onNodeWithTag("language-SYSTEM").assertIsSelected()

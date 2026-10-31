@@ -27,25 +27,23 @@ import dev.mtmux.core.PrivateKeyText
         else {draft=value;error=null}
     }
     ProtectSensitiveContent()
-    AlertDialog(properties=protectedDialogProperties,containerColor=MaterialTheme.colorScheme.surface,icon={AppIcon(UiSymbol.KEY,modifier=Modifier.size(28.dp),tint=MaterialTheme.colorScheme.primary)},onDismissRequest=onDismiss,title={Text(stringResource(R.string.editor_key_paste))},text={
-        Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
-            Text(stringResource(R.string.key_paste_help),style=MaterialTheme.typography.bodySmall)
-            OutlinedTextField(draft,::update,modifier=Modifier.fillMaxWidth().testTag("private-key-text"),minLines=4,maxLines=6,
-                label={Text(stringResource(R.string.key_paste_label))},textStyle=LocalTextStyle.current.copy(fontFamily=FontFamily.Monospace),
-                visualTransformation=if(visible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password,autoCorrectEnabled=false))
-            Row {
-                TextButton(onClick={
-                    val text=runCatching {(context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip?.let {if(it.itemCount>0) it.getItemAt(0).text?.toString() else null}}.getOrNull()
-                    if(text.isNullOrBlank()) error=uiText(R.string.key_paste_clipboard_empty) else update(text)
-                },modifier=Modifier.testTag("paste-key-clipboard")) {Text(stringResource(R.string.key_paste_from_clipboard))}
-                TextButton(onClick={visible=!visible}) {Text(stringResource(if(visible) R.string.key_paste_hide else R.string.key_paste_show))}
-            }
-            error?.let { Text(it.string(),color=MaterialTheme.colorScheme.error) }
+    AppDialog(onDismiss=onDismiss,properties=protectedDialogProperties,title=stringResource(R.string.editor_key_paste),body=stringResource(R.string.key_paste_help),icon=UiSymbol.KEY,
+        confirm=DialogAction(stringResource(R.string.key_paste_import),{
+            runCatching {PrivateKeyText.decode(draft)}.onSuccess { onImport(it);draft="" }.onFailure {error=errorText(it)}
+        },"confirm-key-paste",enabled=draft.isNotBlank() && error==null),
+        dismiss=DialogAction(stringResource(R.string.common_cancel),onDismiss)) {
+        OutlinedTextField(draft,::update,modifier=Modifier.fillMaxWidth().testTag("private-key-text"),minLines=4,maxLines=6,
+            label={Text(stringResource(R.string.key_paste_label))},textStyle=LocalTextStyle.current.copy(fontFamily=FontFamily.Monospace),
+            shape=appFieldShape,colors=appFieldColors(),isError=error!=null,
+            visualTransformation=if(visible) VisualTransformation.None else PasswordVisualTransformation(),
+            keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Password,autoCorrectEnabled=false))
+        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+            FilledTonalButton(onClick={
+                val text=runCatching {(context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip?.let {if(it.itemCount>0) it.getItemAt(0).text?.toString() else null}}.getOrNull()
+                if(text.isNullOrBlank()) error=uiText(R.string.key_paste_clipboard_empty) else update(text)
+            },shape=androidx.compose.foundation.shape.RoundedCornerShape(12.dp),modifier=Modifier.testTag("paste-key-clipboard")) {AppIcon(UiSymbol.COPY,modifier=Modifier.size(16.dp));Spacer(Modifier.width(6.dp));Text(stringResource(R.string.key_paste_from_clipboard))}
+            TextButton(onClick={visible=!visible}) {AppIcon(UiSymbol.EYE,modifier=Modifier.size(16.dp));Spacer(Modifier.width(6.dp));Text(stringResource(if(visible) R.string.key_paste_hide else R.string.key_paste_show))}
         }
-    },confirmButton={TextButton(onClick={
-        runCatching {PrivateKeyText.decode(draft)}.onSuccess { onImport(it);draft="" }
-            .onFailure {error=errorText(it)}
-    },enabled=draft.isNotBlank() && error==null,modifier=Modifier.testTag("confirm-key-paste")) {Text(stringResource(R.string.key_paste_import))}},
-        dismissButton={TextButton(onClick=onDismiss) {Text(stringResource(R.string.common_cancel))}})
+        error?.let { NoticeStrip(it.string(),Tone.DANGER,UiSymbol.ALERT_CIRCLE) }
+    }
 }

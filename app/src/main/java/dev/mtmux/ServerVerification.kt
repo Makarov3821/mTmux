@@ -4,6 +4,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.background
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -33,6 +36,10 @@ internal data class ServerDraft(val profile: ServerProfile, val credentials: Sav
     var progress by remember(retry) { mutableStateOf(uiText(R.string.editor_checking)) }
     var failure by remember(retry) { mutableStateOf<UiText?>(null) }
     var committing by remember(retry) { mutableStateOf(false) }
+    val hops = draft.profile.login(draft.credentials).jumps.size
+    var stage by remember(retry) { mutableStateOf<ConnectProgress?>(null) }
+    var trusted by remember(retry) { mutableIntStateOf(0) }
+    var failedHop by remember(retry) { mutableStateOf<Int?>(null) }
     var forcedSave by remember { mutableStateOf<Job?>(null) }
     fun dismiss() {
         if (committing) return
@@ -63,8 +70,8 @@ internal data class ServerDraft(val profile: ServerProfile, val credentials: Sav
         try {
             DebugLog.event(DebugLog.Event.SERVER_VERIFY, draft.profile.id.hashCode())
             withContext(Dispatchers.IO) {
-                connection.connect(draft.profile.login(draft.credentials)) { stage ->
-                    scope.launch { if (!operation.cancelled) progress = progressText(stage) }
+                connection.connect(draft.profile.login(draft.credentials)) { next ->
+                    scope.launch { if (!operation.cancelled) { progress = progressText(next); stage = next } }
                 }
             }
             ensureActive()
@@ -86,6 +93,7 @@ internal data class ServerDraft(val profile: ServerProfile, val credentials: Sav
         } catch (error: Exception) {
             if (error is CancellationException || operation.cancelled) throw CancellationException("verification cancelled", error)
             DebugLog.event(DebugLog.Event.SERVER_VERIFY_FAILED, draft.profile.id.hashCode(), error = error)
+            failedHop = (error as? ConnectionFailure)?.hop ?: stage?.hop
             failure = when (error) {
                 is HostKeyRejected -> uiText(if (error.challenge.changed) R.string.home_host_key_changed else R.string.editor_trust_declined)
                 else -> errorText(error)
@@ -98,46 +106,85 @@ internal data class ServerDraft(val profile: ServerProfile, val credentials: Sav
         }
     }
     val approval = prompt
-    AlertDialog(properties = protectedDialogProperties, onDismissRequest = ::dismiss,
-        title = { Text(stringResource(if (approval != null) R.string.trust_verify_title else if (failure != null) R.string.editor_check_failed else R.string.editor_verifying_title)) },
-        text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (approval != null) {
-                Text(progress.string(), style = MaterialTheme.typography.bodySmall)
-                Text(approval.challenge.endpoint.substringBefore("|via:"))
-                Text(approval.challenge.fingerprint, modifier = Modifier.testTag("editor-fingerprint"))
-                Text(stringResource(R.string.trust_verify_hint))
-            } else if (failure != null) {
-                Text(failure!!.string(), color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("editor-check-error"))
-                Text(stringResource(R.string.editor_save_anyway_hint), style = MaterialTheme.typography.bodySmall)
+    // Hop order: jumps 1..n, then target (0). Index in that order of the current/failed hop.
+    fun order(hop: Int) = if (hop == 0) hops else hop - 1
+    val current = order((if (failure != null) failedHop else stage?.hop) ?: (if (hops > 0) 1 else 0))
+    val names = (1..hops).map { hopText(it) } + hopText(0)
+    val route = listOf(stringResource(R.string.route_phone) to RouteState.NORMAL) + names.mapIndexed { i, name -> name.string() to when {
+        committing && failure == null -> RouteState.DONE
+        i < current -> RouteState.DONE
+        i == current -> if (failure != null) RouteState.FAILED else RouteState.CURRENT
+        else -> RouteState.NORMAL
+    } }
+    if (approval != null) HostKeyDialog(approval.challenge,
+        onDismiss = { approval.answer.complete(false); prompt = null },
+        onTrust = { approval.answer.complete(true); prompt = null; trusted++ },
+        trustLabel = stringResource(R.string.editor_trust_continue),
+        subtitle = progress.string() + "\n" + stringResource(R.string.trust_verify_hint),
+        headerEnd = { Surface(shape = androidx.compose.foundation.shape.CircleShape, color = MaterialTheme.colorScheme.surfaceVariant) {
+            Text(stringResource(R.string.editor_hop_of, current + 1, hops + 1), Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
+        route = route.takeIf { hops > 0 })
+    VerificationPanel(names.map { it.string() }, current, failure?.string(), committing, progress.string(), ::dismiss, { retry++ }, {
+        committing = true
+        forcedSave = scope.launch {
+            try {
+                withContext(NonCancellable) {
+                    // Intentionally no provisional pins and no authenticated chain.
+                    withContext(Dispatchers.IO) { store.save(draft.profile, draft.credentials) }
+                    DebugLog.event(DebugLog.Event.SERVER_SAVED_UNVERIFIED, draft.profile.id.hashCode())
+                    onSaved(draft.profile, ServerSaveOutcome.UNVERIFIED)
+                }
+            } catch (error: Exception) { failure = errorText(error); committing = false }
+        }
+    })
+}
+
+/** Staged verification sheet: route chips, one step per hop, then save. */
+@Composable internal fun VerificationPanel(names: List<String>, current: Int, failure: String?, committing: Boolean, progress: String,
+    onDismiss: () -> Unit, onRetry: () -> Unit, onSaveAnyway: () -> Unit) {
+    val route = listOf(stringResource(R.string.route_phone) to RouteState.NORMAL) + names.mapIndexed { i, name -> name to when {
+        committing && failure == null -> RouteState.DONE
+        i < current -> RouteState.DONE
+        i == current -> if (failure != null) RouteState.FAILED else RouteState.CURRENT
+        else -> RouteState.NORMAL
+    } }
+    AppSheet(onDismiss = onDismiss, secure = true, dismissible = !committing) {
+        Column(Modifier.padding(horizontal = 12.dp).padding(bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (failure != null) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ToneBadge(UiSymbol.ALERT_CIRCLE, Tone.DANGER)
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.editor_check_failed), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                    Text(failure, color = StatusColors.attention(), style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("editor-check-error"))
+                }
             } else {
-                LinearProgressIndicator(Modifier.fillMaxWidth())
-                Text(progress.string())
+                Text(stringResource(R.string.editor_verifying_title), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                Text(stringResource(R.string.editor_verifying_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        } },
-        confirmButton = {
-            when {
-                approval != null -> TextButton(onClick = {
-                    approval.answer.complete(true); prompt = null
-                }, modifier = Modifier.testTag("editor-trust-key")) { Text(stringResource(R.string.host_key_trust)) }
-                failure != null -> TextButton(enabled = !committing, onClick = {
-                    committing = true
-                    forcedSave = scope.launch {
-                        try {
-                            withContext(NonCancellable) {
-                                // Intentionally no provisional pins and no authenticated chain.
-                                withContext(Dispatchers.IO) { store.save(draft.profile, draft.credentials) }
-                                DebugLog.event(DebugLog.Event.SERVER_SAVED_UNVERIFIED, draft.profile.id.hashCode())
-                                onSaved(draft.profile, ServerSaveOutcome.UNVERIFIED)
-                            }
-                        } catch (error: Exception) { failure = errorText(error); committing = false }
-                    }
-                }, modifier = Modifier.testTag("save-server-anyway")) { Text(stringResource(R.string.editor_save_anyway)) }
+            RouteChips(route, Modifier.padding(vertical = 10.dp))
+            names.forEachIndexed { i, name ->
+                val state = when {
+                    committing && failure == null -> StepState.DONE
+                    i < current -> StepState.DONE
+                    i == current -> if (failure != null) StepState.FAILED else StepState.ACTIVE
+                    else -> StepState.PENDING
+                }
+                StepRow(uiText(R.string.step_hop_auth, UiText.Raw(name)).string(), state, if (state == StepState.ACTIVE) stringResource(R.string.step_in_progress) else null)
             }
-        },
-        dismissButton = { Row {
-            if (failure != null) TextButton(enabled = !committing, onClick = { retry++ }, modifier = Modifier.testTag("retry-server-check")) { Text(stringResource(R.string.editor_retry_verification)) }
-            TextButton(enabled = !committing, onClick = {
-                if (approval != null) { approval.answer.complete(false); prompt = null } else dismiss()
-            }) { Text(stringResource(R.string.common_cancel)) }
-        } })
+            StepRow(stringResource(R.string.editor_step_save), if (committing && failure == null) StepState.ACTIVE else StepState.PENDING)
+            if (failure == null) Text(progress, Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(10.dp))
+            if (failure != null) {
+                Text(stringResource(R.string.editor_save_anyway_hint), Modifier.fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant, androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).padding(12.dp),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TonalActionButton(DialogAction(stringResource(R.string.editor_back_edit), onDismiss, enabled = !committing), Modifier.weight(1f))
+                    PrimaryActionButton(DialogAction(stringResource(R.string.editor_retry_verification), onRetry, "retry-server-check", enabled = !committing), Modifier.weight(1f))
+                }
+                QuietActionButton(DialogAction(stringResource(R.string.editor_save_anyway), onSaveAnyway, "save-server-anyway", enabled = !committing), Modifier.fillMaxWidth())
+            } else TonalActionButton(DialogAction(stringResource(R.string.common_cancel), onDismiss, enabled = !committing), Modifier.fillMaxWidth())
+        }
+    }
 }

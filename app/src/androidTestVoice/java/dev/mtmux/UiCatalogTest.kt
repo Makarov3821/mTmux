@@ -221,11 +221,18 @@ open class UiCatalogTest {
             "05-mouse-off" to (healthy+mapOf("mouse" to "off")))) {
             render {
                 Backdrop()
-                AlertDialog(onDismissRequest={},title={Text("tmux 使用诊断")},text={
-                    Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                        DoctorFindings(TmuxDoctorReport(facts),autoMouse=false)
+                AppSheet(onDismiss={},floating=false) {
+                    Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal=8.dp)) {
+                        SheetHeader(stringResource(R.string.doctor_title),"开发服务器 · "+stringResource(R.string.doctor_checked,"10-30 20:37:00"))
+                        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=4.dp)) {
+                            DoctorFindings(TmuxDoctorReport(facts),autoMouse=false,collapsePassing=true)
+                        }
+                        Row(Modifier.padding(top=10.dp,bottom=4.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                            TonalActionButton(DialogAction(stringResource(R.string.common_close),{}),Modifier.weight(1f))
+                            PrimaryActionButton(DialogAction(stringResource(R.string.doctor_recheck),{}),Modifier.weight(1f))
+                        }
                     }
-                },confirmButton={TextButton({}){Text(stringResource(R.string.common_close))}})
+                }
             }
             shot("doctor",name,"tmux 诊断：$name","component-fixture","TmuxDoctorDialog.kt / DoctorFindings","生产诊断行组件，使用固定报告，不执行远端检查。")
         }
@@ -235,21 +242,9 @@ open class UiCatalogTest {
         require(BuildConfig.DEBUG && android.os.Build.HARDWARE in listOf("ranchu","goldfish"))
         require(store.all().all {it.id.startsWith("catalog-")})
         home()
-        render {
-            Backdrop()
-            AlertDialog(onDismissRequest={},title={Text(stringResource(R.string.doctor_config_preview))},text={
-                Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                    Text(stringResource(R.string.doctor_config_scope,"/home/developer/.tmux.conf"))
-                    OutlinedTextField("10000",{},label={Text(stringResource(R.string.doctor_history_lines))})
-                    Text(TmuxConfigBootstrap.template(10000),style=MaterialTheme.typography.bodySmall)
-                    Text(stringResource(R.string.doctor_config_pending))
-                    Row {Checkbox(true,{});Text(stringResource(R.string.doctor_first_setup))}
-                }
-            },confirmButton={TextButton({}){Text(stringResource(R.string.doctor_apply_config))}},dismissButton={TextButton({}){Text(stringResource(R.string.common_cancel))}})
-        }
+        render { Backdrop(); DoctorConfigPreview("/home/developer","10000",{},true,{},{},{}) }
         shot("doctor","06-config-preview","首次使用：最小配置预览与确认","state-fixture","TmuxDoctorDialog.kt / TmuxConfigBootstrap.kt","固定预览；模板由生产代码生成，不写入远端文件。")
-        render {Backdrop();AlertDialog(onDismissRequest={},title={Text(stringResource(R.string.doctor_undo))},text={Text(stringResource(R.string.doctor_undo_help))},
-            confirmButton={TextButton({}){Text(stringResource(R.string.doctor_undo))}},dismissButton={TextButton({}){Text(stringResource(R.string.common_cancel))}})}
+        render { Backdrop(); DoctorUndoDialog({},{}) }
         shot("doctor","07-undo","撤销初始化确认","state-fixture","TmuxDoctorDialog.kt","固定确认分支，不执行撤销。")
     }
     private fun captureHome() {
@@ -288,7 +283,7 @@ open class UiCatalogTest {
         click("editor-folder");shot("server","05-folder-picker","服务器所属分组菜单",source="ServerEditor.kt")
         editor();click("save-server");shot("server","06-validation","保存校验失败：目标信息不完整",source="ServerEditor.kt")
         editor();type("profile-name","尚未保存的服务器")
-        compose.onNodeWithText(text(R.string.common_cancel)).performSemanticsAction(SemanticsActions.OnClick) {it()}
+        compose.onNodeWithTag("cancel-edit").performSemanticsAction(SemanticsActions.OnClick) {it()}
         shot("server","07-abandon","放弃未保存的修改",source="ServerEditor.kt")
         render {Backdrop(true);PrivateKeyPasteDialog({}, {})};shot("server","08-key-paste","粘贴 SSH 私钥",source="PrivateKeyPasteDialog.kt")
         editor(first);click("advanced");click("jump-enabled");click("jump-from-saved")
@@ -381,44 +376,35 @@ open class UiCatalogTest {
     }
     private fun captureDialogs() {
         home()
-        val fingerprint="[192.0.2.10]:22\nSHA256:ZgNwJk7mDemoFingerprintForUiCatalogOnly\n"+text(R.string.trust_verify_hint)
-        dialog("01-host-first",text(R.string.trust_verify_title),fingerprint,text(R.string.host_key_trust),text(R.string.common_close),shield=true)
-        dialog("02-host-changed",text(R.string.trust_changed_title),fingerprint,text(R.string.common_close),shield=true)
-        dialog("03-server-checking",text(R.string.editor_verifying_title),text(R.string.editor_checking),"",text(R.string.common_cancel),true,true)
-        dialog("04-server-fingerprint",text(R.string.trust_verify_title),"正在验证目标服务器\n"+fingerprint,text(R.string.host_key_trust),text(R.string.common_cancel),editor=true)
-        dialog("05-jump-fingerprint",text(R.string.trust_verify_title),"正在验证跳板 1\n[192.0.2.40]:22\nSHA256:DemoJumpHostFingerprintOnly\n"+text(R.string.trust_verify_hint),text(R.string.host_key_trust),text(R.string.common_cancel),editor=true)
-        render {
-            Backdrop(true)
-            AlertDialog(onDismissRequest={},title={Text(stringResource(R.string.editor_check_failed))},text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                Text("目标服务器：连接超时",color=MaterialTheme.colorScheme.error)
-                Text(stringResource(R.string.editor_save_anyway_hint),style=MaterialTheme.typography.bodySmall)
-            }},confirmButton={TextButton({}) {Text(stringResource(R.string.editor_save_anyway))}},dismissButton={Row {
-                TextButton({}) {Text(stringResource(R.string.editor_retry_verification))}
-                TextButton({}) {Text(stringResource(R.string.common_cancel))}
-            }})
+        fun host(name:String,endpoint:String,fp:String,changed:Boolean,editor:Boolean,subtitle:String?=null,step:String?=null) {
+            render {
+                Backdrop(editor)
+                HostKeyDialog(HostKeyChallenge(endpoint,"catalog-key",fp,changed),{},{},
+                    trustLabel=if(editor) stringResource(R.string.editor_trust_continue) else null,subtitle=subtitle,
+                    headerEnd=step?.let { { Surface(shape=androidx.compose.foundation.shape.CircleShape,color=MaterialTheme.colorScheme.surfaceVariant) {
+                        Text(it,Modifier.padding(horizontal=10.dp,vertical=4.dp),style=MaterialTheme.typography.labelMedium) } } },
+                    route=if(step!=null) listOf("手机" to RouteState.NORMAL,"跳板 1" to (if(endpoint.contains("40")) RouteState.CURRENT else RouteState.DONE),"目标服务器" to (if(endpoint.contains("40")) RouteState.NORMAL else RouteState.CURRENT)) else null)
+            }
+            shot("dialogs",name,text(if(changed) R.string.trust_changed_title else R.string.trust_verify_title),"state-fixture",if(editor) "ServerVerification.kt" else "ServerHome.kt / MainActivity.kt",
+                "瞬时状态固定预览：使用生产指纹组件，不进行网络认证。")
         }
+        host("01-host-first","[192.0.2.10]:22","SHA256:ZgNwJk7mDemoFingerprintForUiCatalogOnly",false,false)
+        host("02-host-changed","[192.0.2.10]:22","SHA256:ZgNwJk7mDemoFingerprintForUiCatalogOnly",true,false)
+        render { Backdrop(true); VerificationPanel(listOf("跳板 1","目标服务器"),1,null,false,"目标服务器 · 正在连接并验证身份…",{},{},{}) }
+        shot("dialogs","03-server-checking",text(R.string.editor_verifying_title),"state-fixture","ServerVerification.kt","固定验证进度，不进行网络认证。")
+        host("04-server-fingerprint","[192.0.2.10]:22","SHA256:ZgNwJk7mDemoFingerprintForUiCatalogOnly",false,true,"正在验证目标服务器\n"+text(R.string.trust_verify_hint),"第 2 / 2 台")
+        host("05-jump-fingerprint","[192.0.2.40]:22","SHA256:DemoJumpHostFingerprintOnly",false,true,"正在验证跳板 1\n"+text(R.string.trust_verify_hint),"第 1 / 2 台")
+        render { Backdrop(true); VerificationPanel(listOf("跳板 1","目标服务器"),1,"目标服务器：连接超时",false,"",{},{},{}) }
         shot("dialogs","06-save-anyway",text(R.string.editor_check_failed),"state-fixture","ServerVerification.kt","固定失败状态，展示重试 / Save anyway / 取消。")
-        render {
-            Backdrop()
-            AlertDialog(onDismissRequest={},title={Text(stringResource(R.string.tmux_create_title))},text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(R.string.tmux_name_hint),style=MaterialTheme.typography.bodySmall)
-                OutlinedTextField("code-review",{},enabled=false,label={Text(stringResource(R.string.tmux_name_label))})
-                LinearProgressIndicator(Modifier.fillMaxWidth());Text(stringResource(R.string.tmux_creating))
-            }},confirmButton={TextButton({},enabled=false) {Text(stringResource(R.string.tmux_create))}},dismissButton={TextButton({}) {Text(stringResource(R.string.common_cancel))}})
-        }
+        render { Backdrop(); NewTmuxPanel("开发服务器","3.4","code-review",{},true,null,{},{}) }
         shot("dialogs","07-tmux-creating",text(R.string.tmux_creating),"state-fixture","NewTmuxDialog.kt","固定创建进行中，不执行远端命令。")
         for((name,message) in listOf("08-tmux-duplicate" to R.string.tmux_name_exists,"09-tmux-uncertain" to R.string.tmux_create_failed)) {
-            render {Backdrop();AlertDialog(onDismissRequest={},title={Text(stringResource(R.string.tmux_create_title))},text={Column(verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(R.string.tmux_name_hint),style=MaterialTheme.typography.bodySmall)
-                OutlinedTextField("code-review",{},label={Text(stringResource(R.string.tmux_name_label))})
-                Text(stringResource(message),color=MaterialTheme.colorScheme.error)
-            }},confirmButton={TextButton({}) {Text(stringResource(R.string.tmux_create))}},dismissButton={TextButton({}) {Text(stringResource(R.string.common_cancel))}})}
+            render { Backdrop(); NewTmuxPanel("开发服务器","3.4","code-review",{},false,stringResource(message),{},{}) }
             shot("dialogs",name,text(message),"state-fixture","NewTmuxDialog.kt","固定远端响应分支，不进行 SSH 连接。")
         }
-        render {TerminalFixture();AlertDialog(onDismissRequest={},title={Text(stringResource(R.string.quick_reply_keep_title))},text={Text(stringResource(R.string.quick_reply_keep_body))},
-            confirmButton={TextButton({}) {Text(stringResource(R.string.quick_reply_append))}},dismissButton={Row {
-                TextButton({}) {Text(stringResource(R.string.quick_reply_replace))};TextButton({}) {Text(stringResource(R.string.common_cancel))}
-            }})}
+        render { TerminalFixture(); AppDialog(onDismiss={},title=stringResource(R.string.quick_reply_keep_title),body=stringResource(R.string.quick_reply_keep_body),icon=UiSymbol.REPLY,
+            confirm=DialogAction(stringResource(R.string.quick_reply_append),{}),dismiss=DialogAction(stringResource(R.string.quick_reply_replace),{}),
+            extra=DialogAction(stringResource(R.string.common_cancel),{})) }
         shot("dialogs","10-reply-conflict","快捷回复：追加、替换或取消","state-fixture","MainActivity.kt","固定已有本地草稿的确认分支。")
     }
     @OptIn(ExperimentalMaterial3Api::class)
@@ -438,15 +424,17 @@ open class UiCatalogTest {
         fun sheet(name:String,title:String,error:Int?=null) {
             render {
                 TerminalFixture(VoiceHoldState())
-                ModalBottomSheet(onDismissRequest={},containerColor=MaterialTheme.colorScheme.surface,
-                    sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true)) {
-                    Column(Modifier.fillMaxWidth().padding(20.dp),verticalArrangement=Arrangement.spacedBy(14.dp)) {
-                        Row(horizontalArrangement=Arrangement.spacedBy(10.dp)) {AppIcon(UiSymbol.MIC);Text(stringResource(R.string.voice_title),style=MaterialTheme.typography.titleLarge)}
-                        Text(stringResource(R.string.voice_local_badge),color=MaterialTheme.colorScheme.primary,style=MaterialTheme.typography.labelLarge)
-                        InsetPanel {if(error==null) {Text(stringResource(R.string.voice_transcribing));LinearProgressIndicator(Modifier.fillMaxWidth())}
-                            else Text(stringResource(error),color=MaterialTheme.colorScheme.error)}
-                        TextButton({},Modifier.fillMaxWidth()) {Text(stringResource(if(error==null) R.string.common_cancel else R.string.common_close))}
+                when (error) {
+                    null -> VoiceTranscribingBubble {}
+                    R.string.voice_error_permission -> AppSheet(onDismiss={}) {
+                        SheetHeader(stringResource(R.string.voice_title),stringResource(R.string.voice_local_badge),UiSymbol.MIC,Tone.WARNING)
+                        Text(stringResource(error),Modifier.padding(horizontal=12.dp,vertical=8.dp),style=MaterialTheme.typography.bodyMedium)
+                        Row(Modifier.fillMaxWidth().padding(12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                            TonalActionButton(DialogAction(stringResource(R.string.common_close),{}),Modifier.weight(1f))
+                            PrimaryActionButton(DialogAction(stringResource(R.string.voice_open_settings),{}),Modifier.weight(1f))
+                        }
                     }
+                    else -> VoiceErrorHint(stringResource(error)) {}
                 }
             }
             shot("voice",name,title,"state-fixture","VoiceIntegration.kt","转写/错误分支固定展示，不运行识别模型。")
@@ -589,6 +577,13 @@ open class UiCatalogTest {
                 state("busy",name=="13-connecting")
                 if(name=="13-connecting" || name=="14-auth-failed") state("renderedBytes",0L)
                 state("status",TerminalStatus(UiText.Raw(message),name!="13-connecting"))
+                // Staged progress card fixture: one jump host, target authenticating or failed.
+                val steps=listOf(ConnectStep(uiText(R.string.step_hop_auth,hopText(1)),StepState.DONE,146),
+                    ConnectStep(uiText(R.string.step_hop_auth,hopText(0)),if(name=="14-auth-failed") StepState.FAILED else StepState.ACTIVE),
+                    ConnectStep(uiText(R.string.step_enter_tmux,"code-review"),StepState.PENDING))
+                state("connectSteps",if(name=="13-connecting" || name=="14-auth-failed") steps else emptyList<ConnectStep>())
+                state("connectRoute",listOf(hopText(1),hopText(0)))
+                state("connectFailure",if(name=="14-auth-failed") ConnectionFailure(0,FailureReason.AUTH,IllegalStateException("fixture")) else null)
             }
             shot("terminal",name,title,"production-ui","MainActivity.kt","真实状态叠层，测试固定对应状态，无网络连接。")
         }

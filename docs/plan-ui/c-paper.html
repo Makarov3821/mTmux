@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>方案 C · 安静纸面</title>
+<link rel="stylesheet" href="shared/board.css"><link rel="stylesheet" href="shared/c.css">
+<script src="shared/icons.js"></script><script src="shared/term.js"></script></head>
+<body class="board">
+<header class="board-head">
+  <h1>方案 C · 安静纸面（Paper）</h1>
+  <p>面向“离开电脑后看一眼、回一句”的场景：暖白纸色、衬线标题、墨黑主按钮，几乎不用卡片和阴影，用细线和留白分层。终端也是浅色纸面。读起来像一份进度报告，夜间可配一套对应的深色“墨纸”版本。</p>
+  <div class="tags"><span>标题 Noto Serif CJK，正文系统无衬线</span><span>主操作墨黑胶囊，强调色赭红只用于链接与需处理</span><span>状态用左侧色条 + 文字</span><span>圆角：按钮全圆、弹窗 6</span></div>
+  <div class="swatches"><b style="background:#F5F1E8"></b><b style="background:#FBF8F1"></b><b style="background:#DDD5C4"></b><b style="background:#22201B"></b><b style="background:#B4532A"></b><b style="background:#C2410C"></b><b style="background:#B7791F"></b><b style="background:#4D7C3A"></b><span>纸 / 浮层 / 线 / 墨 / 强调 / 需处理 / 运行 / 就绪</span></div>
+</header>
+<div class="grid">
+
+<!-- 01 首页 -->
+<figure class="shot" data-id="01-home"><div class="phone C">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="hdr row" style="align-items:flex-end"><div class="grow"><div class="kick">周四 · 19:28</div><div class="h1" style="margin-top:4px">服务器</div></div><div class="ib"><i data-i="gear"></i></div><div class="ib ink" style="margin-left:4px"><i data-i="plus" data-w="2"></i></div></div>
+  <div class="sub" style="padding:0 20px"><span class="s-r" style="font-weight:600">1 个任务在等你回复</span>，2 个运行中。</div>
+  <div class="search"><i data-i="search" data-s="17"></i><span class="grow">搜索服务器、会话或分组</span><i data-i="sort" data-s="17"></i><i data-i="folderPlus" data-s="17"></i></div>
+  <div class="fh"><span class="t">日常开发</span><span class="n">2</span><span class="grow"></span><span style="color:var(--fa)"><i data-i="refresh" data-s="15"></i></span></div>
+  <div class="srv row"><div class="grow"><div class="nm">开发服务器</div><div class="mt">2 分钟前</div></div><div class="ib"><i data-i="terminal" data-s="19" data-w="2"></i></div><div class="ib" style="margin-right:-10px"><i data-i="more" data-s="18"></i></div></div>
+  <div class="task"><span class="mark m-r"></span><div class="grow"><div class="tn">code-review <span class="ts">· 上次使用</span></div><div class="ts">窗口 0 · 2 个 pane</div></div><span class="stt s-r">等你回复</span><span style="color:var(--fa)"><i data-i="chevR" data-s="16"></i></span></div>
+  <div class="task"><span class="mark m-y"></span><div class="grow"><div class="tn">api-service</div><div class="ts">窗口 1</div></div><span class="stt s-y">运行中</span><span style="color:var(--fa)"><i data-i="chevR" data-s="16"></i></span></div>
+  <div class="task" style="border-bottom:0"><span class="mark m-g"></span><div class="grow"><div class="tn">daily-check</div><div class="ts">窗口 2</div></div><span class="stt s-g">已完成</span><span style="color:var(--fa)"><i data-i="chevR" data-s="16"></i></span></div>
+  <div class="srv row" style="margin-top:8px"><div class="grow"><div class="nm">构建节点</div><div class="mt">2 分钟前</div></div><div class="ib"><i data-i="terminal" data-s="19" data-w="2"></i></div><div class="ib" style="margin-right:-10px"><i data-i="more" data-s="18"></i></div></div>
+  <div class="task" style="border-bottom:0"><span class="mark m-y"></span><div class="grow"><div class="tn">release-build</div><div class="ts">窗口 0 · build</div></div><span class="stt s-y">运行中</span><span style="color:var(--fa)"><i data-i="chevR" data-s="16"></i></span></div>
+  <div class="fh"><span class="t">未分组</span><span class="n">1</span></div>
+  <div class="srv row"><div class="grow"><div class="nm">备用服务器</div><div class="mt">暂无 tmux 会话 · <span class="lk">新建会话</span></div></div><div class="ib"><i data-i="terminal" data-s="19" data-w="2"></i></div><div class="ib" style="margin-right:-10px"><i data-i="more" data-s="18"></i></div></div>
+</div><figcaption><b>01 首页</b>标题下用一句话汇总要处理的事。服务器名用衬线体，上方一条墨线分隔；任务行左侧色条 + 右侧状态文字，没有卡片底色。</figcaption></figure>
+
+<!-- 02 首页状态 -->
+<figure class="shot" data-id="02-home-states"><div class="phone C">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="hdr row" style="align-items:flex-end"><div class="grow"><div class="kick">正在刷新 1 台</div><div class="h1" style="margin-top:4px">服务器</div></div><div class="ib"><i data-i="gear"></i></div><div class="ib ink" style="margin-left:4px"><i data-i="plus" data-w="2"></i></div></div>
+  <div class="search"><i data-i="search" data-s="17"></i><span class="grow">搜索服务器、会话或分组</span><i data-i="sort" data-s="17"></i><i data-i="folderPlus" data-s="17"></i></div>
+  <div class="fh"><span class="t">日常开发</span><span class="n">2</span></div>
+  <div class="srv" style="border-top:0;padding-top:0"><div style="height:1px;background:var(--ln);position:relative;margin-bottom:12px"><div style="position:absolute;left:0;top:-1px;height:3px;width:50%;background:var(--fg)"></div></div>
+    <div class="row"><div class="grow"><div class="nm">开发服务器</div><div class="mt">正在读取状态 1 / 2…</div></div><div class="ib"><i data-i="terminal" data-s="19" data-w="2"></i></div></div></div>
+  <div class="task"><span class="mark m-r"></span><div class="grow"><div class="tn">code-review</div></div><span class="stt s-r">等你回复</span></div>
+  <div class="task" style="border-bottom:0"><span class="mark m-x"></span><div class="grow"><div class="tn">api-service</div><div class="ts">34 分钟前的状态</div></div><span class="stt s-x">已过期</span></div>
+  <div class="srv row" style="margin-top:8px"><div class="grow"><div class="nm">构建节点</div><div class="mt">首次连接</div></div></div>
+  <div style="margin:4px 20px 0;padding:12px 0 12px 14px;border-left:3px solid var(--fg)">
+    <div style="font-weight:600">先核对主机指纹</div><div class="note">确认这台服务器的身份后，才会读取任务列表。</div><div class="lk" style="margin-top:6px">核对指纹 →</div></div>
+  <div class="fh"><span class="t">未分组</span><span class="n">1</span></div>
+  <div class="srv row"><div class="grow"><div class="nm">备用服务器</div><div class="mt">缓存 · 1 小时前</div></div></div>
+  <div style="margin:4px 20px 0;padding:12px 0 12px 14px;border-left:3px solid var(--red)">
+    <div style="font-weight:600;color:var(--red)">刷新失败：连接超时</div><div class="note">下面是上次的缓存。</div><div class="lk" style="margin-top:6px">重试 →</div></div>
+  <div style="position:absolute;left:16px;right:16px;bottom:20px;background:var(--ink);color:var(--bg);border-radius:6px;padding:13px 16px;display:flex;align-items:center;gap:10px;font-size:14px"><span class="grow">已创建 code-review-2</span><span style="font-weight:700">进入</span></div>
+</div><figcaption><b>02 首页状态</b>提示不用彩色底块，改为左侧粗线的旁注：黑线是需要你确认，红线是出错。刷新进度是服务器上方的一条墨线。</figcaption></figure>
+
+<!-- 03 服务器编辑 -->
+<figure class="shot" data-id="03-server-edit"><div class="phone C">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="row" style="height:56px;padding:0 16px 0 6px"><div class="ib"><i data-i="close"></i></div><span class="grow"></span><span class="btn b-i sm">保存</span></div>
+  <div class="h1" style="padding:0 20px;font-size:26px">开发服务器</div>
+  <div class="sec">连接</div>
+  <div class="fld"><div class="lb">别名</div><div class="v">开发服务器</div></div>
+  <div class="row" style="margin:0 20px;gap:18px"><div class="fld grow" style="margin:0"><div class="lb">地址</div><div class="v mono">192.0.2.10</div></div><div class="fld" style="margin:0;width:64px"><div class="lb">端口</div><div class="v mono">22</div></div></div>
+  <div class="fld focus"><div class="lb" style="color:var(--fg)">用户名</div><div class="v mono">developer<span style="display:inline-block;width:1.5px;height:17px;background:var(--fg);vertical-align:-3px"></span></div></div>
+  <div class="sec">认证</div>
+  <div class="seg" style="padding:4px 20px 10px"><span>密码</span><span class="on">私钥</span></div>
+  <div class="li"><i data-i="key" data-s="19"></i><div class="lt"><div class="l1">ED25519 私钥</div><div class="l2 mono">OpenSSH · 已加密</div></div><span class="lk" style="font-size:13.5px">更换</span></div>
+  <div class="fld"><div class="lb">私钥口令</div><div class="v row"><span class="grow" style="letter-spacing:2px">••••••••</span><span style="color:var(--fa)"><i data-i="eye" data-s="18"></i></span></div></div>
+  <div class="sec">高级</div>
+  <div class="li"><div class="lt l1">分组</div><span class="val">日常开发<i data-i="chevR" data-s="16"></i></span></div>
+  <div class="li"><div class="lt l1">Jump Host</div><span class="val">直连<i data-i="chevR" data-s="16"></i></span></div>
+  <div class="li"><div class="lt l1">tmux 路径</div><span class="val mono">tmux<i data-i="chevR" data-s="16"></i></span></div>
+  <div class="li"><div class="lt"><div class="l1">会话鼠标</div><div class="l2">只设置所选 session</div></div><span class="tg on"></span></div>
+</div><figcaption><b>03 服务器编辑</b>大标题直接是服务器名；输入框只有下划线，焦点时加粗。认证方式用文字页签切换，不再是两枚小按钮。</figcaption></figure>
+
+<!-- 04 指纹 -->
+<figure class="shot" data-id="04-host-key"><div class="phone C">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="hdr"><div class="kick">周四 · 19:28</div><div class="h1" style="margin-top:4px">服务器</div></div>
+  <div class="srv"><div class="nm">开发服务器</div></div><div class="srv"><div class="nm">构建节点</div></div>
+  <div class="scrim"></div>
+  <div class="dlg" style="top:120px">
+    <div class="kick" style="color:var(--mu)">首次连接 · 构建节点</div>
+    <h2 style="margin-top:6px">这台服务器的指纹<br>和你知道的一致吗？</h2>
+    <p class="note" style="margin-top:8px">请向管理员索取，或在已信任的终端运行 <span class="mono">ssh-keygen -lf</span> 核对。</p>
+    <div style="margin-top:16px;border-top:1px solid var(--fg);border-bottom:1px solid var(--ln);padding:12px 0">
+      <div class="row note" style="font-size:12px"><span class="grow mono">192.0.2.40:22</span><span>SHA256 · ED25519</span></div>
+      <div class="mono" style="font-size:16px;line-height:1.75;letter-spacing:.8px;margin-top:6px">ZgNw Jk7m Demo Fing<br>erpr intF orUi Cata<br>logO nly0 aB3x 9QpL</div></div>
+    <div class="btn b-i" style="margin-top:18px">一致，信任并连接</div>
+    <div class="btn b-g" style="height:40px">取消</div>
+  </div>
+  <div class="dlg" style="top:556px;padding:18px 22px 14px;border-left:4px solid var(--red)">
+    <div style="font:700 17px 'Noto Serif CJK SC',serif;color:var(--red)">主机密钥已改变，已阻止连接</div>
+    <p class="note" style="margin-top:6px">192.0.2.10 的密钥与上次记录不同。核对原因前不要继续。</p>
+    <div class="row" style="justify-content:flex-end;margin-top:8px"><span class="btn b-o sm">关闭</span></div>
+  </div>
+</div><figcaption><b>04 主机指纹</b>标题写成一个问题，让用户明确在确认什么；附核对命令。下方是密钥变化的版本：红色侧边、一句结论、只能关闭。</figcaption></figure>
+
+<!-- 05 终端 -->
+<figure class="shot" data-id="05-terminal"><div class="phone C">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="tbar"><div class="ib"><i data-i="back"></i></div><div class="tt"><div class="t1 ell">开发服务器</div><div class="t2 mono ell"><span style="color:var(--grn)">● 已连接</span> · code-review · %0</div></div><div class="ib"><i data-i="keyboard"></i></div><div class="ib"><i data-i="edit"></i></div><div class="ib"><i data-i="toBottom"></i></div></div>
+  <div class="term" data-box="1" data-cursor="1"></div>
+  <div class="dock">
+    <div class="keys"><span class="key">Esc</span><span class="key">Tab</span><span class="key">^C</span><span class="key">↑</span><span class="key">↓</span><span class="key">Enter</span></div>
+    <div class="pg">1 / 4</div>
+    <div class="acts"><div class="act"><i data-i="tool" data-s="18"></i>工具</div><div class="mic"><i data-i="wave" data-s="24" data-w="2"></i></div><div class="act"><i data-i="reply" data-s="18"></i>快捷回复</div></div>
+  </div>
+</div><figcaption><b>05 终端</b>浅色纸面终端，ANSI 色调成墨色系。快捷键之间只有细竖线，页码用“1 / 4”文字；语音按钮是唯一的墨黑实心元素。</figcaption></figure>
+
+<!-- 06 连接中 -->
+<figure class="shot" data-id="06-connecting"><div class="phone C">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="tbar"><div class="ib"><i data-i="back"></i></div><div class="tt"><div class="t1 ell">开发服务器</div><div class="t2 mono ell">正在连接 · code-review · %0</div></div></div>
+  <div class="grow" style="padding:56px 28px 0;background:var(--sf)">
+    <div class="kick">经 跳板 1</div>
+    <div class="h1" style="font-size:26px;margin-top:6px">正在连接…</div>
+    <div style="margin-top:22px;border-top:1px solid var(--fg)">
+      <div class="stp"><span class="n">1</span><span>跳板 1 认证</span><span class="ms">184 ms ✓</span></div>
+      <div class="stp"><span class="n">2</span><span>转发到 192.0.2.10</span><span class="ms">62 ms ✓</span></div>
+      <div class="stp" style="font-weight:600"><span class="n" style="color:var(--fg)">3</span><span>目标服务器认证</span><span class="ms" style="color:var(--fg)">进行中</span></div>
+      <div class="stp" style="color:var(--fa)"><span class="n">4</span><span>核对 tmux 任务身份</span></div>
+    </div>
+    <div class="btn b-o" style="margin-top:28px;width:120px">取消</div>
+  </div>
+  <div class="dock off">
+    <div class="keys"><span class="key">Esc</span><span class="key">Tab</span><span class="key">^C</span><span class="key">↑</span><span class="key">↓</span><span class="key">Enter</span></div>
+    <div class="pg">1 / 4</div>
+    <div class="acts"><div class="act">工具</div><div class="mic"><i data-i="wave" data-s="24" data-w="2"></i></div><div class="act">快捷回复</div></div>
+  </div>
+</div><figcaption><b>06 连接中</b>连接过程排成一页带编号的清单，像文章目录；已完成项在右侧写耗时，当前项加粗。</figcaption></figure>
+
+<!-- 07 认证失败 -->
+<figure class="shot" data-id="07-auth-failed"><div class="phone C">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="tbar"><div class="ib"><i data-i="back"></i></div><div class="tt"><div class="t1 ell">开发服务器</div><div class="t2 mono ell" style="color:var(--red)">未连接 · 认证失败</div></div></div>
+  <div class="grow" style="padding:56px 28px 0;background:var(--sf)">
+    <div class="kick" style="color:var(--red)">第 3 步失败</div>
+    <div class="h1" style="font-size:26px;margin-top:6px">目标服务器<br>拒绝了登录</div>
+    <p class="note" style="margin-top:14px;font-size:14px">用户名或密码不正确，或者服务器禁用了密码认证。跳板 1 已正常通过，不需要修改。</p>
+    <div style="margin-top:22px;border-top:1px solid var(--fg)">
+      <div class="stp"><span class="n">1</span><span>跳板 1 认证</span><span class="ms">✓</span></div>
+      <div class="stp"><span class="n">2</span><span>转发到 192.0.2.10</span><span class="ms">✓</span></div>
+      <div class="stp" style="color:var(--red);font-weight:600"><span class="n" style="color:var(--red)">3</span><span>目标服务器认证</span><span class="ms" style="color:var(--red)">失败</span></div>
+    </div>
+    <div class="row" style="gap:10px;margin-top:28px"><div class="btn b-i grow">重试</div><div class="btn b-o grow">编辑服务器</div></div>
+  </div>
+  <div class="dock off">
+    <div class="keys"><span class="key">Esc</span><span class="key">Tab</span><span class="key">^C</span><span class="key">↑</span><span class="key">↓</span><span class="key">Enter</span></div>
+    <div class="pg">1 / 4</div>
+    <div class="acts"><div class="act">工具</div><div class="mic"><i data-i="wave" data-s="24" data-w="2"></i></div><div class="act">快捷回复</div></div>
+  </div>
+</div><figcaption><b>07 认证失败</b>同一页面转成结论：失败在第几步、用户该改什么、什么不用改。两个按钮等宽，墨黑的是推荐操作。</figcaption></figure>
+
+<!-- 08 断线 -->
+<figure class="shot" data-id="08-disconnected"><div class="phone C">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="tbar"><div class="ib"><i data-i="back"></i></div><div class="tt"><div class="t1 ell">开发服务器</div><div class="t2 mono ell">已断开 · code-review · %0</div></div><div class="ib"><i data-i="toBottom"></i></div></div>
+  <div style="padding:14px 20px 14px;background:var(--rs);border-bottom:1px solid var(--ln);flex:none">
+    <div style="font:700 17px 'Noto Serif CJK SC',serif">19:26 连接断开</div>
+    <div class="note">网络切换。下面是断开前的内容，草稿已保留。</div>
+    <div class="row" style="gap:10px;margin-top:12px"><span class="btn b-i sm">重连此任务</span><span class="btn b-o sm">重新选择</span></div>
+  </div>
+  <div class="term" data-box="1" style="opacity:.5"></div>
+  <div class="dock">
+    <div class="keys off"><span class="key">Esc</span><span class="key">Tab</span><span class="key">^C</span><span class="key">↑</span><span class="key">↓</span><span class="key">Enter</span></div>
+    <div class="pg">1 / 4</div>
+    <div class="acts"><div class="act"><i data-i="tool" data-s="18"></i>工具</div><div class="mic off"><i data-i="wave" data-s="24" data-w="2"></i></div><div class="act"><i data-i="reply" data-s="18"></i>快捷回复</div></div>
+  </div>
+</div><figcaption><b>08 断线</b>断线说明是顶栏下的一段米色区块，带时间和原因；历史内容减淡，不使用红色，避免把正常断线渲染成故障。</figcaption></figure>
+
+<!-- 09 编辑卡片 -->
+<figure class="shot" data-id="09-editor"><div class="phone C">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="tbar"><div class="ib"><i data-i="back"></i></div><div class="tt"><div class="t1 ell">开发服务器</div><div class="t2 mono ell"><span style="color:var(--grn)">● 已连接</span> · code-review · %0</div></div><div class="ib"><i data-i="keyboard"></i></div><div class="ib" style="background:var(--rs);color:var(--fg)"><i data-i="edit"></i></div></div>
+  <div class="term" data-box="1"></div>
+  <div class="scrim" style="background:rgba(40,34,24,.18)"></div>
+  <div class="sheet">
+    <div class="row" style="align-items:baseline"><div class="grow" style="font:700 20px 'Noto Serif CJK SC',serif">写给 code-review</div><span class="note mono" style="font-size:12px">%0</span></div>
+    <div class="row" style="gap:16px;margin-top:10px;font-size:13px;color:var(--mu);overflow:hidden;white-space:nowrap"><span class="lk">继续</span><span class="lk">总结进展</span><span class="lk">先解释方案</span><span class="lk">运行测试</span></div>
+    <div style="margin-top:14px;font-size:16px;line-height:1.75;min-height:120px;border-bottom:2px solid var(--fg);padding-bottom:10px">请检查这次修改，重点关注 SSH 连接复用和中文输入。<br>完成后运行测试，并说明剩余问题。<span style="display:inline-block;width:1.5px;height:18px;background:var(--fg);vertical-align:-3px"></span></div>
+    <div class="row note" style="font-size:12px;margin:8px 0 16px"><span class="grow">47 字</span><span>插入后不会自动回车</span></div>
+    <div class="row" style="gap:10px"><div class="mic" style="width:46px;height:46px;margin:0;background:var(--rs);color:var(--fg)"><i data-i="wave" data-s="20" data-w="2"></i></div><span class="grow"></span><div class="btn b-g">关闭</div><div class="btn b-i">插入终端</div></div>
+  </div>
+</div><figcaption><b>09 编辑卡片</b>标题写成“写给 code-review”，目标就在标题里。输入区像信纸，只有一条底线；快捷回复是一排文字链接。</figcaption></figure>
+
+<!-- 10 录音 -->
+<figure class="shot" data-id="10-voice"><div class="phone C">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="tbar"><div class="ib"><i data-i="back"></i></div><div class="tt"><div class="t1 ell">开发服务器</div><div class="t2 mono ell">code-review · %0</div></div></div>
+  <div class="term" data-box="1" style="opacity:.07"></div>
+  <div style="position:absolute;left:0;right:0;top:210px;display:flex;flex-direction:column;align-items:center;z-index:3">
+    <div class="kick">正在听 · 本机转写</div>
+    <div style="font:700 72px/1 'Noto Serif CJK SC',serif;margin-top:14px">48</div>
+    <div class="note">秒后自动结束</div>
+    <div class="row" style="gap:4px;height:34px;margin-top:22px;align-items:center">
+      <i style="width:3px;height:8px;background:var(--fg);border-radius:2px"></i><i style="width:3px;height:16px;background:var(--fg);border-radius:2px"></i><i style="width:3px;height:28px;background:var(--fg);border-radius:2px"></i><i style="width:3px;height:20px;background:var(--fg);border-radius:2px"></i><i style="width:3px;height:34px;background:var(--fg);border-radius:2px"></i><i style="width:3px;height:14px;background:var(--fg);border-radius:2px"></i><i style="width:3px;height:24px;background:var(--fg);border-radius:2px"></i><i style="width:3px;height:10px;background:var(--fg);border-radius:2px"></i><i style="width:3px;height:18px;background:var(--fg);border-radius:2px"></i><i style="width:3px;height:6px;background:var(--fg);border-radius:2px"></i><i style="width:3px;height:12px;background:var(--fg);border-radius:2px"></i></div>
+    <div style="width:200px;height:2px;background:var(--ln);margin-top:24px;position:relative"><div style="position:absolute;left:0;top:0;height:2px;width:80%;background:var(--fg)"></div></div>
+    <div style="margin-top:26px;font-size:15px;font-weight:600">松手转文字</div>
+    <div class="note" style="font-size:12px">向上滑动取消</div>
+  </div>
+  <div class="dock" style="position:relative;z-index:3">
+    <div class="keys off"><span class="key">Esc</span><span class="key">Tab</span><span class="key">^C</span><span class="key">↑</span><span class="key">↓</span><span class="key">Enter</span></div>
+    <div class="pg">1 / 4</div>
+    <div class="acts"><div class="act off">工具</div><div class="mic" style="background:var(--ac);box-shadow:0 0 0 10px rgba(180,83,42,.12)"><i data-i="wave" data-s="24" data-w="2"></i></div><div class="act off">快捷回复</div></div>
+  </div>
+</div><figcaption><b>10 按住录音</b>大号衬线数字倒计时，下方是墨色音量条和一条细进度线。录音中按钮变赭红，是全页唯一的彩色。</figcaption></figure>
+
+<!-- 11 设置 -->
+<figure class="shot" data-id="11-settings"><div class="phone C">
+  <div class="sbar"><span>19:28</span><span class="r"><i data-i="signal" data-s="13"></i><i data-i="wifi" data-s="13"></i><i data-i="battery" data-s="15"></i></span></div>
+  <div class="row" style="height:52px;padding:0 6px"><div class="ib"><i data-i="back"></i></div></div>
+  <div class="h1" style="padding:0 20px">设置</div>
+  <div class="sec">外观</div>
+  <div class="li"><div class="lt l1">明暗</div><div class="seg"><span>系统</span><span class="on">浅色</span><span>深色</span></div></div>
+  <div class="li" style="padding:10px 0;align-items:flex-start"><div class="lt l1" style="padding-top:4px">配色</div>
+    <div class="row" style="gap:8px">
+      <span style="width:30px;height:30px;border-radius:50%;background:#F5F1E8;box-shadow:inset 0 0 0 1px #C9BFAB,0 0 0 2px var(--bg),0 0 0 3.5px var(--fg)"></span>
+      <span style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#1B1D29 50%,#7AA2F7 50%)"></span>
+      <span style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#1E1E2E 50%,#CBA6F7 50%)"></span>
+      <span style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#17221C 50%,#79D5B0 50%)"></span>
+      <span style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#282E39 50%,#88C0D0 50%)"></span></div></div>
+  <div class="li"><div class="lt l1">语言</div><span class="val">跟随系统<i data-i="chevR" data-s="16"></i></span></div>
+  <div class="sec">连接与终端</div>
+  <div class="li"><div class="lt"><div class="l1">空闲 SSH 保留</div><div class="l2">前台 1 分钟，退后台关闭</div></div><span class="val">2 条<i data-i="chevR" data-s="16"></i></span></div>
+  <div class="li"><div class="lt l1">字号</div><span class="val mono" style="gap:14px"><span>A−</span><span style="color:var(--fg)">14</span><span>A+</span></span></div>
+  <div class="li"><div class="lt"><div class="l1">触摸滚轮和点击</div><div class="l2">轻点左键，长按右键</div></div><span class="tg on"></span></div>
+  <div class="li"><div class="lt l1">远端滚动倍率</div><span class="val">3×<i data-i="chevR" data-s="16"></i></span></div>
+  <div class="sec">隐私</div>
+  <div class="li"><div class="lt"><div class="l1">隐私展示</div><div class="l2">隐藏地址和用户名</div></div><span class="tg on"></span></div>
+  <div class="li"><div class="lt l1">调试日志</div><span class="val">导出<i data-i="chevR" data-s="16"></i></span></div>
+</div><figcaption><b>11 设置</b>纯列表，分组标题为衬线小字。说明只保留一行；滚动倍率等需要调节的项进入二级页，首屏更短。</figcaption></figure>
+
+</div>
+</body></html>

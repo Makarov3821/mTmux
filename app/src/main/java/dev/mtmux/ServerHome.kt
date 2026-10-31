@@ -24,6 +24,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.repeatOnLifecycle
@@ -337,36 +341,53 @@ private class HomeRefresh {
                     font=font,onFont={font=it;preferences()},speed=speed,onSpeed={speed=it;preferences()},
                     touch=touch,onTouch={touch=it;preferences()})
             }
-            else -> Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal=16.dp)) {
+            else -> Column(Modifier.fillMaxSize().safeDrawingPadding().padding(horizontal=12.dp)) {
                 val settingsLabel=stringResource(R.string.settings_title); val addServerLabel=stringResource(R.string.home_add_server)
                 val addFolderLabel=stringResource(R.string.home_new_folder); val refreshFolderLabel=stringResource(R.string.home_refresh_folder)
                 val openSshLabel=stringResource(R.string.home_open_ssh); val refreshServerLabel=stringResource(R.string.home_refresh_server)
                 val moreLabel=stringResource(R.string.home_more_actions); val ungroupedLabel=stringResource(R.string.home_ungrouped)
-                Row(Modifier.fillMaxWidth().height(68.dp),verticalAlignment=Alignment.CenterVertically) {
-                    Text(stringResource(R.string.home_title),Modifier.weight(1f),style=MaterialTheme.typography.headlineSmall)
-                    AppIconButton(UiSymbol.SETTINGS,settingsLabel,{page="settings"},Modifier.testTag("settings"))
-                    AppIconButton(UiSymbol.PLUS,addServerLabel,{edit=null;page="edit"},Modifier.testTag("add-server"),prominent=true)
+                // App bar: brand mark + name instead of a large page title.
+                Row(Modifier.fillMaxWidth().height(56.dp).padding(start=4.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(10.dp)) {
+                    BrandMark()
+                    Text(stringResource(R.string.app_name),Modifier.weight(1f).testTag("home-title"),style=MaterialTheme.typography.titleLarge.copy(fontWeight=FontWeight.Bold))
+                    AppIconButton(UiSymbol.SETTINGS,settingsLabel,{page="settings"},Modifier.testTag("settings"),tone=IconTone.PLAIN,iconSize=22.dp)
+                    AppIconButton(UiSymbol.PLUS,addServerLabel,{edit=null;page="edit"},Modifier.testTag("add-server"),tone=IconTone.PROMINENT,size=38.dp,iconSize=20.dp)
                 }
-                Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                    OutlinedTextField(query,{query=it},shape=MaterialTheme.shapes.medium,
-                        leadingIcon={AppIcon(UiSymbol.SEARCH)},textStyle=MaterialTheme.typography.bodyMedium,placeholder={Text(stringResource(R.string.home_search),maxLines=1,overflow=TextOverflow.Ellipsis)},singleLine=true,
-                        trailingIcon={if(query.isNotEmpty()) TextButton(onClick={query=""}){Text(stringResource(R.string.common_clear))}},
-                        modifier=Modifier.weight(1f).testTag("server-search"))
-                    Box {
-                        AppIconButton(UiSymbol.SORT,stringResource(R.string.home_sort),{sortMenu=true},Modifier.testTag("server-sort"))
-                        DropdownMenu(expanded=sortMenu,onDismissRequest={sortMenu=false}) {
-                            ServerSort.entries.forEach { option -> DropdownMenuItem(text={Text((if(sort==option) "✓ " else "")+stringResource(option.label))},onClick={runCatching {organization.sort(option);sort=option;sortMenu=false}.onFailure {message=uiText(R.string.home_sort_failed)}},modifier=Modifier.testTag("sort-${option.name}")) }
+                Surface(Modifier.fillMaxWidth().padding(horizontal=4.dp),shape=RoundedCornerShape(14.dp),color=MaterialTheme.colorScheme.surface) {
+                    Row(verticalAlignment=Alignment.CenterVertically) {
+                        TextField(query,{query=it},shape=RoundedCornerShape(14.dp),
+                            leadingIcon={AppIcon(UiSymbol.SEARCH,modifier=Modifier.size(18.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)},textStyle=MaterialTheme.typography.bodyMedium,
+                            placeholder={Text(stringResource(R.string.home_search),maxLines=1,overflow=TextOverflow.Ellipsis,style=MaterialTheme.typography.bodyMedium)},singleLine=true,
+                            trailingIcon={if(query.isNotEmpty()) TextButton(onClick={query=""}){Text(stringResource(R.string.common_clear))}},
+                            colors=TextFieldDefaults.colors(focusedContainerColor=Color.Transparent,unfocusedContainerColor=Color.Transparent,
+                                focusedIndicatorColor=Color.Transparent,unfocusedIndicatorColor=Color.Transparent),
+                            modifier=Modifier.weight(1f).testTag("server-search"))
+                        Box {
+                            AppIconButton(UiSymbol.SORT,stringResource(R.string.home_sort),{sortMenu=true},Modifier.testTag("server-sort"),tone=IconTone.PLAIN)
+                            DropdownMenu(expanded=sortMenu,onDismissRequest={sortMenu=false},shape=RoundedCornerShape(14.dp)) {
+                                ServerSort.entries.forEach { option -> DropdownMenuItem(text={Text(stringResource(option.label))},trailingIcon={if(sort==option) AppIcon(UiSymbol.CHECK,modifier=Modifier.size(16.dp),tint=MaterialTheme.colorScheme.primary)},onClick={runCatching {organization.sort(option);sort=option;sortMenu=false}.onFailure {message=uiText(R.string.home_sort_failed)}},modifier=Modifier.testTag("sort-${option.name}")) }
+                            }
                         }
+                        Box(Modifier.size(1.dp,20.dp).background(MaterialTheme.colorScheme.outlineVariant))
+                        AppIconButton(UiSymbol.FOLDER_PLUS,addFolderLabel,{folderEdit(null)},Modifier.testTag("add-folder"),tone=IconTone.PLAIN)
                     }
-                    AppIconButton(UiSymbol.FOLDER,addFolderLabel,{folderEdit(null)},Modifier.testTag("add-folder"))
                 }
-                message?.let { Text(it.string(),color=MaterialTheme.colorScheme.error) }
-                if(profiles.isEmpty() && folders.isEmpty()) BentoCard(Modifier.padding(top=36.dp)) {
-                    Column(Modifier.fillMaxWidth().padding(vertical=20.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(14.dp)) {
-                        AppIcon(UiSymbol.TERMINAL,modifier=Modifier.size(40.dp),tint=MaterialTheme.colorScheme.primary)
-                        Text(stringResource(R.string.home_empty),style=MaterialTheme.typography.titleMedium)
-                        Text(stringResource(R.string.home_empty_detail),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                        Button(onClick={edit=null;page="edit"}) { AppIcon(UiSymbol.PLUS); Spacer(Modifier.width(6.dp));Text(stringResource(R.string.home_add_server)) }
+                message?.let { NoticeStrip(it.string(),Tone.DANGER,UiSymbol.ALERT_CIRCLE,Modifier.padding(start=4.dp,end=4.dp,top=8.dp)) }
+                // Counts of tasks that need the user, from the same cached snapshots as the dots.
+                val summaryNow = remember(statusClock) { System.currentTimeMillis() }
+                val summary = profiles.flatMap { profile -> val row = rows[profile.id] ?: HomeRow(cache.read(profile))
+                    if(row.error!=null) emptyList() else row.snapshot?.let { s -> s.tasks.map { s.taskState(it,summaryNow) } }.orEmpty() }
+                val attentionCount = summary.count { it==TaskState.ATTENTION }; val runningCount = summary.count { it==TaskState.RUNNING }
+                if(attentionCount+runningCount>0) Row(Modifier.padding(start=4.dp,top=10.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                    if(attentionCount>0) SummaryChip(stringResource(R.string.home_summary_attention,attentionCount),StatusColors.attention(),true)
+                    if(runningCount>0) SummaryChip(stringResource(R.string.home_summary_running,runningCount),StatusColors.running(),false)
+                }
+                if(profiles.isEmpty() && folders.isEmpty()) Surface(Modifier.fillMaxWidth().padding(top=32.dp,start=4.dp,end=4.dp),shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=28.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)) {
+                        BrandMark(56.dp)
+                        Text(stringResource(R.string.home_empty),style=MaterialTheme.typography.titleMedium.copy(fontWeight=FontWeight.Bold),textAlign=TextAlign.Center)
+                        Text(stringResource(R.string.home_empty_detail),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant,textAlign=TextAlign.Center)
+                        Button(onClick={edit=null;page="edit"},shape=RoundedCornerShape(14.dp),modifier=Modifier.padding(top=4.dp).height(46.dp)) { AppIcon(UiSymbol.PLUS,modifier=Modifier.size(18.dp)); Spacer(Modifier.width(6.dp));Text(stringResource(R.string.home_add_server)) }
                     }
                 }
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
@@ -389,25 +410,28 @@ private class HomeRefresh {
                         if(showGroup) hasResults = true
                         if(showGroup) key(folderId ?: "ungrouped") {
                             val folderFolded = search.isEmpty() && folderId != null && (folderCollapsed[folderId] ?: organization.collapsed(folderId))
-                            if(folders.isNotEmpty()) Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                                Text("${if(folderFolded) "›" else "⌄"} $folderTitle  · ${members.size}",Modifier.weight(1f).clickable(enabled=folderId!=null && search.isEmpty()) {
+                            if(folders.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(top=6.dp),verticalAlignment=Alignment.CenterVertically) {
+                                Row(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable(enabled=folderId!=null && search.isEmpty()) {
                                     folderId?.let { runCatching {organization.collapse(it,!folderFolded);folderCollapsed[it]=!folderFolded}.onFailure {message=uiText(R.string.home_collapse_failed)} }
-                                }.padding(vertical=12.dp).testTag("folder-${folderId ?: "ungrouped"}"),color=MaterialTheme.colorScheme.primary,style=MaterialTheme.typography.titleSmall)
+                                }.padding(horizontal=6.dp,vertical=12.dp).testTag("folder-${folderId ?: "ungrouped"}"),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                                    AppIcon(if(folderFolded) UiSymbol.NEXT else UiSymbol.DOWN,modifier=Modifier.size(14.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(folderTitle,style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
+                                    Surface(shape=CircleShape,color=MaterialTheme.colorScheme.surface) {Text("${members.size}",Modifier.padding(horizontal=7.dp,vertical=1.dp),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)}
+                                }
                                 val groupRefreshing = allMembers.any { rows[it.id]?.refreshing == true }
-                                TextButton(onClick={allMembers.forEach { refresh(it) }},enabled=allMembers.isNotEmpty() && !groupRefreshing,
-                                    contentPadding=PaddingValues(0.dp),modifier=Modifier.sizeIn(minWidth=44.dp,minHeight=48.dp)
-                                        .semantics {contentDescription=refreshFolderLabel}.testTag("refresh-folder-${folderId ?: "ungrouped"}")) {
-                                    if(groupRefreshing) CircularProgressIndicator(Modifier.size(16.dp),strokeWidth=2.dp) else AppIcon(UiSymbol.REFRESH)
+                                AppIconButton(UiSymbol.REFRESH,refreshFolderLabel,{allMembers.forEach { refresh(it) }},Modifier.testTag("refresh-folder-${folderId ?: "ungrouped"}"),
+                                    enabled=allMembers.isNotEmpty() && !groupRefreshing,tone=IconTone.PLAIN,iconSize=17.dp) {
+                                    if(groupRefreshing) CircularProgressIndicator(Modifier.size(15.dp),strokeWidth=2.dp) else AppIcon(UiSymbol.REFRESH,modifier=Modifier.size(17.dp))
                                 }
                                 if(folderId!=null) Box {
-                                    AppIconButton(UiSymbol.MORE,moreLabel,{folderMenu=folderId},Modifier.testTag("folder-menu-$folderId"))
-                                    DropdownMenu(expanded=folderMenu==folderId,onDismissRequest={folderMenu=null}) {
-                                        DropdownMenuItem(text={Text(stringResource(R.string.home_rename_folder))},onClick={folderMenu=null;folderEdit(folders.first {it.id==folderId})})
-                                        DropdownMenuItem(text={Text(stringResource(R.string.home_delete_folder))},onClick={folderMenu=null;deletingFolder=folders.first {it.id==folderId}})
+                                    AppIconButton(UiSymbol.MORE,moreLabel,{folderMenu=folderId},Modifier.testTag("folder-menu-$folderId"),tone=IconTone.PLAIN,iconSize=17.dp)
+                                    DropdownMenu(expanded=folderMenu==folderId,onDismissRequest={folderMenu=null},shape=RoundedCornerShape(14.dp)) {
+                                        DropdownMenuItem(text={Text(stringResource(R.string.home_rename_folder))},leadingIcon={AppIcon(UiSymbol.EDIT,modifier=Modifier.size(18.dp))},onClick={folderMenu=null;folderEdit(folders.first {it.id==folderId})})
+                                        DropdownMenuItem(text={Text(stringResource(R.string.home_delete_folder),color=MaterialTheme.colorScheme.error)},leadingIcon={AppIcon(UiSymbol.CLOSE,modifier=Modifier.size(18.dp),tint=MaterialTheme.colorScheme.error)},onClick={folderMenu=null;deletingFolder=folders.first {it.id==folderId}})
                                     }
                                 }
-                            }
-                            if(!folderFolded && members.isEmpty()) Text(stringResource(R.string.home_folder_empty),Modifier.padding(12.dp),style=MaterialTheme.typography.bodySmall)
+                            } else Spacer(Modifier.height(8.dp))
+                            if(!folderFolded && members.isEmpty()) Text(stringResource(R.string.home_folder_empty),Modifier.padding(horizontal=12.dp,vertical=8.dp),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                             if(!folderFolded) members.forEach { profile -> key(profile.id) {
 
                         val state = rows[profile.id] ?: HomeRow(cache.read(profile))
@@ -416,91 +440,133 @@ private class HomeRefresh {
                         // not the previous tick (which predates the snapshot and made it gray for up to 60s).
                         val stateNow = remember(statusClock, state.snapshot) { System.currentTimeMillis() }
                         val folded = search.isEmpty() && (collapsed[profile.id] ?: cache.collapsed(profile.id))
-                        Surface(Modifier.fillMaxWidth().padding(vertical=6.dp).testTag("profile-${profile.id}"),
-                            shape=MaterialTheme.shapes.large,color=MaterialTheme.colorScheme.surface,
-                            border=BorderStroke(1.dp,if(state.error!=null) MaterialTheme.colorScheme.error.copy(alpha=.35f) else MaterialTheme.colorScheme.outlineVariant)) {
-                        Column(Modifier.padding(horizontal=12.dp,vertical=8.dp)) {
-                            Row(verticalAlignment=Alignment.CenterVertically) {
-                                Row(Modifier.weight(1f).heightIn(min=48.dp).clickable(enabled=search.isEmpty()) { collapsed[profile.id]=!folded;cache.collapse(profile.id,!folded) }, verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(4.dp)) {
-                                    AppIcon(if(folded) UiSymbol.NEXT else UiSymbol.DOWN,modifier=Modifier.size(16.dp),tint=MaterialTheme.colorScheme.primary)
-                                    Column(Modifier.weight(1f)) {
-                                        val title = privacySettings.label(profile, privacyDisplay)
-                                        Text(title,Modifier.testTag("server-title-${profile.id}"),style=MaterialTheme.typography.titleMedium,maxLines=1,overflow=TextOverflow.Ellipsis)
-                                        state.snapshot?.let { snapshot ->
-                                            val time=java.text.SimpleDateFormat("HH:mm",java.util.Locale.ROOT).format(java.util.Date(snapshot.updatedAt))
-                                            val fullTime=java.text.SimpleDateFormat("MM-dd HH:mm",java.util.Locale.ROOT).format(java.util.Date(snapshot.updatedAt))
-                                            val updatedLabel=stringResource(R.string.home_updated_at,fullTime)
-                                            Text(time,Modifier.semantics {contentDescription=updatedLabel}.testTag("server-updated-${profile.id}"),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                        Surface(Modifier.fillMaxWidth().padding(vertical=5.dp).testTag("profile-${profile.id}"),
+                            shape=RoundedCornerShape(18.dp),color=MaterialTheme.colorScheme.surface,
+                            border=if(menu==profile.id) BorderStroke(2.dp,MaterialTheme.colorScheme.primary) else null) {
+                        Box {
+                        if(state.refreshing) LinearProgressIndicator(Modifier.fillMaxWidth().height(2.dp).align(Alignment.TopCenter),trackColor=Color.Transparent)
+                        Column {
+                            Row(Modifier.padding(start=14.dp,end=2.dp,top=6.dp,bottom=6.dp),verticalAlignment=Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f).heightIn(min=48.dp).clickable(enabled=search.isEmpty()) { collapsed[profile.id]=!folded;cache.collapse(profile.id,!folded) },verticalArrangement=Arrangement.Center) {
+                                    val title = privacySettings.label(profile, privacyDisplay)
+                                    Text(title,Modifier.testTag("server-title-${profile.id}"),style=MaterialTheme.typography.titleMedium.copy(fontWeight=FontWeight.SemiBold),maxLines=1,overflow=TextOverflow.Ellipsis)
+                                    Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(5.dp)) {
+                                        val muted=MaterialTheme.colorScheme.onSurfaceVariant
+                                        when {
+                                            state.refreshing -> {CircularProgressIndicator(Modifier.size(10.dp),strokeWidth=1.5.dp);Text(state.progress.string(),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary,maxLines=1,overflow=TextOverflow.Ellipsis)}
+                                            state.error!=null && state.challenge==null -> {AppIcon(UiSymbol.ALERT_CIRCLE,modifier=Modifier.size(12.dp),tint=StatusColors.attention());Text(state.error.string()+if(state.snapshot!=null) stringResource(R.string.home_showing_cache) else "",style=MaterialTheme.typography.labelSmall,color=StatusColors.attention(),maxLines=2,overflow=TextOverflow.Ellipsis)}
+                                            tmuxBlocked -> {AppIcon(UiSymbol.ALERT,modifier=Modifier.size(12.dp),tint=StatusColors.running());Text(stringResource(R.string.doctor_unavailable_short),style=MaterialTheme.typography.labelSmall,color=StatusColors.running(),maxLines=1)}
+                                            else -> state.snapshot?.let { snapshot ->
+                                                val time=java.text.SimpleDateFormat("HH:mm",java.util.Locale.ROOT).format(java.util.Date(snapshot.updatedAt))
+                                                val fullTime=java.text.SimpleDateFormat("MM-dd HH:mm",java.util.Locale.ROOT).format(java.util.Date(snapshot.updatedAt))
+                                                val updatedLabel=stringResource(R.string.home_updated_at,fullTime)
+                                                Text(time,Modifier.semantics {contentDescription=updatedLabel}.testTag("server-updated-${profile.id}"),style=MaterialTheme.typography.labelSmall,color=muted)
+                                            } ?: Text(stringResource(R.string.home_no_cache),style=MaterialTheme.typography.labelSmall,color=muted,maxLines=1)
                                         }
                                     }
                                 }
-                                AppIconButton(UiSymbol.TERMINAL,openSshLabel,{open(profile,null)},Modifier.testTag("ssh-${profile.id}"))
+                                AppIconButton(UiSymbol.TERMINAL,openSshLabel,{open(profile,null)},Modifier.testTag("ssh-${profile.id}"),tone=IconTone.ACCENT)
                                 AppIconButton(UiSymbol.PLUS,stringResource(R.string.home_new_tmux),{requestNewTmux(profile)},Modifier.testTag("new-tmux-${profile.id}"),enabled=!tmuxBlocked)
-                                TextButton(onClick={refresh(profile)},enabled=!state.refreshing,contentPadding=PaddingValues(0.dp),modifier=Modifier.sizeIn(minWidth=44.dp,minHeight=48.dp).semantics{contentDescription=refreshServerLabel}.testTag("refresh-${profile.id}")){
-                                    if(state.refreshing) CircularProgressIndicator(Modifier.size(16.dp),strokeWidth=2.dp) else AppIcon(UiSymbol.REFRESH)
+                                AppIconButton(UiSymbol.REFRESH,refreshServerLabel,{refresh(profile)},Modifier.testTag("refresh-${profile.id}"),enabled=!state.refreshing) {
+                                    if(state.refreshing) CircularProgressIndicator(Modifier.size(15.dp),strokeWidth=2.dp)
+                                    else AppIcon(UiSymbol.REFRESH,modifier=Modifier.size(17.dp),tint=if(state.error!=null && state.challenge==null) StatusColors.attention() else LocalContentColor.current)
                                 }
-                                Box {
-                                    AppIconButton(UiSymbol.MORE,moreLabel,{menu=profile.id},Modifier.testTag("more-${profile.id}"))
-                                    DropdownMenu(expanded=menu==profile.id,onDismissRequest={menu=null}) {
-                                        DropdownMenuItem(text={Text(stringResource(R.string.home_new_tmux))},enabled=!tmuxBlocked,onClick={menu=null;requestNewTmux(profile)})
-                                        DropdownMenuItem(text={Text(stringResource(R.string.doctor_title))},onClick={menu=null;doctorForCreate=false;doctorProfile=profile},modifier=Modifier.testTag("doctor-${profile.id}"))
-                                        DropdownMenuItem(text={Text(stringResource(R.string.home_verify_host))},onClick={menu=null;state.challenge?.let { trust=profile to it } ?: refresh(profile,verifyFingerprint=true)},modifier=Modifier.testTag("verify-host-${profile.id}"))
-                                        DropdownMenuItem(text={Text(stringResource(R.string.home_edit_server))},onClick={menu=null;edit=profile;page="edit"})
-                                        DropdownMenuItem(text={Text(stringResource(R.string.home_move_to_folder))},onClick={menu=null;movingServer=profile})
-                                        DropdownMenuItem(text={Text(stringResource(R.string.home_delete_server))},onClick={menu=null;delete=profile})
-                                    }
-                                }
+                                AppIconButton(UiSymbol.MORE,moreLabel,{menu=profile.id},Modifier.testTag("more-${profile.id}"),tone=IconTone.PLAIN,size=26.dp)
                             }
-                            if(tmuxBlocked) Text(stringResource(R.string.doctor_unavailable),Modifier.padding(vertical=4.dp).clickable {doctorForCreate=false;doctorProfile=profile}.testTag("tmux-unavailable-${profile.id}"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.error)
-                            val note = when { opening == profile.id -> stringResource(R.string.home_opening_task); state.refreshing -> state.progress.string(); state.error != null -> state.error.string() + if(state.snapshot!=null) stringResource(R.string.home_showing_cache) else "";state.snapshot==null -> stringResource(R.string.home_no_cache);else -> null }
-                            if (opening == profile.id) TextButton(onClick = { openingJob?.cancel() }) { Text(stringResource(R.string.common_cancel)) }
-                            if (note != null) Surface(Modifier.fillMaxWidth().padding(vertical=6.dp).clickable(enabled=state.challenge!=null){trust=profile to state.challenge!!},
-                                shape=MaterialTheme.shapes.small,color=if(state.error!=null) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant) {
-                                Text(note,Modifier.padding(10.dp),style=MaterialTheme.typography.bodySmall,color=if(state.error!=null) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant)
+                            if(tmuxBlocked) Row(Modifier.fillMaxWidth().clickable {doctorForCreate=false;doctorProfile=profile}.testTag("tmux-unavailable-${profile.id}")
+                                .padding(start=16.dp,end=12.dp,top=4.dp,bottom=10.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+                                AppIcon(UiSymbol.SPARKLE,modifier=Modifier.size(18.dp),tint=StatusColors.running())
+                                Text(stringResource(R.string.doctor_unavailable),Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                Surface(shape=RoundedCornerShape(11.dp),color=MaterialTheme.colorScheme.surfaceVariant) {Text(stringResource(R.string.doctor_title_short),Modifier.padding(horizontal=12.dp,vertical=7.dp),style=MaterialTheme.typography.labelMedium)}
                             }
+                            if(opening == profile.id) NoticeStrip(stringResource(R.string.home_opening_task),Tone.ACCENT,UiSymbol.TERMINAL,Modifier.padding(start=10.dp,end=10.dp,bottom=10.dp),
+                                action=DialogAction(stringResource(R.string.common_cancel),{openingJob?.cancel()}))
+                            if(state.challenge!=null) NoticeStrip(state.error?.string() ?: stringResource(R.string.home_needs_fingerprint),if(state.challenge.changed) Tone.DANGER else Tone.ACCENT,
+                                if(state.challenge.changed) UiSymbol.SHIELD_ALERT else UiSymbol.SHIELD,Modifier.padding(start=10.dp,end=10.dp,bottom=10.dp).clickable{trust=profile to state.challenge},
+                                action=DialogAction(stringResource(R.string.home_check_fingerprint),{trust=profile to state.challenge}))
                             if(!folded) {
                                 val tasks = state.snapshot?.tasks.orEmpty().filter { search.isEmpty() || folderMatch || profile.matchesSearch(search) || it.matchesSearch(search) }
-                                if(tasks.isEmpty() && state.snapshot!=null && !state.refreshing && state.error==null) Text(stringResource(R.string.home_no_sessions),Modifier.padding(16.dp),style=MaterialTheme.typography.bodySmall)
+                                if(tasks.isEmpty() && state.snapshot!=null && !state.refreshing && state.error==null) {
+                                    HorizontalDivider(color=MaterialTheme.colorScheme.onSurface.copy(alpha=.06f))
+                                    Text(stringResource(R.string.home_no_sessions),Modifier.padding(horizontal=16.dp,vertical=14.dp),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                                 val last = recent.firstOrNull { it.profileId==profile.id }
                                 tasks.groupBy { it.binding!!.identity.split(':').slice(2..3).joinToString(":") }.forEach { (id, group) ->
-                                    val title="${group.first().sessionName} / ${group.first().windowName}"
                                     val expanded=search.isNotEmpty() || expandedWindows[profile.id+id]==true
-                                    TextButton(onClick={if(group.size==1) open(profile,group.first()) else expandedWindows[profile.id+id]=!expanded},shape=MaterialTheme.shapes.medium,colors=ButtonDefaults.textButtonColors(containerColor=MaterialTheme.colorScheme.surfaceVariant),modifier=Modifier.fillMaxWidth().padding(vertical=4.dp).testTag("task-${profile.id}-${group.first().binding!!.pane}"),contentPadding=PaddingValues(horizontal=12.dp,vertical=10.dp)) {
+                                    HorizontalDivider(color=MaterialTheme.colorScheme.onSurface.copy(alpha=.06f))
+                                    Row(Modifier.fillMaxWidth().heightIn(min=46.dp).clickable {if(group.size==1) open(profile,group.first()) else expandedWindows[profile.id+id]=!expanded}
+                                        .testTag("task-${profile.id}-${group.first().binding!!.pane}").padding(start=16.dp,end=12.dp),verticalAlignment=Alignment.CenterVertically) {
                                         TaskStatusDot(TaskStates.aggregate(group.map { if(state.error==null) state.snapshot?.taskState(it,stateNow) ?: TaskState.UNKNOWN else TaskState.UNKNOWN }),"task-status-${profile.id}-${group.first().binding!!.pane}")
-                                        Text(title,Modifier.weight(1f),color=MaterialTheme.colorScheme.onSurface,style=MaterialTheme.typography.bodyMedium,maxLines=2,overflow=TextOverflow.Ellipsis)
-                                        if(group.any { it.identity==last?.identity }) Surface(shape=MaterialTheme.shapes.extraSmall,color=MaterialTheme.colorScheme.primaryContainer) {
-                                            Text(stringResource(R.string.home_last_used),Modifier.padding(horizontal=6.dp,vertical=3.dp),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
+                                        Text(group.first().sessionName,Modifier.weight(1f,fill=false),color=MaterialTheme.colorScheme.onSurface,style=MaterialTheme.typography.bodyMedium.copy(fontWeight=FontWeight.Medium),maxLines=1,overflow=TextOverflow.Ellipsis)
+                                        val window=group.first().windowName.removeSuffix(" · ${group.first().sessionName}").takeIf { it!=group.first().sessionName }
+                                        if(window!=null) Text("  $window",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
+                                        if(group.any { it.identity==last?.identity }) Surface(Modifier.padding(start=8.dp),shape=RoundedCornerShape(5.dp),color=MaterialTheme.colorScheme.primary.copy(alpha=.14f)) {
+                                            Text(stringResource(R.string.home_last_used),Modifier.padding(horizontal=6.dp,vertical=1.dp),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary)
                                         }
-                                        if(group.size>1) Text(" ${group.size}",style=MaterialTheme.typography.labelMedium); AppIcon(if(group.size>1 && expanded) UiSymbol.DOWN else UiSymbol.NEXT,modifier=Modifier.size(16.dp))
+                                        Spacer(Modifier.weight(1f))
+                                        if(group.size>1) Text("${group.size}",style=MaterialTheme.typography.labelMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                                        AppIcon(if(group.size>1 && expanded) UiSymbol.DOWN else UiSymbol.NEXT,modifier=Modifier.size(16.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                     val paneGuide=MaterialTheme.colorScheme.outlineVariant
-                                    if(group.size>1 && expanded) Column(Modifier.padding(start=12.dp).drawBehind { drawLine(paneGuide,Offset(0f,0f),Offset(0f,size.height),1.dp.toPx()) }) { group.forEach { task -> TextButton(onClick={open(profile,task)},modifier=Modifier.fillMaxWidth().padding(start=8.dp).testTag("pane-${profile.id}-${task.binding!!.pane}")){TaskStatusDot(if(state.error==null) state.snapshot?.taskState(task,stateNow) ?: TaskState.UNKNOWN else TaskState.UNKNOWN,"pane-status-${profile.id}-${task.binding!!.pane}");Text(stringResource(R.string.home_pane, task.binding!!.pane),Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium);AppIcon(UiSymbol.NEXT,modifier=Modifier.size(16.dp))} } }
+                                    if(group.size>1 && expanded) Column(Modifier.padding(start=24.dp,bottom=6.dp).drawBehind { drawLine(paneGuide,Offset(0f,0f),Offset(0f,size.height),2.dp.toPx()) }) { group.forEach { task -> Row(Modifier.fillMaxWidth().heightIn(min=40.dp).clickable{open(profile,task)}.testTag("pane-${profile.id}-${task.binding!!.pane}").padding(start=14.dp,end=12.dp),verticalAlignment=Alignment.CenterVertically){TaskStatusDot(if(state.error==null) state.snapshot?.taskState(task,stateNow) ?: TaskState.UNKNOWN else TaskState.UNKNOWN,"pane-status-${profile.id}-${task.binding!!.pane}");Text(stringResource(R.string.home_pane, task.binding!!.pane),Modifier.weight(1f),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant);AppIcon(UiSymbol.NEXT,modifier=Modifier.size(15.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)} } }
                                 }
                             }
                         }
+                        }
+                        }
+                        if(menu==profile.id) AppSheet(onDismiss={menu=null}) {
+                            val lastDoctor=doctorCache.report(profile.id,store.connectionRevision(profile))?.checkedAt
+                            SheetHeader(privacySettings.label(profile, privacyDisplay),listOfNotNull(memberships[profile.id]?.let { id -> folders.firstOrNull { it.id==id }?.name } ?: ungroupedLabel,
+                                if(tmuxBlocked) stringResource(R.string.doctor_unavailable_short) else null).joinToString(" · "),UiSymbol.SERVER)
+                            SheetAction(UiSymbol.SPARKLE,stringResource(R.string.doctor_title),{menu=null;doctorForCreate=false;doctorProfile=profile},Modifier.testTag("doctor-${profile.id}"),highlighted=true,
+                                trailing=lastDoctor?.let { stringResource(R.string.doctor_last_checked,java.text.SimpleDateFormat("HH:mm",java.util.Locale.ROOT).format(java.util.Date(it))) })
+                            SheetAction(UiSymbol.EDIT,stringResource(R.string.home_edit_server),{menu=null;edit=profile;page="edit"})
+                            SheetAction(UiSymbol.SHIELD,stringResource(R.string.home_verify_host),{menu=null;state.challenge?.let { trust=profile to it } ?: refresh(profile,verifyFingerprint=true)},Modifier.testTag("verify-host-${profile.id}"))
+                            SheetAction(UiSymbol.FOLDER,stringResource(R.string.home_move_to_folder),{menu=null;movingServer=profile},
+                                trailing=memberships[profile.id]?.let { id -> folders.firstOrNull { it.id==id }?.name })
+                            SheetDivider()
+                            SheetAction(UiSymbol.CLOSE,stringResource(R.string.home_delete_server),{menu=null;delete=profile},danger=true)
                         }
                     } }
                         }
                     }
-                    if(search.isNotEmpty() && !hasResults) Text(stringResource(R.string.home_no_results),Modifier.padding(vertical=24.dp))
+                    if(search.isNotEmpty() && !hasResults) Column(Modifier.fillMaxWidth().padding(vertical=40.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(10.dp)) {
+                        AppIcon(UiSymbol.SEARCH,modifier=Modifier.size(28.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.home_no_results),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     Spacer(Modifier.height(24.dp))
                 }
             }
         }
     }
-    if(folderDialog) AlertDialog(onDismissRequest={folderDialog=false},title={Text(stringResource(if(editingFolder==null) R.string.home_new_folder else R.string.home_rename_folder))},text={Column {
-        OutlinedTextField(folderName,{folderName=it;folderError=null},label={Text(stringResource(R.string.folder_name))},singleLine=true,modifier=Modifier.testTag("folder-name"))
-        folderError?.let { Text(it.string(),color=MaterialTheme.colorScheme.error) }
-    }},confirmButton={TextButton(onClick={runCatching {organization.saveFolder(editingFolder?.id,folderName);folders=organization.folders();folderDialog=false}.onFailure {folderError=errorText(it)}},modifier=Modifier.testTag("save-folder")){Text(stringResource(R.string.common_save))}},dismissButton={TextButton(onClick={folderDialog=false}){Text(stringResource(R.string.common_cancel))}})
-    deletingFolder?.let { folder -> AlertDialog(onDismissRequest={deletingFolder=null},title={Text(stringResource(R.string.folder_delete_title, folder.name))},text={Text(stringResource(R.string.folder_delete_body))},confirmButton={TextButton(onClick={runCatching {organization.deleteFolder(folder.id);folders=organization.folders();organizationRevision++;folderCollapsed.remove(folder.id);deletingFolder=null}.onFailure {message=uiText(R.string.folder_delete_failed)}},modifier=Modifier.testTag("confirm-delete-folder")){Text(stringResource(R.string.home_delete_folder))}},dismissButton={TextButton(onClick={deletingFolder=null}){Text(stringResource(R.string.common_cancel))}}) }
-    movingServer?.let { profile -> AlertDialog(onDismissRequest={movingServer=null},title={Text(stringResource(R.string.move_title, privacySettings.label(profile, privacyDisplay)))},text={Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())) {
-        (listOf(null to stringResource(R.string.home_ungrouped))+folders.map {it.id to it.name}).forEach { (id,name) ->
-            TextButton(onClick={runCatching {organization.move(profile.id,id);organizationRevision++;movingServer=null}.onFailure {message=uiText(R.string.move_failed)}},modifier=Modifier.fillMaxWidth().testTag("move-folder-${id ?: "ungrouped"}")){Text(name)}
+    if(folderDialog) AppDialog(onDismiss={folderDialog=false},title=stringResource(if(editingFolder==null) R.string.home_new_folder else R.string.home_rename_folder),icon=UiSymbol.FOLDER,
+        confirm=DialogAction(stringResource(R.string.common_save),{runCatching {organization.saveFolder(editingFolder?.id,folderName);folders=organization.folders();folderDialog=false}.onFailure {folderError=errorText(it)}},"save-folder"),
+        dismiss=DialogAction(stringResource(R.string.common_cancel),{folderDialog=false})) {
+        OutlinedTextField(folderName,{folderName=it;folderError=null},label={Text(stringResource(R.string.folder_name))},singleLine=true,isError=folderError!=null,
+            shape=appFieldShape,colors=appFieldColors(),modifier=Modifier.fillMaxWidth().testTag("folder-name"))
+        folderError?.let { Text(it.string(),color=MaterialTheme.colorScheme.error,style=MaterialTheme.typography.bodySmall) }
+    }
+    deletingFolder?.let { folder -> AppDialog(onDismiss={deletingFolder=null},title=stringResource(R.string.folder_delete_title, folder.name),body=stringResource(R.string.folder_delete_body),
+        icon=UiSymbol.FOLDER,tone=Tone.DANGER,
+        confirm=DialogAction(stringResource(R.string.home_delete_folder),{runCatching {organization.deleteFolder(folder.id);folders=organization.folders();organizationRevision++;folderCollapsed.remove(folder.id);deletingFolder=null}.onFailure {message=uiText(R.string.folder_delete_failed)}},"confirm-delete-folder",danger=true),
+        dismiss=DialogAction(stringResource(R.string.common_cancel),{deletingFolder=null})) }
+    movingServer?.let { profile -> AppSheet(onDismiss={movingServer=null}) {
+        SheetHeader(stringResource(R.string.move_title, privacySettings.label(profile, privacyDisplay)),icon=UiSymbol.FOLDER)
+        val current=organization.folderOf(profile.id)
+        Column(Modifier.heightIn(max=360.dp).verticalScroll(rememberScrollState())) {
+            (listOf(null to stringResource(R.string.home_ungrouped))+folders.map {it.id to it.name}).forEach { (id,name) ->
+                SheetAction(UiSymbol.FOLDER,name,{runCatching {organization.move(profile.id,id);organizationRevision++;movingServer=null}.onFailure {message=uiText(R.string.move_failed)}},
+                    Modifier.testTag("move-folder-${id ?: "ungrouped"}"),highlighted=current==id)
+            }
         }
-    }},confirmButton={TextButton(onClick={movingServer=null}){Text(stringResource(R.string.common_cancel))}}) }
-    delete?.let { profile -> AlertDialog(onDismissRequest={delete=null},title={Text(stringResource(R.string.delete_server_title, privacySettings.label(profile, privacyDisplay)))},text={Text(stringResource(R.string.delete_server_body))},confirmButton={TextButton(onClick={
-        runCatching { store.delete(profile.id);revisions[profile.id]=(revisions[profile.id] ?: 0)+1;jobs.remove(profile.id)?.cancel();profiles=store.all();rows.remove(profile.id);delete=null }.onFailure { message=uiText(R.string.delete_server_failed) }
-    }){Text(stringResource(R.string.common_delete))}},dismissButton={TextButton(onClick={delete=null}){Text(stringResource(R.string.common_cancel))}}) }
+        SheetDivider()
+        SheetAction(UiSymbol.CLOSE,stringResource(R.string.common_cancel),{movingServer=null})
+    } }
+    delete?.let { profile -> AppDialog(onDismiss={delete=null},title=stringResource(R.string.delete_server_title, privacySettings.label(profile, privacyDisplay)),body=stringResource(R.string.delete_server_body),
+        icon=UiSymbol.SERVER,tone=Tone.DANGER,
+        confirm=DialogAction(stringResource(R.string.common_delete),{
+            runCatching { store.delete(profile.id);revisions[profile.id]=(revisions[profile.id] ?: 0)+1;jobs.remove(profile.id)?.cancel();profiles=store.all();rows.remove(profile.id);delete=null }.onFailure { message=uiText(R.string.delete_server_failed) }
+        },danger=true),dismiss=DialogAction(stringResource(R.string.common_cancel),{delete=null})) }
     doctorInvitation?.let { profile -> TmuxDoctorInvitation(
         onRun={doctorInvitation=null;doctorForCreate=false;doctorProfile=profile},
         onSkip={doctorInvitation=null;refresh(profile,automatic=true)}) }
@@ -511,18 +577,41 @@ private class HomeRefresh {
         onCreateReady={doctorProfile=null;doctorRevision++;creatingTmux=profile})} }
     creatingTmux?.let { profile -> NewTmuxDialog(profile, warmConnections, onDismiss={mayHaveChanged -> creatingTmux=null;doctorRevision++;if(mayHaveChanged) refresh(profile)},
         onTrustRequired={trust=profile to it},onCreated={task,client -> creatingTmux=null;doctorRevision++;onOpen(profile,task,client)}) }
-    trust?.let { (profile, item) -> ProtectSensitiveContent(); AlertDialog(icon={AppIcon(UiSymbol.SHIELD,modifier=Modifier.size(28.dp),tint=if(item.changed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)},properties=protectedDialogProperties,onDismissRequest={trust=null},title={Text(stringResource(if(item.changed) R.string.trust_changed_title else R.string.trust_verify_title))},text={Text("${item.endpoint.substringBefore("|via:")}\n${item.fingerprint}\n${stringResource(R.string.trust_verify_hint)}")},confirmButton={if(!item.changed) TextButton(onClick={pins.edit().putString(item.endpoint,item.key).apply();trust=null;refresh(profile)}){Text(stringResource(R.string.host_key_trust))}},dismissButton={TextButton(onClick={trust=null}){Text(stringResource(R.string.common_close))}}) }
+    trust?.let { (profile, item) -> ProtectSensitiveContent(); HostKeyDialog(item,onDismiss={trust=null},
+        onTrust={pins.edit().putString(item.endpoint,item.key).apply();trust=null;refresh(profile)}) }
 }
 
 @Composable private fun TaskStatusDot(state: TaskState, tag: String) {
-    val dark=MaterialTheme.colorScheme.background.red<0.5f
     val color=when(state) {
-        TaskState.ATTENTION -> if(dark) Color(0xFFFF8A80) else Color(0xFFBA1A1A)
-        TaskState.RUNNING -> if(dark) Color(0xFFF2CF66) else Color(0xFF8B6500)
-        TaskState.COMPLETED -> if(dark) Color(0xFF79D5A0) else Color(0xFF176B39)
-        TaskState.UNKNOWN -> MaterialTheme.colorScheme.onSurfaceVariant
+        TaskState.ATTENTION -> StatusColors.attention()
+        TaskState.RUNNING -> StatusColors.running()
+        TaskState.COMPLETED -> StatusColors.ready()
+        TaskState.UNKNOWN -> StatusColors.unknown()
     }
     val stateLabel=stringResource(R.string.task_state_description, stringResource(state.text()))
-    Box(Modifier.size(8.dp).background(color,CircleShape).semantics {contentDescription=stateLabel}.testTag(tag))
-    Spacer(Modifier.width(8.dp))
+    TaskStateDot(color,ring=state==TaskState.ATTENTION,modifier=Modifier.semantics {contentDescription=stateLabel}.testTag(tag))
+    Spacer(Modifier.width(10.dp))
+}
+
+@Composable private fun SummaryChip(text: String, color: Color, emphasized: Boolean) {
+    Surface(shape=CircleShape,color=if(emphasized) color.copy(alpha=.12f) else MaterialTheme.colorScheme.surface) {
+        Row(Modifier.padding(start=9.dp,end=11.dp,top=5.dp,bottom=5.dp),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.size(7.dp).background(color,CircleShape))
+            Text(text,style=MaterialTheme.typography.labelMedium,color=if(emphasized) color else MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** First-trust and changed-key prompt shared by home, editor, terminal and Doctor. */
+@Composable internal fun HostKeyDialog(item: HostKeyChallenge, onDismiss: () -> Unit, onTrust: () -> Unit, trustLabel: String? = null, subtitle: String? = null,
+    headerEnd: (@Composable () -> Unit)? = null, route: List<Pair<String,RouteState>>? = null, fingerprintTag: String = "editor-fingerprint", trustTag: String = "editor-trust-key") {
+    AppDialog(onDismiss=onDismiss,properties=protectedDialogProperties,headerEnd=headerEnd,
+        title=stringResource(if(item.changed) R.string.trust_changed_title else R.string.trust_verify_title),
+        body=subtitle ?: stringResource(R.string.trust_verify_hint),
+        icon=if(item.changed) UiSymbol.SHIELD_ALERT else UiSymbol.SHIELD,tone=if(item.changed) Tone.DANGER else Tone.ACCENT,stacked=true,
+        confirm=if(!item.changed) DialogAction(trustLabel ?: stringResource(R.string.host_key_trust),onTrust,trustTag) else null,
+        dismiss=DialogAction(stringResource(if(item.changed) R.string.common_close else R.string.common_cancel),onDismiss)) {
+        route?.let { RouteChips(it) }
+        FingerprintBlock(item.endpoint.substringBefore("|via:"),item.fingerprint,valueTag=fingerprintTag)
+    }
 }
