@@ -2,6 +2,12 @@
 
 版本号不代表完整真机验收。每个版本的实现细节、验证结果、截图与 APK SHA-256 见对应的「详细记录」；测试证据在 [docs/evidence/](docs/evidence/)。文档目录说明见 [docs/README.md](docs/README.md)。
 
+## [0.9.3-rc.2] — 2026-11-01 · versionCode 40 · Pre-release
+
+详细记录：[0.9.3-rc.2](docs/releases/0.9.3-rc.2.md)。
+
+- 首页标题边距 18dp；终端顶栏字号 +2sp；工具/快捷回复放大；快捷键文字缩小、去掉底色，与下方间距 10dp。
+
 ## [0.9.3-rc.1] — 2026-10-31 · versionCode 39 · Pre-release
 
 详细记录：[0.9.3-rc.1](docs/releases/0.9.3-rc.1.md)。
