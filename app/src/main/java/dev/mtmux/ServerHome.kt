@@ -258,7 +258,9 @@ private class HomeRefresh {
         opening = profile.id
         refresh.opening.set(true)
         DebugLog.event(DebugLog.Event.REFRESH_HANDOFF_REQUEST, profile.id.hashCode())
-        openingJob = scope.launch {
+        // Opening transfers the connection to Activity/WebView APIs. Make this UI boundary
+        // explicit even when a probe finishes on an IO worker or a test wraps the UI context.
+        openingJob = scope.launch(Dispatchers.Main.immediate) {
             try {
                 refresh.finished.await()
                 val connection = refresh.handedOff

@@ -1464,7 +1464,12 @@ class TerminalUiTest {
             val view = terminal()
             compose.waitUntil(30000) { evaluate(view, "typeof window.receive") == "\"function\"" }
             compose.onNodeWithTag("ssh-${profile.id}").performScrollTo().performClick()
-            compose.waitUntil(30000) { evaluate(view,"connected") == "true" }
+            try {compose.waitUntil(30000) { evaluate(view,"connected") == "true" }}
+            catch(error:Throwable) {
+                println("KEY_RESTORE_CONNECT_FAILURE encrypted=$encrypted\n"+compose.onRoot(useUnmergedTree=true).printToString())
+                println("KEY_RESTORE_DIAGNOSTICS\n"+DebugLog.snapshot().toString(Charsets.UTF_8))
+                throw error
+            }
             try {compose.waitUntil(30000) {evaluate(view,"terminalSnapshot().text").contains("MTMUX_SSH_WELCOME")}}
             catch(error:Throwable) {
                 throw AssertionError("Fixture welcome missing after key restore (encrypted=$encrypted): "+evaluate(view,"terminalSnapshot().text"),error)
