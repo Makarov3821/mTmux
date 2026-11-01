@@ -15,38 +15,65 @@
     }
     return result;
   }
+  function readRow(terminal,row) {
+    const line=terminal.buffer.active.getLine(row);
+    let text='',cells=[],used=0;
+    for(let col=0;line && col<terminal.cols;col++) {
+      const cell=line.getCell(col);
+      if(!cell || cell.getWidth()===0) continue;
+      const chars=cell.getChars();
+      for(let i=0;i<(chars || ' ').length;i++) cells.push({x:col+1,y:row+1});
+      text+=chars || ' ';
+      if(chars) used=text.length;
+    }
+    // A wide glyph wrapping at the last column leaves a null cell, not a path space.
+    return {text:text.slice(0,used),cells:cells.slice(0,used),wrapped:line?.isWrapped,row};
+  }
+  function continuation(group,next,cols) {
+    if(!group.text || !next.text) return null;
+    const left=group.text.replace(/[ │┃║]+$/u,'');
+    const last=group.cells[left.length-1];
+    if(!last || cols-last.x>4) return null;
+    const indent=next.text.match(/^[ │┃║]*/u)[0].length;
+    if(indent>12) return null;
+    if(indent===0 && last.x!==cols) return null;
+    const right=next.text.slice(indent);
+    if(!right || /^(?:https?|file):\/\//i.test(right) || !/^[\p{L}\p{N}_~.@$()+%/?&#=:-]/u.test(right)) return null;
+    // TUI applications often paint explicit CR/LF (with an indent) rather than
+    // xterm soft-wraps. Only join a URL/path at the right edge, never whole paragraphs.
+    const tail=left.match(/(?:https?:\/\/|file:\/\/)[^\s<>"`]*$|[^\s<>"`]*\/[^\s<>"`]*$/iu)?.[0];
+    if(!tail || /[\]),;!，。；！]$/u.test(tail)) return null;
+    if(!/^(?:https?|file):/i.test(tail) && /\.(?:md|markdown|html?|png|jpe?g|webp)(?::\d+(?::\d+)?)?$/i.test(tail)) return null;
+    return {left:left.length,indent};
+  }
+  function linksForRow(terminal,y) {
+      const buffer=terminal.buffer.active,groups=[];
+      for(let row=Math.max(0,y-9);row<Math.min(buffer.length,y+8);row++) {
+        const next=readRow(terminal,row),group=groups.at(-1);
+        const hard=group && !next.wrapped ? continuation(group,next,terminal.cols) : null;
+        if(group && (next.wrapped || hard) && group.text.length+next.text.length<=8192) {
+          const left=hard?.left ?? group.text.length,indent=hard?.indent ?? 0;
+          group.text=group.text.slice(0,left)+next.text.slice(indent);
+          group.cells=group.cells.slice(0,left).concat(next.cells.slice(indent));
+          group.last=row;
+        } else groups.push({text:next.text,cells:next.cells,first:row,last:row});
+      }
+      const {text,cells}=groups.find(g=>g.first<=y-1 && g.last>=y-1) || {text:'',cells:[]};
+      return candidates(text).flatMap(item=>{
+        const a=cells[item.start],b=cells[item.end-1];
+        if(!a || !b) return [];
+        const last=buffer.getLine(b.y-1)?.getCell(b.x-1);
+        const range={start:a,end:{x:b.x+Math.max(0,(last?.getWidth()||1)-1),y:b.y}};
+        return range.start.y<=y && range.end.y>=y ? [{text:item.text,range}] : [];
+      });
+  }
   function install(terminal,screen,onOpen) {
     let osc=null;
     let painted=true;
     terminal.onRender(()=>{painted=true;});
     terminal.options.linkHandler={allowNonHttpProtocols:true,
       activate:(_e,uri)=>onOpen(uri),hover:(_e,uri,range)=>{osc={text:uri,range};},leave:()=>{osc=null;}};
-    function links(y) {
-      const buffer=terminal.buffer.active;
-      let start=y-1,end=y-1;
-      while(start>0 && y-1-start<8 && buffer.getLine(start)?.isWrapped) start--;
-      while(end+1<buffer.length && end-start<8 && buffer.getLine(end+1)?.isWrapped) end++;
-      let text='',cells=[];
-      for(let row=start;row<=end;row++) {
-        const line=buffer.getLine(row);
-        if(!line) break;
-        for(let col=0;col<terminal.cols;col++) {
-          const cell=line.getCell(col);
-          if(!cell || cell.getWidth()===0) continue;
-          const chars=cell.getChars() || ' ';
-          for(let i=0;i<chars.length;i++) cells.push({x:col+1,y:row+1});
-          text+=chars;
-          if(text.length>8192) return [];
-        }
-      }
-      return candidates(text).flatMap(item=>{
-        const a=cells[item.start],b=cells[item.end-1];
-        if(!a || !b) return [];
-        const last=buffer.getLine(b.y-1)?.getCell(b.x-1);
-        const range={start:a,end:{x:b.x+Math.max(0,(last?.getWidth()||1)-1),y:b.y}};
-        return [{text:item.text,range,activate:()=>onOpen(item.text)}];
-      });
-    }
+    const links=y=>linksForRow(terminal,y).map(link=>({...link,activate:()=>onOpen(link.text)}));
     terminal.registerLinkProvider({provideLinks:(y,cb)=>cb(links(y))});
     function at(range,col,row) {
       const p=row*terminal.cols+col;
@@ -77,6 +104,6 @@
       }
     };
   }
-  root.TerminalLinks={candidates,install};
+  root.TerminalLinks={candidates,linksForRow,install};
   if(typeof module!=='undefined') module.exports=root.TerminalLinks;
 })(globalThis);

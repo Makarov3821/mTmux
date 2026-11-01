@@ -115,6 +115,12 @@ class PreviewInteractionTest {
             assertNull(cache.read(folded))
             assertEquals(before,prefs.getString("probe:${folded.id}",null))
             assertFalse(cache.shouldRefresh(visible))
+            compose.waitUntil(5000) {
+                compose.onAllNodesWithTag("home-pull-refresh").fetchSemanticsNodes().single().config[SemanticsProperties.StateDescription]!=
+                    isolated.getString(R.string.home_pull_refreshing)
+            }
+            compose.onNodeWithText("Refresh finished. Check server cards for results.").assertDoesNotExist()
+            compose.onNodeWithText("刷新结束，请查看各服务器卡片的结果。").assertDoesNotExist()
         } finally {
             pool.close();store.delete(visible.id);store.delete(folded.id);organization.deleteFolder(folder.id)
         }

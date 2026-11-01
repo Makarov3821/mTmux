@@ -532,8 +532,6 @@
     <string name="home_pull_hint">Pull to refresh expanded groups</string>
     <string name="home_pull_release">Release to refresh</string>
     <string name="home_pull_refreshing">Refreshing expanded groups</string>
-    <string name="home_pull_no_targets">No servers in expanded groups to refresh</string>
-    <string name="home_pull_finished">Refresh finished. Check server cards for results.</string>
     <string name="preview_title">File preview</string>
     <string name="preview_not_found">File not found. Check the base directory and SFTP path.</string>
     <string name="preview_permission">The SSH user does not have permission to read this file.</string>

@@ -71,3 +71,18 @@
 验证：新增 3 项 JVM 路径/HTML 属性重写测试、2 项 Node 映射测试均通过。两版 app JVM 各 44/44、网页单测 9/9、两版 Debug 构建及 lint 通过。`PreviewInteractionTest` 全类真实 Android 5/5，0 skip，覆盖此前 4 项和新增绝对路径用例；后者通过真实 SSH/SFTP 加载包含中文、空格和 `#` 的图片，检查 Markdown 多种 URI 的 naturalWidth，以及静态 HTML 中绝对路径绿图和 file URI 蓝图的实际像素。
 
 同一 Android 用例同时确认未知主机、越界绝对路径和指向范围外的符号链接不显示图片；整个流程仅一次 SSH 握手，关闭后 exec 仍可执行。原始结果在 `.tools/diagnostics/matrix/absolute-preview-20261101/`，构建记录在 `.tools/absolute-preview-checks.log`。本轮采用 google_apis API 35 / Google WebView 124，没有把桌面浏览器结果当 Android 验证。
+
+## 0.9.3-rc.4 反馈：刷新提示与终端链接命中
+
+基于已发布的 `cc31105` 修改，尚未另行发布。
+
+- 删除下拉刷新完成/没有目标时写入全局危险提示栏的消息；保留刷新图标、动画和每台服务器自己的状态、错误及指纹提示。
+- 提取基于公开 buffer API 的 `linksForRow`，去掉中文宽字符折行留下的行尾空占位，保留实际字符到终端格子的映射。旧逻辑在回归样例中只得到中文路径的后半段。
+- 除 xterm 自动折行外，兼容 Agent/TUI 在右边界附近显式换行并添加续行缩进的路径和网址；拼接后再识别链接，不先把第一行当成完整 URL。保留空行、独立链接边界、8 KiB 限制与有限行扫描，不将整段终端文本去空白合并。缺少 OSC 8 元数据时，显式换行只能根据可见布局判断，无法任意还原 Agent 已丢弃的文本。
+- 点击仍优先消费本地链接，不发送远端鼠标点击、不请求键盘；拖动、长按、连接变化或手指下内容变化继续按原有规则处理，不修改服务器 tmux 配置。
+
+验证：Node 11/11；实际打包终端的桌面 Chromium 点击回归通过，覆盖用户提供的 `docs/design/code-review.md`、图片、中文宽字符长路径以及显式换行网址/路径两侧的点击，同时断言没有 input/binaryInput/focusInput。桌面仍采用 file origin，不代替 Android。
+
+Android API 35 / Google WebView 124：原有预览与首页下拉刷新 5/5，0 skip；新增 MainActivity + 真实 SSH/tmux 用例通过普通相对路径、图片及带缩进硬换行路径，实际打开远端预览并确认 IME 关闭。结果分别在 `.tools/diagnostics/matrix/link-taps-20261101/PreviewInteractionTest/` 和 `.tools/diagnostics/matrix/link-taps-delivery-20261101/`。两版 app JVM 各 44/44、两版 Debug 构建与 lint 通过，构建记录 `.tools/link-fix-checks.log`。
+
+失败记录没有删除：沙箱内隔离 sshd 的 PTY 在 verifyResume 前断开，宿主 SSH PTY 对照同样失败，沙箱外对照正常，因此完整终端点击用例在沙箱外运行，仍只用临时密钥、loopback sshd 和独立 tmux socket。新增测试的动态画面曾在输入文件写完前读取到空文件；改为先写临时帧再原子重命名，并等待确切的新终端内容及 visual state callback 后点击。此前轮次保留在 `link-taps-diagnose/connection/wrapped/final/frame-20261101` 等独立目录，不计为最终通过结果。

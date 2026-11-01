@@ -319,6 +319,32 @@ try {
   await feed('\x1b[Hother.md','link-redrawn');
   await touch('touchend',point.x,point.y);
   assert.equal(await page.evaluate(()=>events.filter(e=>e[0]==='openLink').length),opened,'redraw under finger must cancel link activation');
+  await page.setViewportSize({width:280,height:500});
+  await page.evaluate(()=>{terminal.reset();setFont(14);});
+  async function assertLinkTap(output,expected,row,col=3) {
+    await page.evaluate(()=>terminal.reset());
+    await feed('\x1b[?1003h\x1b[?1006h'+output,'tap-'+expected+'-'+row);
+    const tap=await page.evaluate(([row,col])=>{
+      const r=screen.getBoundingClientRect();
+      return {x:r.x+(col-.5)*r.width/terminal.cols,y:r.y+(row-.5)*r.height/terminal.rows};
+    },[row,col]);
+    const before=await page.evaluate(()=>events.length);
+    await touch('touchstart',tap.x,tap.y);await touch('touchend',tap.x,tap.y);
+    const emitted=await page.evaluate(n=>events.slice(n),before);
+    assert.deepEqual(emitted.filter(e=>e[0]==='openLink').map(e=>e[2]),[expected],JSON.stringify({output,row,col,emitted}));
+    assert.equal(emitted.filter(e=>['input','binaryInput','focusInput'].includes(e[0])).length,0,'link tap must not summon keyboard or click the Agent');
+  }
+  await assertLinkTap('  docs/design/code-review.md','docs/design/code-review.md',1,12);
+  await assertLinkTap('  assets/image.png','assets/image.png',1,8);
+  const cols=await page.evaluate(()=>terminal.cols);
+  const longFile='docs/'+ '文'.repeat(cols)+'.md';
+  await assertLinkTap('  '+longFile,longFile,2,8);
+  const urlFirst='  https://a.b.'.padEnd(cols-2,'c');
+  const urlRest='d.example/path?q=1';
+  for(const row of [1,2]) await assertLinkTap(urlFirst+'\r\n  '+urlRest,urlFirst.trimStart()+urlRest,row,8);
+  const pathFirst='  docs/'.padEnd(cols-2,'x');
+  const pathRest='/design/code-review.md';
+  for(const row of [1,2]) await assertLinkTap(pathFirst+'\r\n  '+pathRest,pathFirst.trimStart()+pathRest,row,8);
   assert.deepEqual(errors, []);
   console.log('PASS: bundled xterm page, native bridge callbacks, UTF-8, paste preview protocol, stale/offline tokens, bracketed paste, resize, touch wheel/click and binary mouse protocols');
 } finally {

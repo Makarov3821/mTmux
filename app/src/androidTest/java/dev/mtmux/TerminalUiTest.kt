@@ -1216,6 +1216,97 @@ class TerminalUiTest {
         disconnectFixture()
     }
 
+    @Test fun codexStyleFilePathsOpenRemotePreviewsWithoutFocusingTheIme() {
+        val args=InstrumentationRegistry.getArguments()
+        assumeTrue("Use scripts/test_ssh.py --android",args.containsKey("fixtureTmux"))
+        val port=args.getString("fixturePort")!!.toInt()
+        val path=args.getString("fixtureTmux")!!
+        val login=Login("127.0.0.1",port,args.getString("fixtureUser")!!,"",Base64.getDecoder().decode(args.getString("fixtureKey")))
+        val controller=dev.mtmux.core.SshClient(object:dev.mtmux.core.PinStore {
+            override fun get(endpoint:String)=args.getString("fixtureHostKey")
+        })
+        controller.connect(login)
+        val folder=controller.exec("mktemp -d /tmp/mtmux-link-taps-XXXXXX").output.trim()
+        val quote=dev.mtmux.core.Tmux::quote
+        val tmux=quote(path)+" -u"
+        try {
+            assertEquals(0,controller.exec("mkdir -p "+quote("$folder/docs/design")+" "+quote("$folder/assets")).status)
+            assertEquals(0,controller.exec("cat > "+quote("$folder/docs/design/code-review.md"),"# Clicked from terminal\n".toByteArray()).status)
+            val bitmap=Bitmap.createBitmap(8,8,Bitmap.Config.ARGB_8888).apply {eraseColor(Color.GREEN)}
+            val image=java.io.ByteArrayOutputStream().also {bitmap.compress(Bitmap.CompressFormat.PNG,100,it);bitmap.recycle()}.toByteArray()
+            assertEquals(0,controller.exec("cat > "+quote("$folder/assets/image.png"),image).status)
+            val output="\u001b[2J\u001b[H\u001b[4;32m  docs/design/code-review.md\u001b[0m\r\n  assets/image.png\r\n"
+            val frame=quote("$folder/frame")
+            val command="printf '%s' "+quote(output)+"; while sleep 0.1; do if [ -f $frame ]; then cat -- $frame; rm -f -- $frame; fi; done"
+            assertEquals(0,controller.exec("$tmux respawn-pane -k -t '%0' -c "+quote(folder)+" "+quote(command)).status)
+            showTerminalForFixture()
+            val view=terminal()
+            compose.waitUntil(30000) {evaluate(view,"typeof window.receive")=="\"function\""}
+            compose.runOnUiThread {
+                compose.activity.getSharedPreferences("host-pins",0).edit().putString("[127.0.0.1]:$port",args.getString("fixtureHostKey")).commit()
+                MainActivity::class.java.getDeclaredMethod("connect",Login::class.java,String::class.java,String::class.java,Boolean::class.javaPrimitiveType)
+                    .apply {isAccessible=true}.invoke(compose.activity,login,path,"$0",false)
+            }
+            fun failure():Throwable? {
+                var result:Throwable?=null
+                compose.runOnUiThread {
+                    val state=MainActivity::class.java.getDeclaredField("connectFailure\$delegate").apply {isAccessible=true}.get(compose.activity)
+                    result=(state as androidx.compose.runtime.State<*>).value as? Throwable
+                }
+                return result
+            }
+            try {compose.waitUntil(30000) {failure()?.let {throw AssertionError("Link fixture connection: "+diagnosticReason(it),it)}
+                evaluate(view,"connected")=="true" && evaluate(view,"terminalSnapshot().text").contains("code-review.md")}}
+            catch(error:Throwable) {
+                throw AssertionError("Link fixture did not attach: failure="+failure()?.let {diagnosticReason(it)}+" connected="+evaluate(view,"connected")+" screen="+evaluate(view,"terminalSnapshot().text")+
+                    " pane="+controller.exec("$tmux capture-pane -p -t '%0'").output,error)
+            }
+            hideKeyboard()
+            fun clickText(text:String) {
+                val literal=org.json.JSONObject.quote(text)
+                val position=org.json.JSONObject(org.json.JSONTokener(evaluate(view,"JSON.stringify((()=>{const b=terminal.buffer.active;for(let y=b.viewportY;y<b.viewportY+terminal.rows;y++){const line=b.getLine(y);for(let x=0;x<terminal.cols;x++){if(line.translateToString(false,x).startsWith($literal)){const r=screen.getBoundingClientRect();return {x:r.x+(x+2.5)*r.width/terminal.cols,y:r.y+(y-b.viewportY+.5)*r.height/terminal.rows,scale:devicePixelRatio};}}}})())")).nextValue().toString())
+                compose.onNodeWithTag("terminal-webview").performTouchInput {click(androidx.compose.ui.geometry.Offset(
+                    (position.getDouble("x")*position.getDouble("scale")).toFloat(),(position.getDouble("y")*position.getDouble("scale")).toFloat()))}
+            }
+            clickText("docs/design/code-review.md")
+            compose.waitUntil(20000) {compose.onAllNodesWithTag("preview-webview").fetchSemanticsNodes().isNotEmpty()}
+            compose.runOnUiThread {assertFalse("File tap must not show the keyboard",ViewCompat.getRootWindowInsets(view)?.isVisible(WindowInsetsCompat.Type.ime())==true)}
+            saveScreenshot("terminal-file-tap-markdown")
+            compose.onNodeWithContentDescription(compose.activity.getString(R.string.common_close)).performClick()
+            clickText("assets/image.png")
+            compose.waitUntil(20000) {compose.onAllNodesWithTag("preview-image").fetchSemanticsNodes().isNotEmpty()}
+            compose.runOnUiThread {assertFalse("Image tap must not show the keyboard",ViewCompat.getRootWindowInsets(view)?.isVisible(WindowInsetsCompat.Type.ime())==true)}
+            saveScreenshot("terminal-file-tap-image")
+            compose.onNodeWithContentDescription(compose.activity.getString(R.string.common_close)).performClick()
+            // Keep the pane process/identity, but paint an indented hard wrap like a TUI.
+            val cols=evaluate(view,"terminal.cols").toInt()
+            val first="  docs/".padEnd(cols-2,'x')
+            val relative=first.trimStart()+"/code-review.md"
+            assertEquals(0,controller.exec("mkdir -p "+quote("$folder/"+first.trimStart())).status)
+            assertEquals(0,controller.exec("cat > "+quote("$folder/$relative"),"# Wrapped file click\n".toByteArray()).status)
+            val nextFrame=quote("$folder/frame.next")
+            assertEquals(0,controller.exec("cat > $nextFrame && mv -- $nextFrame $frame",("\u001b[2J\u001b[H"+first+"\r\n  /code-review.md").toByteArray()).status)
+            try {compose.waitUntil(10000) {evaluate(view,"terminalSnapshot().text").contains(first.trimStart())}}
+            catch(error:Throwable) {
+                throw AssertionError("Wrapped frame missing: cols=$cols snapshot="+evaluate(view,"terminalSnapshot().text")+
+                    " pane="+controller.exec("$tmux capture-pane -p -t '%0'").output+
+                    " size="+controller.exec("$tmux display-message -p -t '%0' '#{pane_width}:#{pane_height}:#{pane_dead}'").output+
+                    " frame="+controller.exec("test -f $frame && cat $frame").output,error)
+            }
+            val painted=CountDownLatch(1)
+            compose.runOnUiThread {view.postVisualStateCallback(1,object:WebView.VisualStateCallback() {
+                override fun onComplete(requestId:Long) {painted.countDown()}
+            })}
+            assertTrue("Updated terminal frame did not paint",painted.await(10,TimeUnit.SECONDS))
+            clickText("/code-review.md")
+            compose.waitUntil(20000) {compose.onAllNodesWithTag("preview-webview").fetchSemanticsNodes().isNotEmpty()}
+            compose.runOnUiThread {assertFalse(ViewCompat.getRootWindowInsets(view)?.isVisible(WindowInsetsCompat.Type.ime())==true)}
+            saveScreenshot("terminal-file-tap-wrapped")
+            compose.onNodeWithContentDescription(compose.activity.getString(R.string.common_close)).performClick()
+            disconnectFixture()
+        } finally {controller.exec("rm -rf -- "+quote(folder));controller.close()}
+    }
+
     private fun connectFixtureShell(args: android.os.Bundle): TerminalView {
         val port = args.getString("fixturePort")!!.toInt()
         showTerminalForFixture()

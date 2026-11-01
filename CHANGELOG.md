@@ -2,6 +2,14 @@
 
 版本号不代表完整真机验收。每个版本的实现细节、验证结果、截图与 APK SHA-256 见对应的「详细记录」；测试证据在 [docs/evidence/](docs/evidence/)。文档目录说明见 [docs/README.md](docs/README.md)。
 
+## [0.9.3-rc.5] — 2026-11-01 · versionCode 43 · Pre-release
+
+详细记录：[0.9.3-rc.5](docs/releases/0.9.3-rc.5.md)。
+
+- 去掉首页下拉刷新结束后的全局红色提示，由各服务器卡片显示刷新结果。
+- 修复中文宽字符折行和 Agent/TUI 显式换行导致的文件路径漏识别、HTTPS 链接截断；保留终端格子映射，链接点击不发送远端鼠标点击或弹出键盘。
+- 增加真实 SSH/tmux 的 Android 点击回归，覆盖普通相对路径、图片及跨行路径打开远端预览。
+
 ## [0.9.3-rc.4] — 2026-11-01 · versionCode 42 · Pre-release
 
 详细记录：[0.9.3-rc.4](docs/releases/0.9.3-rc.4.md)。

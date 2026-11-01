@@ -522,8 +522,6 @@
     <string name="home_pull_hint">下拉刷新已展开分组</string>
     <string name="home_pull_release">松开刷新</string>
     <string name="home_pull_refreshing">正在刷新已展开分组</string>
-    <string name="home_pull_no_targets">已展开分组中没有可刷新的服务器</string>
-    <string name="home_pull_finished">刷新结束，请查看各服务器卡片的结果。</string>
     <string name="preview_title">文件预览</string>
     <string name="preview_not_found">文件不存在，请检查基准目录及 SFTP 路径。</string>
     <string name="preview_permission">当前 SSH 用户没有读取此文件的权限。</string>

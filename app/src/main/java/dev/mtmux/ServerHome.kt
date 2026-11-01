@@ -247,7 +247,6 @@ private class HomeRefresh {
                     refreshes[profile.id]?.finished
                 }
                 waiting.forEach { it.await() }
-                message=uiText(if(selected.isEmpty()) R.string.home_pull_no_targets else R.string.home_pull_finished)
             } finally { pullRefreshing=false }
         }
     }
