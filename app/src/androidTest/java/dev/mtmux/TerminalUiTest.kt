@@ -353,7 +353,9 @@ class TerminalUiTest {
         var session=""
         try {
             client.connect(dev.mtmux.core.Login(profile.host,profile.port,profile.user,"",key))
-            session=client.exec("$tmux new-session -d -P -F '#{session_id}' -s phone-status-fixture 'printf \"Reply complete\\n› Ask Codex to do anything\\nGPT-6-Astra medium · ~/project  ⚠ 5 · f2\\n\"; sleep 120'").output.trim()
+            // A supplied window name disables tmux automatic-rename: the two discovery calls
+            // must compare the same fixture, not a startup transition from bash to sleep.
+            session=client.exec("$tmux new-session -d -P -F '#{session_id}' -s phone-status-fixture -n status-fixture 'printf \"Reply complete\\n› Ask Codex to do anything\\nGPT-6-Astra medium · ~/project  ⚠ 5 · f2\\n\"; sleep 120'").output.trim()
             assertTrue(session.startsWith("$"))
             Thread.sleep(250)
             val tasks=client.discoverTasks(profile,args.getString("fixtureHostKey")!!).filter {it.binding?.session==session}
@@ -1393,8 +1395,18 @@ class TerminalUiTest {
             compose.onNodeWithTag("editor-folder").performScrollTo().assertTextContains("未分组",substring=true).performClick()
             compose.onNodeWithTag("editor-folder-${folder.id}").performClick()
             compose.onNodeWithTag("editor-folder").assertTextContains("工作",substring=true)
-            compose.onNodeWithTag("jump-enabled").performScrollTo().performClick()
-            compose.waitUntil(10000){compose.onAllNodesWithTag("jump-from-saved").fetchSemanticsNodes().isNotEmpty()}
+            // The dropdown owns a separate window. Finish dismissing it and the IME before
+            // scrolling/tapping the switch, so its physical click uses settled coordinates.
+            compose.waitUntil(10000){compose.onAllNodesWithTag("editor-folder-${folder.id}").fetchSemanticsNodes().isEmpty()}
+            hideKeyboard()
+            try {
+                compose.onNodeWithTag("jump-enabled").performScrollTo().assertIsOff().performClick().assertIsOn()
+                compose.waitUntil(10000){compose.onAllNodesWithTag("jump-from-saved").fetchSemanticsNodes().isNotEmpty()}
+            } catch(error:Throwable) {
+                println("JUMP_IMPORT_FAILURE\n"+compose.onRoot(useUnmergedTree=true).printToString())
+                saveScreenshot("failure-editor-jump-switch")
+                throw error
+            }
             compose.onNodeWithTag("jump-from-saved").performScrollTo().performClick()
             compose.onNodeWithTag("jump-pick-${saved.id}").assertTextContains("已存跳板",substring=true).performClick()
             // Blank hop from the switch is replaced; imported hops are collapsed summaries.

@@ -162,7 +162,8 @@ class PreviewInteractionTest {
             compose.waitUntil(20000) {webView()!=null && eval("document.querySelector('h1')?.textContent")=="\"Remote preview\"" &&
                 eval("document.querySelector('img')?.naturalWidth")=="8"}
             val restoredFrame=CountDownLatch(1)
-            compose.runOnUiThread {webView()!!.postVisualStateCallback(20,object:WebView.VisualStateCallback() {
+            val restoredView=webView()!!
+            compose.runOnUiThread {restoredView.postVisualStateCallback(20,object:WebView.VisualStateCallback() {
                 override fun onComplete(requestId:Long) {restoredFrame.countDown()}
             })}
             assertTrue("Restored document did not paint before the link tap",restoredFrame.await(10,TimeUnit.SECONDS))
