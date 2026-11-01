@@ -2,6 +2,12 @@
 
 版本号不代表完整真机验收。每个版本的实现细节、验证结果、截图与 APK SHA-256 见对应的「详细记录」；测试证据在 [docs/evidence/](docs/evidence/)。文档目录说明见 [docs/README.md](docs/README.md)。
 
+## [0.9.3-rc.3] — 2026-11-01 · versionCode 41 · Pre-release
+
+详细记录：[0.9.3-rc.3](docs/releases/0.9.3-rc.3.md)。
+
+- 快捷键文字 12sp；翻页点上移并在闲置 5 秒后隐藏；设置去掉语音一节。
+
 ## [0.9.3-rc.2] — 2026-11-01 · versionCode 40 · Pre-release
 
 详细记录：[0.9.3-rc.2](docs/releases/0.9.3-rc.2.md)。
