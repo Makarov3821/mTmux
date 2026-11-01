@@ -2,6 +2,14 @@
 
 版本号不代表完整真机验收。每个版本的实现细节、验证结果、截图与 APK SHA-256 见对应的「详细记录」；测试证据在 [docs/evidence/](docs/evidence/)。文档目录说明见 [docs/README.md](docs/README.md)。
 
+## [0.9.3-rc.4] — 2026-11-01 · versionCode 42 · Pre-release
+
+详细记录：[0.9.3-rc.4](docs/releases/0.9.3-rc.4.md)。
+
+- 新增终端内远端 Markdown、静态 HTML 与图片预览，图片支持缩放/拖动；复用当前 SSH 的 SFTP 通道读取，关闭后清理临时文件，外部网页交系统浏览器。
+- 文档图片和子文档支持相对路径、远端绝对路径及当前主机的 file URI，继续限制读取范围、文件大小和图片像素。
+- 修复快捷键分页亮点方向；首页到顶下拉可主动刷新，附主题刷新图标与动画，仍遵守折叠分组限制。
+
 ## [0.9.3-rc.3] — 2026-11-01 · versionCode 41 · Pre-release
 
 详细记录：[0.9.3-rc.3](docs/releases/0.9.3-rc.3.md)。

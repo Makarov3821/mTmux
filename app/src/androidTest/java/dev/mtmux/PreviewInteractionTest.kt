@@ -185,7 +185,69 @@ class PreviewInteractionTest {
             assertEquals("still-alive",connection.exec("printf still-alive").output)
         } finally {connection.exec("rm -rf -- "+Tmux.quote(directory));connection.close()}
     }
-    private fun saveImage(name:String):Int {
+    @Test fun absoluteAndFileUriImagesRenderFromTheSameRemoteInMarkdownAndStaticHtml() {
+        val args=InstrumentationRegistry.getArguments()
+        assumeTrue("Use scripts/test_ssh.py --android",args.containsKey("fixturePort"))
+        val connection=SshClient(object:PinStore {override fun get(endpoint:String)=args.getString("fixtureHostKey")})
+        var handshakes=0
+        connection.observe {if(it.phase==ConnectionPhase.TCP_CONNECT && it.result==TraceResult.OK) handshakes++}
+        connection.connect(Login("127.0.0.1",args.getString("fixturePort")!!.toInt(),args.getString("fixtureUser")!!,"",
+            Base64.getDecoder().decode(args.getString("fixtureKey"))))
+        val directory=connection.exec("mktemp -d /tmp/mtmux-absolute-test-XXXXXX").output.trim()
+        val outside=connection.exec("mktemp -d /tmp/mtmux-absolute-outside-XXXXXX").output.trim()
+        try {
+            fun put(path:String,bytes:ByteArray) {assertEquals(0,connection.exec("cat > "+Tmux.quote(path),bytes).status)}
+            fun image(color:Int):ByteArray {
+                val bitmap=android.graphics.Bitmap.createBitmap(8,8,android.graphics.Bitmap.Config.ARGB_8888).apply {eraseColor(color)}
+                return java.io.ByteArrayOutputStream().also {bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it);bitmap.recycle()}.toByteArray()
+            }
+            val imagePath="$directory/绝对 path #.png"
+            val encoded=java.net.URI(null,null,imagePath,null).toASCIIString()
+            val blueEncoded=java.net.URI(null,null,"$directory/blue.png",null).toASCIIString()
+            put(imagePath,image(android.graphics.Color.GREEN))
+            put("$directory/blue.png",image(android.graphics.Color.BLUE))
+            put("$outside/outside.png",image(android.graphics.Color.GREEN))
+            assertEquals(0,connection.exec("ln -s "+Tmux.quote("$outside/outside.png")+" "+Tmux.quote("$directory/escape.png")).status)
+            put("$directory/readme.md",("# Absolute Markdown\n\n"+
+                "![absolute]($encoded)\n\n![file](file://$encoded)\n\n![localhost](file://localhost$encoded)\n\n"+
+                "![same-host](file://127.0.0.1$encoded)\n\n<img alt='entity' src='file&#58;//$encoded'>\n\n"+
+                "![foreign](file://different.example$encoded)\n\n![outside]($outside/outside.png)\n\n![escape]($directory/escape.png)").toByteArray())
+            put("$directory/static.html",("<title>Absolute HTML</title><h1>Absolute HTML</h1>"+
+                "<img src='$encoded'><img src='file&#58;//$blueEncoded'>"+
+                "<script>document.title='UNSAFE'</script>").toByteArray())
+            var target by mutableStateOf("$directory/readme.md")
+            var showing by mutableStateOf(true)
+            compose.setContent {MaterialTheme(colorScheme=appColors(true,AppPalette.TOKYO)) {
+                if(showing) key(target) {FilePreviewDialog(PreviewRequest(target,"absolute-fixture",connection,null,"tmux","Fixture",host="127.0.0.1"),{showing=false},{fail("Unexpected browser launch")})}
+            }}
+            compose.waitUntil(30000) {webView()!=null && eval("document.querySelector('h1')?.textContent")=="\"Absolute Markdown\""}
+            compose.waitUntil(15000) {eval("['absolute','file','localhost','same-host','entity'].every(alt=>document.querySelector('img[alt=\"'+alt+'\"]').naturalWidth===8)")=="true"}
+            assertEquals("true",eval("['absolute','file','localhost','same-host','entity'].every(alt=>document.querySelector('img[alt=\"'+alt+'\"]').src.startsWith('https://preview.mtmux.invalid/'))"))
+            assertEquals("null",eval("document.querySelector('img[alt=foreign]').getAttribute('src')"))
+            assertEquals("true",eval("['outside','escape'].every(alt=>document.querySelector('img[alt=\"'+alt+'\"]').naturalWidth===0)"))
+            saveImage("absolute-markdown")
+            compose.runOnIdle {target="$directory/static.html"}
+            compose.waitUntil(20000) {
+                val view=webView();var title:String?=null
+                if(view!=null) compose.runOnUiThread {title=view.title}
+                title=="Absolute HTML"
+            }
+            val htmlView=webView()!!
+            compose.runOnUiThread {assertFalse(htmlView.settings.javaScriptEnabled)}
+            val painted=CountDownLatch(1)
+            compose.runOnUiThread {htmlView.postVisualStateCallback(2,object:WebView.VisualStateCallback() {
+                override fun onComplete(requestId:Long) {painted.countDown()}
+            })}
+            assertTrue(painted.await(10,TimeUnit.SECONDS))
+            saveImage("absolute-html",intArrayOf(android.graphics.Color.BLUE))
+            compose.onNodeWithContentDescription(compose.activity.getString(R.string.common_close)).performClick()
+            compose.waitUntil(5000) {!showing}
+            assertEquals("alive",connection.exec("printf alive").output)
+            assertEquals(1,handshakes)
+        } finally {connection.exec("rm -rf -- "+Tmux.quote(directory)+" "+Tmux.quote(outside));connection.close()}
+    }
+
+    private fun saveImage(name:String,extraColors:IntArray=intArrayOf()):Int {
         compose.waitForIdle()
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         Thread.sleep(750) // SurfaceFlinger and Dialog transitions are not driven by Compose's clock.
@@ -196,6 +258,12 @@ class PreviewInteractionTest {
         val pixels=IntArray(bitmap.width*bitmap.height)
         bitmap.getPixels(pixels,0,bitmap.width,0,0,bitmap.width,bitmap.height)
         val green=pixels.count {android.graphics.Color.green(it)>180 && android.graphics.Color.red(it)<40 && android.graphics.Color.blue(it)<40}
+        for(color in extraColors) {
+            val count=pixels.count {kotlin.math.abs(android.graphics.Color.red(it)-android.graphics.Color.red(color))<20 &&
+                kotlin.math.abs(android.graphics.Color.green(it)-android.graphics.Color.green(color))<20 &&
+                kotlin.math.abs(android.graphics.Color.blue(it)-android.graphics.Color.blue(color))<20}
+            assertTrue("$name did not paint expected color $color (pixels=$count)",count>8)
+        }
         bitmap.recycle()
         assertTrue("$name did not paint its green fixture image (pixels=$green)",green>8)
         return green

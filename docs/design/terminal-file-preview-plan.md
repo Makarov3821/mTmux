@@ -211,3 +211,7 @@ HTTP(S) 只在用户明确激活时交给系统 ACTION_VIEW；缺少可用浏览
 - 实际 Android WebView 内测试独立资源 origin、渲染及请求拦截；桌面 Chromium 和离线合成图不能替代此验收。
 
 本轮同时排期的分页指示点与首页下拉刷新见[终端与首页交互修复计划](terminal-and-home-interaction-plan.md)，与文件预览传输/渲染分开验收。
+
+### 基础提交后的补充：绝对路径图片
+
+基础实现已固定为 `881eb94`。按后续用户要求，补齐 Markdown 和静态 HTML 的普通绝对路径 / file URI 图片映射；沿用当前 SSH、目录及资源上限，不访问手机文件、不自动扩展目录范围。实际支持形式与 Android 验证见[实现记录](../testing/terminal-file-preview.md)中的绝对路径章节。

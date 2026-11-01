@@ -586,7 +586,7 @@ class MainActivity : AppCompatActivity() {
                         } else client?.let {connection ->
                             hideVoiceKeyboard()
                             preview=PreviewRequest(if(parsed.scheme=="file") parsed.path.orEmpty() else normalized,token,connection,replyPane,connectedPath,
-                                activeProfile?.let {privacySettings.label(it,privacyDisplay)} ?: getString(R.string.terminal_current_server))
+                                activeProfile?.let {privacySettings.label(it,privacyDisplay)} ?: getString(R.string.terminal_current_server),host=activeProfile?.host)
                         }
                     }
                     else -> status=TerminalStatus(uiText(R.string.preview_unsupported),alert=true)

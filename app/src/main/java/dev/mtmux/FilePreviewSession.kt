@@ -10,13 +10,14 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
 internal data class PreviewRequest(val target: String, val token: String, val connection: SshClient,
-    val binding: PaneBinding?, val tmux: String, val server: String)
+    val binding: PaneBinding?, val tmux: String, val server: String, val host: String? = null)
 internal data class PreviewDocument(val path: String, val root: String, val file: File,
     val kind: RemoteFilePaths.Kind, val text: String?, val url: String)
 
 /** Private bounded cache for one visible preview. All transfers are serialized by RemoteFiles. */
 internal class FilePreviewSession(context: Context, private val request: PreviewRequest) : AutoCloseable {
     val id=UUID.randomUUID().toString()
+    val host=request.host
     private val trace=id.hashCode()
     private val access=request.connection.remoteFiles()
     private val directory=File(context.cacheDir,"preview/$id").apply { active.add(absolutePath);mkdirs() }

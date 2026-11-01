@@ -19,11 +19,14 @@ internal class FilePreviewWebView(context:Context, private val session:FilePrevi
     private val root=Uri.parse(document.url).path!!.substringBefore("/remote/")
     private val assets="https://${FilePreviewSession.HOST}$root/assets/"
     private val markdown=document.kind==RemoteFilePaths.Kind.MARKDOWN
+    private val paths=PreviewResourceUrls(document.url,session.host)
     private fun css(color:Color)="#%06x".format(java.util.Locale.ROOT,color.toArgb() and 0xffffff)
     private val policy="default-src 'none'; img-src 'self'; style-src 'self' 'unsafe-inline'; script-src ${if(markdown) "'self'" else "'none'"}; connect-src 'none'; font-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'"
     private val style="""html{color-scheme:${if(colors.background.luminanceForPreview()<.5f) "dark" else "light"};background:${css(colors.surface)};color:${css(colors.onSurface)}}body{margin:0;padding:18px;font:16px/1.7 system-ui,sans-serif;overflow-wrap:anywhere}#document{max-width:850px;margin:auto}h1,h2,h3{line-height:1.35}a{color:${css(colors.primary)}}img{max-width:100%;height:auto}pre{padding:14px;border-radius:12px;overflow:auto;background:${css(colors.surfaceVariant)};white-space:pre;overflow-wrap:normal}code{font: .9em/1.6 monospace}blockquote{margin-left:0;padding-left:14px;border-left:3px solid ${css(colors.primary)};color:${css(colors.onSurfaceVariant)}}table{border-collapse:collapse;display:block;max-width:100%;overflow:auto}td,th{padding:8px;border:1px solid ${css(colors.outlineVariant)}}"""
-    private val body=if(markdown) """<main id="document"></main><script id="markdown-source" type="text/plain">${Base64.getEncoder().encodeToString(document.text!!.toByteArray(Charsets.UTF_8))}</script><script src="${assets}marked.js"></script><script src="${assets}purify.js"></script><script src="${assets}preview.js"></script>"""
-        else document.text!!
+    private val previewContext=Base64.getEncoder().encodeToString(org.json.JSONObject().put("documentUrl",document.url)
+        .put("host",session.host ?: org.json.JSONObject.NULL).toString().toByteArray(Charsets.UTF_8))
+    private val body=if(markdown) """<main id="document"></main><script id="markdown-source" type="text/plain">${Base64.getEncoder().encodeToString(document.text!!.toByteArray(Charsets.UTF_8))}</script><script id="preview-context" type="text/plain">$previewContext</script><script src="${assets}marked.js"></script><script src="${assets}purify.js"></script><script src="${assets}preview-paths.js"></script><script src="${assets}preview.js"></script>"""
+        else paths.html(document.text!!) {android.text.Html.fromHtml(it,android.text.Html.FROM_HTML_MODE_LEGACY).toString()}
     private val html="<!doctype html><html><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><style>$style</style></head><body>$body</body></html>".toByteArray(Charsets.UTF_8)
     init {
         setBackgroundColor(colors.surface.toArgb())
@@ -43,8 +46,8 @@ internal class FilePreviewWebView(context:Context, private val session:FilePrevi
                 val uri=request.url
                 if(uri.scheme=="https" && uri.host==FilePreviewSession.HOST && uri.path==Uri.parse(document.url).path && uri.fragment!=null) return false
                 if(uri.scheme in listOf("http","https") && uri.host!=FilePreviewSession.HOST) onLink(uri.toString())
-                else if(uri.scheme=="https" && uri.host==FilePreviewSession.HOST && uri.path?.startsWith("$root/remote/")==true)
-                    onLink(uri.path!!.removePrefix("$root/remote"))
+                else if(paths.remotePath(uri.scheme,uri.host,uri.path)!=null)
+                    onLink(paths.remotePath(uri.scheme,uri.host,uri.path)!!)
                 else onBlocked()
                 return true
             }
@@ -57,11 +60,11 @@ internal class FilePreviewWebView(context:Context, private val session:FilePrevi
                         uri.path==Uri.parse(document.url).path -> response("text/html",html)
                         uri.path?.startsWith("$root/assets/")==true && markdown -> {
                             val name=uri.path!!.removePrefix("$root/assets/")
-                            if(name !in listOf("marked.js","purify.js","preview.js")) return blocked()
+                            if(name !in listOf("marked.js","purify.js","preview-paths.js","preview.js")) return blocked()
                             response("text/javascript",context.assets.open("preview/$name").use {it.readBytes()})
                         }
-                        uri.path?.startsWith("$root/remote/")==true -> {
-                            val (file,kind)=session.resource(document,uri.path!!.removePrefix("$root/remote"))
+                        paths.remotePath(uri.scheme,uri.host,uri.path)!=null -> {
+                            val (file,kind)=session.resource(document,paths.remotePath(uri.scheme,uri.host,uri.path)!!)
                             if(kind==RemoteFilePaths.Kind.IMAGE) {
                                 val options=android.graphics.BitmapFactory.Options().apply {inJustDecodeBounds=true}
                                 android.graphics.BitmapFactory.decodeFile(file.path,options)
@@ -106,8 +109,8 @@ internal class FilePreviewWebView(context:Context, private val session:FilePrevi
             val handler=android.os.Handler(android.os.Looper.getMainLooper()) {message ->
                 val uri=message.data.getString("src")?.let {Uri.parse(it)}
                 if(serial==touchSerial && isAttachedToWindow && message.data.getString("url").isNullOrEmpty() &&
-                    uri!=null && uri.scheme=="https" && uri.host==FilePreviewSession.HOST && uri.path?.startsWith("$root/remote/")==true) {
-                    onLink(uri.path!!.removePrefix("$root/remote"))
+                    uri!=null && paths.remotePath(uri.scheme,uri.host,uri.path)!=null) {
+                    onLink(paths.remotePath(uri.scheme,uri.host,uri.path)!!)
                 }
                 true
             }

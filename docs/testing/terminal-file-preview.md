@@ -57,3 +57,17 @@
 `PREVIEW_OPEN / CHANNEL / RESOLVED / FIRST_BYTE / READ / READY / CLOSED / FAILED` 仅写请求编号、时间戳、开通耗时及字节数。不写文档内容、完整路径、网址参数或凭据。可以区分文件通道、读取与显示阶段，但不是完整逐字符输入时延埋点。
 
 新增部署 JS 约 80 KB 原始文件（含渲染入口），随包固定版本和许可证，不运行时下载。完整 APK 增量以同条件构建对照为准。
+
+## 2026-11-01：绝对路径图片补充
+
+先将上面的基础版提交为 `881eb94`，再单独实现本节改动。此补充尚未发版。
+
+- Markdown 与静态 HTML 的普通图片地址支持 `/home/.../image.png`、`file:///home/.../image.png`、`file://localhost/home/.../image.png`，以及 authority 匹配当前 SSH 配置主机的 file URI。
+- 地址先映射成当前文档的虚拟 HTTPS 资源，再通过原有 SFTP 通道读取；`file://` 从不交给手机本地文件系统。保留中文、空格、转义的 `#`、URL 查询/片段；百分号只解码一次。绝对路径子文档链接采用相同映射。
+- Markdown 在 DOMPurify 检查 URL 之前映射；静态 HTML 仅重写 img/src、a/href 等 URL 属性，保留其余标记及 script/style/title/注释等原始文本。静态 HTML 的 JavaScript 仍关闭。没有增加解析库或原生运行时依赖。
+- HTML/CSS 中站内根路径资源也能按远端绝对路径处理，预览内部资产和其他文档的保留路由不能变成远端文件入口。CSS `file://`、响应式 `srcset` 不在本次新增验收范围。
+- 其他主机、带账户/端口的 file URI、控制字符不转成当前服务器文件读取；既有目录 realpath、越界/符号链接、大小和像素限制继续生效。需要引用其他目录时，应由用户明确调整基准目录，不因绝对路径自动放宽范围。
+
+验证：新增 3 项 JVM 路径/HTML 属性重写测试、2 项 Node 映射测试均通过。两版 app JVM 各 44/44、网页单测 9/9、两版 Debug 构建及 lint 通过。`PreviewInteractionTest` 全类真实 Android 5/5，0 skip，覆盖此前 4 项和新增绝对路径用例；后者通过真实 SSH/SFTP 加载包含中文、空格和 `#` 的图片，检查 Markdown 多种 URI 的 naturalWidth，以及静态 HTML 中绝对路径绿图和 file URI 蓝图的实际像素。
+
+同一 Android 用例同时确认未知主机、越界绝对路径和指向范围外的符号链接不显示图片；整个流程仅一次 SSH 握手，关闭后 exec 仍可执行。原始结果在 `.tools/diagnostics/matrix/absolute-preview-20261101/`，构建记录在 `.tools/absolute-preview-checks.log`。本轮采用 google_apis API 35 / Google WebView 124，没有把桌面浏览器结果当 Android 验证。
