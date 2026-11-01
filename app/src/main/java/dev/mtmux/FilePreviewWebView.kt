@@ -19,6 +19,7 @@ internal class FilePreviewWebView(context:Context, private val session:FilePrevi
     private val root=Uri.parse(document.url).path!!.substringBefore("/remote/")
     private val assets="https://${FilePreviewSession.HOST}$root/assets/"
     private val markdown=document.kind==RemoteFilePaths.Kind.MARKDOWN
+    private val svg=document.kind==RemoteFilePaths.Kind.SVG
     private val paths=PreviewResourceUrls(document.url,session.host)
     private fun css(color:Color)="#%06x".format(java.util.Locale.ROOT,color.toArgb() and 0xffffff)
     private val policy="default-src 'none'; img-src 'self'; style-src 'self' 'unsafe-inline'; script-src ${if(markdown) "'self'" else "'none'"}; connect-src 'none'; font-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'"
@@ -26,8 +27,12 @@ internal class FilePreviewWebView(context:Context, private val session:FilePrevi
     private val previewContext=Base64.getEncoder().encodeToString(org.json.JSONObject().put("documentUrl",document.url)
         .put("host",session.host ?: org.json.JSONObject.NULL).toString().toByteArray(Charsets.UTF_8))
     private val body=if(markdown) """<main id="document"></main><script id="markdown-source" type="text/plain">${Base64.getEncoder().encodeToString(document.text!!.toByteArray(Charsets.UTF_8))}</script><script id="preview-context" type="text/plain">$previewContext</script><script src="${assets}marked.js"></script><script src="${assets}purify.js"></script><script src="${assets}preview-paths.js"></script><script src="${assets}preview.js"></script>"""
+        else if(svg) """<title>SVG preview</title><main id="svg-preview"><img src="${assets}image.svg" alt=""></main>"""
         else paths.html(document.text!!) {android.text.Html.fromHtml(it,android.text.Html.FROM_HTML_MODE_LEGACY).toString()}
-    private val html="<!doctype html><html><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><style>$style</style></head><body>$body</body></html>".toByteArray(Charsets.UTF_8)
+    // Anchor to the measured viewport; percentage/vh heights can resolve to zero
+    // while Compose is measuring a newly created WebView (as with the terminal).
+    private val vectorStyle=if(svg) "html,body{margin:0;padding:0}#svg-preview{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}#svg-preview img{width:100%;height:100%;max-width:none;object-fit:contain}" else ""
+    private val html="<!doctype html><html><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1${if(svg) ",maximum-scale=10" else ""}\"><style>$style$vectorStyle</style></head><body>$body</body></html>".toByteArray(Charsets.UTF_8)
     init {
         setBackgroundColor(colors.surface.toArgb())
         settings.javaScriptEnabled=markdown
@@ -37,6 +42,8 @@ internal class FilePreviewWebView(context:Context, private val session:FilePrevi
         settings.mixedContentMode=WebSettings.MIXED_CONTENT_NEVER_ALLOW
         settings.cacheMode=WebSettings.LOAD_NO_CACHE
         settings.builtInZoomControls=true;settings.displayZoomControls=false
+        settings.setSupportZoom(true)
+        if(svg) settings.useWideViewPort=true
         isSaveEnabled=false
         setDownloadListener { _,_,_,_,_->onBlocked() }
         webViewClient=object:WebViewClient() {
@@ -58,10 +65,12 @@ internal class FilePreviewWebView(context:Context, private val session:FilePrevi
                 return try {
                     when {
                         uri.path==Uri.parse(document.url).path -> response("text/html",html)
-                        uri.path?.startsWith("$root/assets/")==true && markdown -> {
+                        uri.path?.startsWith("$root/assets/")==true -> {
                             val name=uri.path!!.removePrefix("$root/assets/")
-                            if(name !in listOf("marked.js","purify.js","preview-paths.js","preview.js")) return blocked()
-                            response("text/javascript",context.assets.open("preview/$name").use {it.readBytes()})
+                            if(svg && name=="image.svg") response("image/svg+xml",document.file.readBytes())
+                            else if(markdown && name in listOf("marked.js","purify.js","preview-paths.js","preview.js"))
+                                response("text/javascript",context.assets.open("preview/$name").use {it.readBytes()})
+                            else blocked()
                         }
                         paths.remotePath(uri.scheme,uri.host,uri.path)!=null -> {
                             val (file,kind)=session.resource(document,paths.remotePath(uri.scheme,uri.host,uri.path)!!)
@@ -119,5 +128,5 @@ internal class FilePreviewWebView(context:Context, private val session:FilePrevi
         return handled
     }
     private fun Color.luminanceForPreview()=.2126f*red+.7152f*green+.0722f*blue
-    private fun imageMime(path:String)=when(path.substringAfterLast('.').lowercase()) {"png"->"image/png";"webp"->"image/webp";else->"image/jpeg"}
+    private fun imageMime(path:String)=when(path.substringAfterLast('.').lowercase()) {"png"->"image/png";"webp"->"image/webp";"svg"->"image/svg+xml";else->"image/jpeg"}
 }

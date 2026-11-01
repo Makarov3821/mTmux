@@ -1303,6 +1303,22 @@ class TerminalUiTest {
             compose.runOnUiThread {assertFalse(ViewCompat.getRootWindowInsets(view)?.isVisible(WindowInsetsCompat.Type.ime())==true)}
             saveScreenshot("terminal-file-tap-wrapped")
             compose.onNodeWithContentDescription(compose.activity.getString(R.string.common_close)).performClick()
+            val report="2nd/tackle-1/batch/reports/index.html"
+            assertEquals(0,controller.exec("mkdir -p "+quote("$folder/2nd/tackle-1/batch/reports")).status)
+            assertEquals(0,controller.exec("cat > "+quote("$folder/$report"),"<title>Report from terminal</title><h1>Report from terminal</h1>".toByteArray()).status)
+            val reportOutput="\u001b[2J\u001b[Hbatch)，可以查看处理报告 (2nd/tackle-1/\r\nbatch/reports/index.html)。"
+            assertEquals(0,controller.exec("cat > $nextFrame && mv -- $nextFrame $frame",reportOutput.toByteArray()).status)
+            compose.waitUntil(10000) {evaluate(view,"terminalSnapshot().text").contains("处理报告")}
+            val reportPainted=CountDownLatch(1)
+            compose.runOnUiThread {view.postVisualStateCallback(2,object:WebView.VisualStateCallback() {
+                override fun onComplete(requestId:Long) {reportPainted.countDown()}
+            })}
+            assertTrue(reportPainted.await(10,TimeUnit.SECONDS))
+            clickText("batch/reports/index.html")
+            compose.waitUntil(20000) {compose.onAllNodesWithTag("preview-webview").fetchSemanticsNodes().isNotEmpty()}
+            compose.runOnUiThread {assertFalse(ViewCompat.getRootWindowInsets(view)?.isVisible(WindowInsetsCompat.Type.ime())==true)}
+            saveScreenshot("terminal-file-tap-html-report")
+            compose.onNodeWithContentDescription(compose.activity.getString(R.string.common_close)).performClick()
             disconnectFixture()
         } finally {controller.exec("rm -rf -- "+quote(folder));controller.close()}
     }

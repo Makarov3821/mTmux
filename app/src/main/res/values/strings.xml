@@ -533,7 +533,7 @@
     <string name="home_pull_release">Release to refresh</string>
     <string name="home_pull_refreshing">Refreshing expanded groups</string>
     <string name="preview_title">File preview</string>
-    <string name="preview_not_found">File not found. Check the base directory and SFTP path.</string>
+    <string name="preview_not_found">File not found. Check the file path above.</string>
     <string name="preview_permission">The SSH user does not have permission to read this file.</string>
     <string name="preview_loading">Reading remote file…</string>
     <string name="preview_error">Could not read this file. Check its path, permissions and the server’s SFTP service.</string>
@@ -542,10 +542,11 @@
     <string name="preview_timeout">The file transfer timed out. You can retry.</string>
     <string name="preview_encoding">This document is not valid UTF-8.</string>
     <string name="preview_blocked">Some resources were blocked or unavailable. Preview supports static local content.</string>
-    <string name="preview_base">Base directory</string>
-    <string name="preview_base_help">Relative paths use this directory. Change it if your Agent works in another project.</string>
+    <string name="preview_edit_path">Edit file path</string>
+    <string name="preview_not_file">This path is a directory. Enter the full path to a file.</string>
+    <string name="preview_invalid_path">Enter a valid file path.</string>
     <string name="preview_retry">Open / retry</string>
-    <string name="preview_path">Remote path</string>
+    <string name="preview_path">File path</string>
     <string name="preview_image_sampled">Large image displayed at reduced resolution</string>
     <string name="preview_external_error">No browser is available. The link was copied.</string>
     <string name="preview_localhost">This address opens on your phone, not the SSH server.</string>

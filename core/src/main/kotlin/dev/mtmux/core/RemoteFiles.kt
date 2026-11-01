@@ -90,7 +90,7 @@ class RemoteFiles internal constructor(private val channel: ChannelSftp, private
 
 /** Linux remote paths; never interpreted as shell commands or local filesystem paths. */
 object RemoteFilePaths {
-    enum class Kind { MARKDOWN, HTML, IMAGE, CSS }
+    enum class Kind { MARKDOWN, HTML, IMAGE, SVG, CSS }
     fun valid(path: String): String {
         if (path.isBlank() || path.length > 8192 || path.any { it.isISOControl() }) throw RemoteFileException(FileProblem.INVALID_PATH)
         return path
@@ -99,6 +99,7 @@ object RemoteFilePaths {
         "md", "markdown" -> Kind.MARKDOWN
         "html", "htm" -> Kind.HTML
         "png", "jpg", "jpeg", "webp" -> Kind.IMAGE
+        "svg" -> Kind.SVG
         "css" -> Kind.CSS
         else -> throw RemoteFileException(FileProblem.UNSUPPORTED)
     }
@@ -116,5 +117,5 @@ object RemoteFilePaths {
         return "/" + parts.joinToString("/")
     }
     fun inside(path: String, root: String) = path == root || path.startsWith(root.trimEnd('/') + "/")
-    fun withoutLine(path: String) = path.replace(Regex("(?i)(\\.(?:md|markdown|html?|png|jpe?g|webp)):\\d+(?::\\d+)?$"), "$1")
+    fun withoutLine(path: String) = path.replace(Regex("(?i)(\\.(?:md|markdown|html?|png|jpe?g|webp|svg)):\\d+(?::\\d+)?$"), "$1")
 }

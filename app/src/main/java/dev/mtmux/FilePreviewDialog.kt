@@ -8,6 +8,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,9 +22,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -35,17 +40,19 @@ import java.util.concurrent.Executors
 
 @Composable internal fun FilePreviewDialog(request:PreviewRequest,onClose:()->Unit,onExternal:(String)->Unit) {
     val context=LocalContext.current
-    val scope=rememberCoroutineScope()
+    val focus=LocalFocusManager.current
+    val keyboard=LocalSoftwareKeyboardController.current
     val dispatcher=remember {Executors.newSingleThreadExecutor().asCoroutineDispatcher()}
     var session by remember {mutableStateOf<FilePreviewSession?>(null)}
     var base by remember {mutableStateOf("")}
     var target by remember {mutableStateOf(request.target)}
+    var pathText by remember {mutableStateOf(request.target)}
     var document by remember {mutableStateOf<PreviewDocument?>(null)}
     var error by remember {mutableStateOf<Throwable?>(null)}
     var loading by remember {mutableStateOf(true)}
     var blocked by remember {mutableStateOf(false)}
-    var editBase by remember {mutableStateOf(false)}
-    var awaitingBase by remember {mutableStateOf(request.binding==null && !request.target.startsWith('/') && !request.target.startsWith("~/"))}
+    var editPath by remember {mutableStateOf(false)}
+    var awaitingPath by remember {mutableStateOf(request.binding==null && !request.target.startsWith('/') && !request.target.startsWith("~/"))}
     var retry by remember {mutableIntStateOf(0)}
     var loadGeneration by remember {mutableIntStateOf(0)}
     val history=remember {mutableStateListOf<String>()}
@@ -60,6 +67,7 @@ import java.util.concurrent.Executors
     }}
     LaunchedEffect(target,retry) {
         val generation=++loadGeneration
+        val requestedTarget=target
         loading=true;error=null;blocked=false;document=null
         try {
             val loaded=withContext(dispatcher) {
@@ -71,15 +79,26 @@ import java.util.concurrent.Executors
                     if(!alive.get()) {holder.getAndSet(null)?.close();throw CancellationException()}
                     session=it
                 }
-                if(base.isBlank()) base=owner.base()
-                if(awaitingBase) null else owner.open(target,base)
+                if(base.isBlank()) base=if(requestedTarget.startsWith('/')) requestedTarget.substringBeforeLast('/').ifEmpty {"/"} else owner.base()
+                val resolved=owner.resolve(requestedTarget,base)
+                val root=if(RemoteFilePaths.inside(resolved,base)) base else resolved.substringBeforeLast('/').ifEmpty {"/"}
+                withContext(Dispatchers.Main) {if(generation==loadGeneration) {pathText=resolved;base=root}}
+                if(awaitingPath) null else owner.open(resolved,root)
             }
-            if(generation==loadGeneration) {if(awaitingBase) editBase=true else document=loaded}
+            if(generation==loadGeneration) {
+                if(awaitingPath) editPath=true
+                else {document=loaded;loaded?.let {pathText=it.path}}
+            }
         } catch(e:CancellationException) {throw e}
         catch(e:Exception) {if(generation==loadGeneration) {error=e;DebugLog.event(DebugLog.Event.PREVIEW_FAILED,holder.get()?.id?.hashCode() ?: 0)}}
         finally {if(generation==loadGeneration) loading=false}
     }
     fun back() {if(history.isNotEmpty()) target=history.removeAt(history.lastIndex) else onClose()}
+    fun openPath() {
+        if(loading) return
+        focus.clearFocus(force=true);keyboard?.hide()
+        editPath=false;awaitingPath=false;target=pathText.trim();retry++
+    }
     Dialog(onDismissRequest=onClose,properties=DialogProperties(usePlatformDefaultWidth=false,
         dismissOnClickOutside=false,securePolicy=SecureFlagPolicy.Inherit)) {
         Surface(Modifier.widthIn(max=1000.dp).fillMaxWidth().fillMaxHeight(.94f).padding(horizontal=10.dp)
@@ -92,24 +111,18 @@ import java.util.concurrent.Executors
                             style=MaterialTheme.typography.titleMedium,maxLines=1,overflow=TextOverflow.Ellipsis)
                         Text(request.server,style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1)
                     }
-                    AppIconButton(UiSymbol.FOLDER,stringResource(R.string.preview_base),{editBase=!editBase})
+                    if(document!=null && error==null && !loading)
+                        AppIconButton(UiSymbol.FOLDER,stringResource(R.string.preview_edit_path),{editPath=!editPath},Modifier.testTag("preview-edit-path"))
                     AppIconButton(UiSymbol.CLOSE,stringResource(R.string.common_close),onClose)
                 }
-                if(editBase || error!=null) Column(Modifier.padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.preview_base_help),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                    OutlinedTextField(base,{base=it},label={Text(stringResource(R.string.preview_base))},singleLine=true,
-                        shape=appFieldShape,colors=appFieldColors(),modifier=Modifier.fillMaxWidth().testTag("preview-base"))
-                    Button(onClick={editBase=false;awaitingBase=false;retry++},enabled=!loading,shape=RoundedCornerShape(14.dp)) {Text(stringResource(R.string.preview_retry))}
-                }
-                run {
-                    val visiblePath=document?.path ?: target
-                    Row(Modifier.fillMaxWidth().padding(horizontal=16.dp),verticalAlignment=Alignment.CenterVertically) {
-                        Text(visiblePath,Modifier.weight(1f),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=2,overflow=TextOverflow.Ellipsis)
-                        AppIconButton(UiSymbol.COPY,stringResource(R.string.preview_copy_path),{
+                if(editPath || error!=null || awaitingPath) Column(Modifier.padding(horizontal=16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(pathText,{pathText=it},label={Text(stringResource(R.string.preview_path))},minLines=2,maxLines=2,
+                        enabled=!loading,keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={openPath()}),
+                        trailingIcon={AppIconButton(UiSymbol.COPY,stringResource(R.string.preview_copy_path),{
                             (context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager)
-                                .setPrimaryClip(android.content.ClipData.newPlainText(context.getString(R.string.preview_path),visiblePath))
-                        })
-                    }
+                                .setPrimaryClip(android.content.ClipData.newPlainText(context.getString(R.string.preview_path),pathText))
+                        })},shape=appFieldShape,colors=appFieldColors(),modifier=Modifier.fillMaxWidth().testTag("preview-path"))
+                    Button(onClick={openPath()},enabled=!loading && pathText.isNotBlank(),shape=RoundedCornerShape(14.dp),modifier=Modifier.testTag("preview-open-path")) {Text(stringResource(R.string.preview_retry))}
                 }
                 Box(Modifier.weight(1f).fillMaxWidth().clipToBounds(),contentAlignment=Alignment.Center) {
                     when {
@@ -124,8 +137,8 @@ import java.util.concurrent.Executors
                                 val colors=MaterialTheme.colorScheme
                                 AndroidView(factory={ FilePreviewWebView(it,session!!,doc,colors,{link ->
                     if(link.startsWith("https://") || link.startsWith("http://")) onExternal(link)
-                                    else if(link!=target) {if(history.size>=10) history.removeAt(0);history.add(target);target=link}
-                                },{blocked=true},{error=RemoteFileException(FileProblem.UNAVAILABLE);document=null}) },modifier=Modifier.fillMaxSize().testTag("preview-webview"),
+                                    else if(link!=doc.path) {if(history.size>=10) history.removeAt(0);history.add(doc.path);editPath=false;target=link}
+                                },{blocked=true},{error=RemoteFileException(FileProblem.UNAVAILABLE);document=null}) },modifier=Modifier.fillMaxSize().testTag(if(doc.kind==RemoteFilePaths.Kind.SVG) "preview-svg" else "preview-webview"),
                                     onRelease={it.stopLoading();it.destroy()})
                             }
                         }
@@ -133,7 +146,7 @@ import java.util.concurrent.Executors
                 }
                 if(blocked) Text(stringResource(R.string.preview_blocked),Modifier.padding(horizontal=16.dp,vertical=6.dp),
                     style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                if(document?.kind!=RemoteFilePaths.Kind.IMAGE) Text(stringResource(R.string.preview_static),Modifier.padding(horizontal=16.dp,vertical=10.dp),
+                if(document?.kind !in setOf(RemoteFilePaths.Kind.IMAGE,RemoteFilePaths.Kind.SVG)) Text(stringResource(R.string.preview_static),Modifier.padding(horizontal=16.dp,vertical=10.dp),
                     style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -148,6 +161,8 @@ internal fun previewError(error:Throwable?)=when((error as? RemoteFileException)
     FileProblem.ENCODING -> R.string.preview_encoding
     FileProblem.NOT_FOUND -> R.string.preview_not_found
     FileProblem.PERMISSION -> R.string.preview_permission
+    FileProblem.NOT_FILE -> R.string.preview_not_file
+    FileProblem.INVALID_PATH -> R.string.preview_invalid_path
     else -> R.string.preview_error
 }
 

@@ -19,4 +19,11 @@ class RemoteFilePathsTest {
         assertEquals("file:21.md",RemoteFilePaths.withoutLine("file:21.md"))
         assertFailsWith<RemoteFileException> {RemoteFilePaths.kind("a.md.sh")}
     }
+    @Test fun rasterAndVectorImagePathsKeepTheirOwnKinds() {
+        listOf("photo.jpeg","photo.JPG","image.png","image.webp").forEach {assertEquals(RemoteFilePaths.Kind.IMAGE,RemoteFilePaths.kind(it))}
+        assertEquals(RemoteFilePaths.Kind.SVG,RemoteFilePaths.kind("diagram.SVG"))
+        assertEquals("diagram.svg",RemoteFilePaths.withoutLine("diagram.svg:12:3"))
+        assertEquals("/project/docs/report.md",RemoteFilePaths.resolve("/project/docs/report.md","/wrong/root","/home/u"))
+        assertFailsWith<RemoteFileException> {RemoteFilePaths.kind("diagram.svg.sh")}
+    }
 }

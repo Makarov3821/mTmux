@@ -336,6 +336,7 @@ try {
   }
   await assertLinkTap('  docs/design/code-review.md','docs/design/code-review.md',1,12);
   await assertLinkTap('  assets/image.png','assets/image.png',1,8);
+  await assertLinkTap('  assets/diagram.svg','assets/diagram.svg',1,8);
   const cols=await page.evaluate(()=>terminal.cols);
   const longFile='docs/'+ '文'.repeat(cols)+'.md';
   await assertLinkTap('  '+longFile,longFile,2,8);
@@ -345,6 +346,12 @@ try {
   const pathFirst='  docs/'.padEnd(cols-2,'x');
   const pathRest='/design/code-review.md';
   for(const row of [1,2]) await assertLinkTap(pathFirst+'\r\n  '+pathRest,pathFirst.trimStart()+pathRest,row,8);
+  await page.setViewportSize({width:460,height:500});
+  const report='2nd/tackle-1/batch/reports/index.html';
+  await assertLinkTap('('+report+')',report,1,10);
+  const reportOutput='batch)，可以查看处理报告 (2nd/tackle-1/\r\nbatch/reports/index.html)。';
+  await assertLinkTap(reportOutput,report,1,30);
+  await assertLinkTap(reportOutput,report,2,8);
   assert.deepEqual(errors, []);
   console.log('PASS: bundled xterm page, native bridge callbacks, UTF-8, paste preview protocol, stale/offline tokens, bracketed paste, resize, touch wheel/click and binary mouse protocols');
 } finally {

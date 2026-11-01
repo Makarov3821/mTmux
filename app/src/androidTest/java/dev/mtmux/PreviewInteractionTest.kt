@@ -253,7 +253,97 @@ class PreviewInteractionTest {
         } finally {connection.exec("rm -rf -- "+Tmux.quote(directory)+" "+Tmux.quote(outside));connection.close()}
     }
 
-    private fun saveImage(name:String,extraColors:IntArray=intArrayOf()):Int {
+    @Test fun failedPathCanBeReplacedWithACompleteFilePathAndTheEditButtonRecovers() {
+        val args=InstrumentationRegistry.getArguments()
+        assumeTrue("Use scripts/test_ssh.py --android",args.containsKey("fixturePort"))
+        val connection=SshClient(object:PinStore {override fun get(endpoint:String)=args.getString("fixtureHostKey")})
+        connection.connect(Login("127.0.0.1",args.getString("fixturePort")!!.toInt(),args.getString("fixtureUser")!!,"",Base64.getDecoder().decode(args.getString("fixtureKey"))))
+        val directory=connection.exec("mktemp -d /tmp/mtmux-preview-path-XXXXXX").output.trim()
+        val correct="$directory/report.md"
+        val missing="$directory/wrong/out-test/README.md"
+        try {
+            assertEquals(0,connection.exec("cat > "+Tmux.quote(correct),"# Corrected file path".toByteArray()).status)
+            compose.setContent {MaterialTheme(colorScheme=appColors(true,AppPalette.TOKYO)) {
+                FilePreviewDialog(PreviewRequest(missing,"path-fixture",connection,null,"tmux","Fixture"),{},{fail("Unexpected external link")})
+            }}
+            compose.waitUntil(20000) {compose.onAllNodesWithText(compose.activity.getString(R.string.preview_not_found)).fetchSemanticsNodes().isNotEmpty()}
+            compose.onNodeWithTag("preview-edit-path").assertDoesNotExist()
+            compose.onNodeWithTag("preview-path").assertTextContains(missing).assertHeightIsAtLeast(72.dp)
+            compose.onAllNodesWithText(missing).assertCountEquals(1) // Only the editor, no duplicate standalone path label.
+            saveImage("preview-file-path-error",requireGreen=false)
+            compose.onNodeWithTag("preview-path").performTextReplacement(correct)
+            compose.onNodeWithTag("preview-open-path").performClick()
+            compose.waitUntil(20000) {webView()!=null && eval("document.querySelector('h1')?.textContent")=="\"Corrected file path\""}
+            compose.onNodeWithTag("preview-path").assertDoesNotExist()
+            compose.onNodeWithTag("preview-edit-path").performClick()
+            compose.onNodeWithTag("preview-path").assertTextContains(correct)
+            saveImage("preview-file-path-corrected",requireGreen=false)
+            compose.onNodeWithTag("preview-edit-path").performClick()
+            compose.onNodeWithTag("preview-path").assertDoesNotExist()
+            assertEquals("alive",connection.exec("printf alive").output)
+        } finally {connection.exec("rm -rf -- "+Tmux.quote(directory));connection.close()}
+    }
+
+    @Test fun jpegAndSvgRenderAndSvgUsesAnIsolatedZoomableImageSurface() {
+        val args=InstrumentationRegistry.getArguments()
+        assumeTrue("Use scripts/test_ssh.py --android",args.containsKey("fixturePort"))
+        val connection=SshClient(object:PinStore {override fun get(endpoint:String)=args.getString("fixtureHostKey")})
+        connection.connect(Login("127.0.0.1",args.getString("fixturePort")!!.toInt(),args.getString("fixtureUser")!!,"",Base64.getDecoder().decode(args.getString("fixtureKey"))))
+        val directory=connection.exec("mktemp -d /tmp/mtmux-preview-svg-XXXXXX").output.trim()
+        try {
+            fun put(name:String,bytes:ByteArray) {assertEquals(0,connection.exec("cat > "+Tmux.quote("$directory/$name"),bytes).status)}
+            fun image(color:Int,format:android.graphics.Bitmap.CompressFormat):ByteArray {
+                val b=android.graphics.Bitmap.createBitmap(16,16,android.graphics.Bitmap.Config.ARGB_8888).apply {eraseColor(color)}
+                return java.io.ByteArrayOutputStream().also {b.compress(format,100,it);b.recycle()}.toByteArray()
+            }
+            val jpeg=image(android.graphics.Color.GREEN,android.graphics.Bitmap.CompressFormat.JPEG)
+            put("photo.jpeg",jpeg);put("photo.jpg",jpeg)
+            put("blue.png",image(android.graphics.Color.BLUE,android.graphics.Bitmap.CompressFormat.PNG))
+            put("drawing.svg",("""<svg xmlns="http://www.w3.org/2000/svg" width="160" height="120" viewBox="0 0 160 120">
+                <rect id="green" width="80" height="80" fill="#00ff00"/>
+                <script>document.getElementById('green').setAttribute('fill','#ff00ff');</script>
+                <image href="blue.png" x="90" width="40" height="40"/>
+                </svg>""").toByteArray())
+            put("readme.md","# Vector image\n\n![vector](drawing.svg)".toByteArray())
+            var target by mutableStateOf("$directory/photo.jpeg")
+            compose.setContent {MaterialTheme(colorScheme=appColors(true,AppPalette.TOKYO)) {
+                key(target) {FilePreviewDialog(PreviewRequest(target,"image-fixture",connection,null,"tmux","Fixture"),{},{fail("Unexpected external link")})}
+            }}
+            for(name in listOf("photo.jpeg","photo.jpg")) {
+                compose.runOnIdle {target="$directory/$name"}
+                compose.waitUntil(15000) {compose.onAllNodesWithTag("preview-image").fetchSemanticsNodes().isNotEmpty()}
+                saveImage("preview-$name")
+            }
+            compose.runOnIdle {target="$directory/drawing.svg"}
+            compose.waitUntil(15000) {compose.onAllNodesWithTag("preview-svg").fetchSemanticsNodes().isNotEmpty() && webView()!=null}
+            val svg=webView()!!
+            compose.waitUntil(20000) {
+                var ready=false
+                compose.runOnUiThread {ready=svg.title=="SVG preview" && svg.progress==100}
+                ready
+            }
+            compose.runOnUiThread {assertFalse(svg.settings.javaScriptEnabled);assertTrue(svg.settings.builtInZoomControls)}
+            val painted=CountDownLatch(1)
+            compose.runOnUiThread {svg.postVisualStateCallback(10,object:WebView.VisualStateCallback() {override fun onComplete(requestId:Long) {painted.countDown()}})}
+            assertTrue(painted.await(10,TimeUnit.SECONDS))
+            saveImage("svg-preview",forbiddenColors=intArrayOf(android.graphics.Color.BLUE,android.graphics.Color.MAGENTA))
+            var scale=0f
+            @Suppress("DEPRECATION")
+            compose.runOnUiThread {scale=svg.scale;assertTrue(svg.zoomIn())}
+            compose.waitUntil(5000) {
+                var zoomed=false
+                @Suppress("DEPRECATION")
+                compose.runOnUiThread {zoomed=svg.scale>scale*1.1f}
+                zoomed
+            }
+            compose.runOnIdle {target="$directory/readme.md"}
+            compose.waitUntil(20000) {webView()!=null && eval("document.querySelector('img')?.naturalWidth")=="160"}
+            saveImage("markdown-svg",forbiddenColors=intArrayOf(android.graphics.Color.BLUE,android.graphics.Color.MAGENTA))
+            assertEquals("alive",connection.exec("printf alive").output)
+        } finally {connection.exec("rm -rf -- "+Tmux.quote(directory));connection.close()}
+    }
+
+    private fun saveImage(name:String,extraColors:IntArray=intArrayOf(),forbiddenColors:IntArray=intArrayOf(),requireGreen:Boolean=true):Int {
         compose.waitForIdle()
         InstrumentationRegistry.getInstrumentation().waitForIdleSync()
         Thread.sleep(750) // SurfaceFlinger and Dialog transitions are not driven by Compose's clock.
@@ -270,8 +360,14 @@ class PreviewInteractionTest {
                 kotlin.math.abs(android.graphics.Color.blue(it)-android.graphics.Color.blue(color))<20}
             assertTrue("$name did not paint expected color $color (pixels=$count)",count>8)
         }
+        for(color in forbiddenColors) {
+            val count=pixels.count {kotlin.math.abs(android.graphics.Color.red(it)-android.graphics.Color.red(color))<20 &&
+                kotlin.math.abs(android.graphics.Color.green(it)-android.graphics.Color.green(color))<20 &&
+                kotlin.math.abs(android.graphics.Color.blue(it)-android.graphics.Color.blue(color))<20}
+            assertTrue("$name painted a forbidden script/external-resource color $color (pixels=$count)",count<8)
+        }
         bitmap.recycle()
-        assertTrue("$name did not paint its green fixture image (pixels=$green)",green>8)
+        if(requireGreen) assertTrue("$name did not paint its green fixture image (pixels=$green)",green>8)
         return green
     }
     private fun webView():WebView? {

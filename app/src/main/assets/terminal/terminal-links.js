@@ -1,17 +1,25 @@
 /* Public xterm APIs only. This module never sends input or opens a browser itself. */
 (function(root) {
+  function leadingWrapper(text) {
+    let unmatched=(text.match(/\(/g)||[]).length-(text.match(/\)/g)||[]).length,start=0;
+    while(text[start]==='(' && unmatched>0) {start++;unmatched--;}
+    return start;
+  }
   function candidates(text) {
     const result=[];
-    const pattern=/https?:\/\/[^\s<>"`]+|file:\/\/[^\s<>"`]+|(?:"([^"\r\n]+\.(?:md|markdown|html?|png|jpe?g|webp)(?::\d+(?::\d+)?)?)"|'([^'\r\n]+\.(?:md|markdown|html?|png|jpe?g|webp)(?::\d+(?::\d+)?)?)')|(?:\/?(?:[\p{L}\p{N}_~.@$()+-]+\/)*[\p{L}\p{N}_@.$()+-]+\.(?:md|markdown|html?|png|jpe?g|webp)(?::\d+(?::\d+)?)?)/giu;
+    const pattern=/https?:\/\/[^\s<>"`]+|file:\/\/[^\s<>"`]+|(?:"([^"\r\n]+\.(?:md|markdown|html?|png|jpe?g|webp|svg)(?::\d+(?::\d+)?)?)"|'([^'\r\n]+\.(?:md|markdown|html?|png|jpe?g|webp|svg)(?::\d+(?::\d+)?)?)')|(?:\/?(?:[\p{L}\p{N}_~.@$()+-]+\/)*[\p{L}\p{N}_@.$()+-]+\.(?:md|markdown|html?|png|jpe?g|webp|svg)(?::\d+(?::\d+)?)?)/giu;
     for (const match of text.matchAll(pattern)) {
       let value=match[1] || match[2] || match[0];
       const quoted=!!(match[1] || match[2]);
+      const wrapper=quoted ? 0 : leadingWrapper(value);
+      value=value.slice(wrapper);
       if (!quoted && /^https?:/i.test(value)) {
         value=value.replace(/[.,;!，。；！]+$/u,'');
         // Only remove an unmatched closing Markdown wrapper, not balanced URL parentheses.
         while(value.endsWith(')') && (value.match(/\)/g)||[]).length>(value.match(/\(/g)||[]).length) value=value.slice(0,-1);
       }
-      result.push({text:value,start:match.index+(quoted?1:0),end:match.index+(quoted?1:0)+value.length});
+      const start=match.index+(quoted?1:0)+wrapper;
+      result.push({text:value,start,end:start+value.length});
     }
     return result;
   }
@@ -33,17 +41,19 @@
     if(!group.text || !next.text) return null;
     const left=group.text.replace(/[ │┃║]+$/u,'');
     const last=group.cells[left.length-1];
-    if(!last || cols-last.x>4) return null;
+    const tail=left.match(/(?:https?:\/\/|file:\/\/)[^\s<>"`]*$|[^\s<>"`]*\/[^\s<>"`]*$/iu)?.[0];
+    if(!last || !tail || /[\]),;!，。；！]$/u.test(tail)) return null;
+    const enclosed=leadingWrapper(tail)>0;
+    if(!enclosed && cols-last.x>4) return null;
     const indent=next.text.match(/^[ │┃║]*/u)[0].length;
     if(indent>12) return null;
-    if(indent===0 && last.x!==cols) return null;
+    if(!enclosed && indent===0 && last.x!==cols) return null;
     const right=next.text.slice(indent);
     if(!right || /^(?:https?|file):\/\//i.test(right) || !/^[\p{L}\p{N}_~.@$()+%/?&#=:-]/u.test(right)) return null;
-    // TUI applications often paint explicit CR/LF (with an indent) rather than
-    // xterm soft-wraps. Only join a URL/path at the right edge, never whole paragraphs.
-    const tail=left.match(/(?:https?:\/\/|file:\/\/)[^\s<>"`]*$|[^\s<>"`]*\/[^\s<>"`]*$/iu)?.[0];
-    if(!tail || /[\]),;!，。；！]$/u.test(tail)) return null;
-    if(!/^(?:https?|file):/i.test(tail) && /\.(?:md|markdown|html?|png|jpe?g|webp)(?::\d+(?::\d+)?)?$/i.test(tail)) return null;
+    // TUI applications paint CR/LF inside a prose margin, sometimes with no indent.
+    // An unfinished parenthesized path can continue there; ordinary text still
+    // needs the right-edge/indent evidence rather than merging whole paragraphs.
+    if(!/^(?:https?|file):/i.test(tail) && /\.(?:md|markdown|html?|png|jpe?g|webp|svg)(?::\d+(?::\d+)?)?$/i.test(tail)) return null;
     return {left:left.length,indent};
   }
   function linksForRow(terminal,y) {

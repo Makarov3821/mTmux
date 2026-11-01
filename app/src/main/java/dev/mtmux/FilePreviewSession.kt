@@ -42,9 +42,13 @@ internal class FilePreviewSession(context: Context, private val request: Preview
         }
     }
     private fun checkOpen() { if(closed.get()) throw RemoteFileException(FileProblem.UNAVAILABLE) }
+    @Synchronized fun resolve(target:String,base:String):String {
+        connect()
+        return RemoteFilePaths.resolve(RemoteFilePaths.withoutLine(target),base,home)
+    }
     @Synchronized fun open(target: String, base: String): PreviewDocument {
         connect()
-        val path=access.canonical(RemoteFilePaths.resolve(RemoteFilePaths.withoutLine(target),base,home))
+        val path=access.canonical(resolve(target,base))
         DebugLog.event(DebugLog.Event.PREVIEW_RESOLVED,trace)
         val kind=RemoteFilePaths.kind(path)
         if(kind==RemoteFilePaths.Kind.CSS) throw RemoteFileException(FileProblem.UNSUPPORTED)
@@ -61,7 +65,7 @@ internal class FilePreviewSession(context: Context, private val request: Preview
         val canonical=access.canonical(normalized)
         if(!RemoteFilePaths.inside(canonical,document.root)) throw RemoteFileException(FileProblem.OUTSIDE_ROOT)
         val kind=RemoteFilePaths.kind(canonical)
-        if(kind!=RemoteFilePaths.Kind.IMAGE && kind!=RemoteFilePaths.Kind.CSS) throw RemoteFileException(FileProblem.UNSUPPORTED)
+        if(kind !in setOf(RemoteFilePaths.Kind.IMAGE,RemoteFilePaths.Kind.SVG,RemoteFilePaths.Kind.CSS)) throw RemoteFileException(FileProblem.UNSUPPORTED)
         return fetch(canonical,kind) to kind
     }
     private fun fetch(path: String, kind: RemoteFilePaths.Kind): File {

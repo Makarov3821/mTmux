@@ -86,3 +86,34 @@
 Android API 35 / Google WebView 124：原有预览与首页下拉刷新 5/5，0 skip；新增 MainActivity + 真实 SSH/tmux 用例通过普通相对路径、图片及带缩进硬换行路径，实际打开远端预览并确认 IME 关闭。结果分别在 `.tools/diagnostics/matrix/link-taps-20261101/PreviewInteractionTest/` 和 `.tools/diagnostics/matrix/link-taps-delivery-20261101/`。两版 app JVM 各 44/44、两版 Debug 构建与 lint 通过，构建记录 `.tools/link-fix-checks.log`。
 
 失败记录没有删除：沙箱内隔离 sshd 的 PTY 在 verifyResume 前断开，宿主 SSH PTY 对照同样失败，沙箱外对照正常，因此完整终端点击用例在沙箱外运行，仍只用临时密钥、loopback sshd 和独立 tmux socket。新增测试的动态画面曾在输入文件写完前读取到空文件；改为先写临时帧再原子重命名，并等待确切的新终端内容及 visual state callback 后点击。此前轮次保留在 `link-taps-diagnose/connection/wrapped/final/frame-20261101` 等独立目录，不计为最终通过结果。
+
+## 0.9.3-rc.5 截图反馈：括号中的 HTML 报告路径
+
+基于 `ff92238` 的后续修改，尚未提交或发布。用户截图中的报告地址为 `2nd/tackle-1/batch/reports/index.html`，在 Codex 输出中写成 `(2nd/tackle-1/` 换行后接 `batch/reports/index.html)。`。
+
+- 原版能复现两种错误：显式换行的续行没有缩进且没有占满终端宽度时，第一行无链接，第二行仅识别 `batch/reports/index.html`；合并为单行后，又将开头的 `(` 识别为文件名，得到 `(2nd/tackle-1/batch/reports/index.html`。
+- 未闭合括号内的路径允许沿正文内边距继续换行，不再要求这一类续行恰好位于物理终端右边界。普通未括起的输出仍使用原有边界限制。
+- 未加引号的文件链接剥离开头多出的包裹括号，并修正点击格子的偏移；`docs/chart(1).html`、`(draft).html` 等配对括号文件名保持完整，带引号的字面路径也保持原样。
+- 此修改处理链接识别；前述基准目录输入框与失败时实际请求路径的显示问题不在本节修改中。
+
+验证：新增两个 Node 回归先在原逻辑上失败，修复后网页全套 13/13；实际打包页面的桌面 Chromium 通过单行括号链接和截图两行两侧的点击断言，无 input/binaryInput/focusInput。Android API 35 / Google WebView 124 的完整 SSH/tmux 点击用例 1/1，0 skip，除已有 Markdown、图片及带缩进换行路径外，新增截图形式的 HTML 链接，只有完整路径存在于远端，点击续行后实际打开静态 HTML，IME 保持关闭。
+
+Android 原始结果在 `.tools/diagnostics/matrix/html-report-link-20261101/`，桌面记录 `.tools/html-link-browser.log`；实际设备截图由测试输出到 `ui-evidence/terminal-file-tap-html-report.png`，继续 Git 忽略。没有重跑全部历史 Android 用例，也没有更改版本号或覆盖 rc.5 发布包。
+
+## 完整文件路径编辑与 SVG
+
+后续工作区改动，未修改版本号或发布。
+
+- 失败时显示实际尝试读取的完整文件路径，直接在两行高的输入框中修改并打开；不再显示基准目录解释及下方重复路径。复制按钮移入输入框。绝对路径按原样读取，不再把整个文件路径作为目录再追加旧相对链接。
+- 右上角文件夹按钮仅在文件成功加载后出现，用于展开/收起文件路径编辑框；错误时输入框自动显示，不保留无效的切换按钮。重试时清理输入焦点并收起键盘。原有相对路径仍在内部按 pane 目录/HOME 候选解析，普通 SSH 的相对路径仍先等待用户确认完整路径。
+- 新的完整路径显式转到原范围外时，资源范围取新文件的父目录；原范围内导航继续保留范围。符号链接 realpath、文件/像素、数量和缓存限制继续保留。
+- PNG、JPG/JPEG、WebP 原本已支持，本轮增加 JPEG/JPG 的实际像素回归。新增 `.svg` 路径识别、独立 SVG 预览及 Markdown/HTML 的 SVG 图片资源；SVG 沿用 2 MiB 文本文件预算。
+- SVG 使用现有 WebView 的 `<img>` 图像模式，不增加依赖。独立窗口保持 JavaScript 关闭、手机文件访问关闭、有限虚拟 origin 及 CSP；图像模式禁止脚本和外部依赖，支持内建缩放。依据：[SVG 图像处理模式](https://www.w3.org/TR/SVG/latest/conform.html)、[Android WebView 缩放设置](https://developer.android.com/reference/android/webkit/WebSettings)。不将 SVG 作为可执行的顶层网页打开。
+
+新增真实 SSH/SFTP 交互用例覆盖：错误路径自动展示完整候选、失败隐藏按钮、替换为完整文件名后打开成功、成功后展开/收起两行路径框；JPEG/JPG 像素；独立 SVG 像素、缩放、Markdown 内嵌 SVG naturalWidth 与像素。SVG 故意含有修改颜色的脚本及外部蓝图引用，断言图形保留绿色、没有脚本生成的洋红色和外部蓝色。
+
+测试发现 SVG 文件已加载但容器百分比高度为 0，实际截图空白；修正为固定到 WebView 已测量的视口，与终端的布局处理一致。此前失败保存在 `preview-path-svg/preview-svg-ready/preview-svg-layout-20261101` 等轮次中，诊断期间仅在已失败的 fixture 上临时查看 DOM，不计为安全通过结果；最终测试没有启用 SVG 页面 JavaScript。
+
+最终 `PreviewInteractionTest` 全类 7/7，0 skip，报告 `.tools/diagnostics/matrix/preview-path-svg-delivery-20261101/`；真实 SSH/tmux 的终端文件点击回归另外 1/1，见 `.tools/diagnostics/matrix/preview-path-svg-20261101/TerminalUiTest#codexStyleFilePathsOpenRemotePreviewsWithoutFocusingTheIme/`。网页 Node 13/13、桌面 Chromium 回归通过；两版 app JVM 各 44/44、两版 Debug 构建及 lint 通过，最终构建记录 `.tools/preview-path-svg-delivery-checks.log`。Core 新增格式/完整路径回归通过。
+
+实际设备的错误路径框、修正后路径框、SVG、Markdown 内嵌 SVG 和 JPEG 截图已复制到本机 `docs/screenshots/current/preview/`，继续 Git 忽略。本节是工作区验证，不表示已经发布新的正式证书升级包。
