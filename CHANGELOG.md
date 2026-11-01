@@ -2,7 +2,7 @@
 
 版本号不代表完整真机验收。每个版本的实现细节、验证结果、截图与 APK SHA-256 见对应的「详细记录」；测试证据在 [docs/evidence/](docs/evidence/)。文档目录说明见 [docs/README.md](docs/README.md)。
 
-## [0.9.3] — 2026-11-01 · versionCode 44
+## [0.9.3] — 2026-11-02 · versionCode 44
 
 详细记录：[0.9.3](docs/releases/0.9.3.md)。
 

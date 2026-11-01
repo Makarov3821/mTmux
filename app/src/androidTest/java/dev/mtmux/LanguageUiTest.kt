@@ -24,6 +24,24 @@ class LanguageUiTest {
     // CJK and full-width punctuation; the full-width ＋ icon (U+FF0B) is a symbol, not text.
     private val cjk = Regex("[\\u3000-\\u303f\\u4e00-\\u9fff\\uff01-\\uff0a\\uff0c-\\uffef]")
 
+    /** Do not enter Espresso's idle loop while framework locale recreation is in flight. */
+    private fun awaitRecreatedFrame(previous:MainActivity,language:String) {
+        val instrumentation=InstrumentationRegistry.getInstrumentation()
+        val ready=java.util.concurrent.atomic.AtomicBoolean()
+        val posted=java.util.concurrent.atomic.AtomicBoolean()
+        val deadline=android.os.SystemClock.elapsedRealtime()+15000
+        while(!ready.get() && android.os.SystemClock.elapsedRealtime()<deadline) {
+            instrumentation.runOnMainSync {
+                val resumed=androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance()
+                    .getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED).filterIsInstance<MainActivity>()
+                resumed.firstOrNull {it!==previous && it.resources.configuration.locales[0].language==language && it.window.decorView.isAttachedToWindow}
+                    ?.let {activity -> if(posted.compareAndSet(false,true)) activity.window.decorView.postOnAnimation {ready.set(true)}}
+            }
+            if(!ready.get()) Thread.sleep(25)
+        }
+        assertTrue("Locale $language did not produce a resumed, drawn Activity",ready.get())
+    }
+
     private fun saveScreenshot(name: String) {
         compose.waitForIdle()
         Thread.sleep(750)
@@ -143,9 +161,11 @@ class LanguageUiTest {
             assertEquals(before, prefs.getString("probe:${profile.id}", null))
 
             // A language without resources falls back to English (the default resources).
+            val beforeFallback=compose.activity
             InstrumentationRegistry.getInstrumentation().runOnMainSync {
                 AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("fr"))
             }
+            awaitRecreatedFrame(beforeFallback,"fr")
             compose.waitUntil(15000) { compose.onAllNodesWithTag("home-title").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithTag("settings").performClick()
             compose.onNodeWithText("Language").assertExists()

@@ -159,7 +159,13 @@ class PreviewInteractionTest {
             compose.onNodeWithTag("preview-webview").performTouchInput {click(Offset((imagePosition.getDouble("x")*imagePosition.getDouble("scale")).toFloat(),(imagePosition.getDouble("y")*imagePosition.getDouble("scale")).toFloat()))}
             compose.waitUntil(15000) {compose.onAllNodesWithTag("preview-image").fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithContentDescription(compose.activity.getString(R.string.common_back)).performClick()
-            compose.waitUntil(20000) {webView()!=null && eval("document.querySelector('h1')?.textContent")=="\"Remote preview\""}
+            compose.waitUntil(20000) {webView()!=null && eval("document.querySelector('h1')?.textContent")=="\"Remote preview\"" &&
+                eval("document.querySelector('img')?.naturalWidth")=="8"}
+            val restoredFrame=CountDownLatch(1)
+            compose.runOnUiThread {webView()!!.postVisualStateCallback(20,object:WebView.VisualStateCallback() {
+                override fun onComplete(requestId:Long) {restoredFrame.countDown()}
+            })}
+            assertTrue("Restored document did not paint before the link tap",restoredFrame.await(10,TimeUnit.SECONDS))
             val position=org.json.JSONObject(org.json.JSONTokener(eval("JSON.stringify((()=>{const r=[...document.querySelectorAll('a')].find(a=>a.textContent==='child').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,scale:devicePixelRatio}})())")).nextValue().toString())
             compose.onNodeWithTag("preview-webview").performTouchInput {click(Offset((position.getDouble("x")*position.getDouble("scale")).toFloat(),(position.getDouble("y")*position.getDouble("scale")).toFloat()))}
             compose.waitUntil(20000) {webView()!=null && eval("document.querySelector('h1')?.textContent")=="\"Child document\""}

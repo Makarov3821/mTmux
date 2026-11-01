@@ -1453,7 +1453,12 @@ class TerminalUiTest {
             compose.waitUntil(30000) { evaluate(view, "typeof window.receive") == "\"function\"" }
             compose.onNodeWithTag("ssh-${profile.id}").performScrollTo().performClick()
             compose.waitUntil(30000) { evaluate(view,"connected") == "true" }
-            compose.waitUntil(30000) { evaluate(view, "terminal.buffer.active.getLine(0).translateToString(true)").contains("MTMUX_SSH_WELCOME") }
+            try {compose.waitUntil(30000) {evaluate(view,"terminalSnapshot().text").contains("MTMUX_SSH_WELCOME")}}
+            catch(error:Throwable) {
+                throw AssertionError("Fixture welcome missing after key restore (encrypted=$encrypted): "+evaluate(view,"terminalSnapshot().text"),error)
+            }
+            println("KEY_RESTORE_RENDER encrypted=$encrypted row0HasWelcome="+
+                evaluate(view,"terminal.buffer.active.getLine(0).translateToString(true)").contains("MTMUX_SSH_WELCOME"))
             disconnectFixture()
             compose.runOnUiThread {
                 val store = ServerProfiles(compose.activity)
