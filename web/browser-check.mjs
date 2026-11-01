@@ -23,13 +23,15 @@ try {
   page.on('pageerror', e => errors.push(e.message));
   await page.addInitScript(() => {
     window.events = [];
-    window.NativeTerminal = Object.fromEntries(['ready','resize','input','draftInput','notice','ack','copy','pasteFinished','binaryInput','focusInput'].map(name => [name, (...args) => events.push([name, ...args])]));
+    window.NativeTerminal = Object.fromEntries(['ready','resize','input','draftInput','notice','ack','copy','pasteFinished','binaryInput','focusInput','openLink'].map(name => [name, (...args) => events.push([name, ...args])]));
   });
   await page.goto(process.env.TERMINAL_TEST_FILE ? pathToFileURL(resolve(root,'index.html')).href : `http://127.0.0.1:${server.address().port}/`);
   await page.waitForFunction(() => events.some(e => e[0] === 'ready'));
   async function feed(text, id) {
     await page.evaluate(([data, id]) => receive(data, id), [Buffer.from(text).toString('base64'), id]);
     await page.waitForFunction(id => events.some(e => e[0] === 'ack' && e[1] === id), id);
+    // Touch assertions target a painted frame, not only the parser acknowledgement.
+    await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
   }
   await feed('\x1b[32m中文 Agent\x1b[0m', 'a');
   assert.equal(await page.evaluate(() => terminal.buffer.active.getLine(0).translateToString(true)), '中文 Agent');
@@ -297,6 +299,26 @@ try {
         'clipped right edge '+JSON.stringify({width,size,...geometry}));
     }
   }
+  // A touch on an OSC 8 label must not also click the Agent or summon the IME,
+  // even with any-motion mouse tracking enabled behind the stable touch surface.
+  await page.evaluate(()=>{setConnection('file-links');terminal.reset();setFont(14);});
+  await feed('\x1b[?1003h\x1b[?1006h\x1b]8;;file:///home/u/docs/readme.md\x1b\\中文文档\x1b]8;;\x1b\\','link-labelled');
+  await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+  const point=await page.evaluate(()=>{const r=document.querySelector('.xterm-screen').getBoundingClientRect();return {x:r.x+4,y:r.y+8};});
+  const inputBeforeLink=await page.evaluate(()=>events.filter(e=>['input','binaryInput','focusInput'].includes(e[0])).length);
+  await touch('touchstart',point.x,point.y);await touch('touchend',point.x,point.y);
+  assert.deepEqual(await page.evaluate(()=>events.filter(e=>e[0]==='openLink').at(-1)),['openLink','file-links','file:///home/u/docs/readme.md']);
+  assert.equal(await page.evaluate(()=>events.filter(e=>['input','binaryInput','focusInput'].includes(e[0])).length),inputBeforeLink);
+  await page.evaluate(()=>terminal.reset());
+  await feed('docs/中文.md:12','link-visible');
+  await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+  await touch('touchstart',point.x,point.y);await touch('touchend',point.x,point.y);
+  assert.equal(await page.evaluate(()=>events.filter(e=>e[0]==='openLink').at(-1)[2]),'docs/中文.md:12');
+  const opened=await page.evaluate(()=>events.filter(e=>e[0]==='openLink').length);
+  await touch('touchstart',point.x,point.y);
+  await feed('\x1b[Hother.md','link-redrawn');
+  await touch('touchend',point.x,point.y);
+  assert.equal(await page.evaluate(()=>events.filter(e=>e[0]==='openLink').length),opened,'redraw under finger must cancel link activation');
   assert.deepEqual(errors, []);
   console.log('PASS: bundled xterm page, native bridge callbacks, UTF-8, paste preview protocol, stale/offline tokens, bracketed paste, resize, touch wheel/click and binary mouse protocols');
 } finally {

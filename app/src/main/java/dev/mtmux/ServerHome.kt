@@ -100,6 +100,8 @@ private class HomeRefresh {
     var doctorForCreate by remember { mutableStateOf(false) }
     val currentPage by rememberUpdatedState(page)
     var message by remember { mutableStateOf<UiText?>(null) }
+    var pullRefreshing by remember { mutableStateOf(false) }
+    var pullJob by remember { mutableStateOf<Job?>(null) }
     var font by remember { mutableIntStateOf(settings.getInt("fontSize",14)) }
     var speed by remember { mutableFloatStateOf(savedScrollSpeed(settings)) }
     var touch by remember { mutableStateOf(settings.getBoolean("remoteTouch",true)) }
@@ -232,6 +234,24 @@ private class HomeRefresh {
             }
         }
     }
+    fun pullRefresh() {
+        if(pullRefreshing || page!="home") return
+        pullRefreshing=true
+        pullJob=scope.launch {
+            try {
+                val selected=store.all().filter { profile ->
+                    organization.folderOf(profile.id)?.let { !organization.collapsed(it) } ?: true
+                }
+                val waiting=selected.mapNotNull { profile ->
+                    refresh(profile,automatic=true,forceInterval=true)
+                    refreshes[profile.id]?.finished
+                }
+                waiting.forEach { it.await() }
+                message=uiText(if(selected.isEmpty()) R.string.home_pull_no_targets else R.string.home_pull_finished)
+            } finally { pullRefreshing=false }
+        }
+    }
+    LaunchedEffect(page) { if(page!="home") pullJob?.cancel() }
     fun open(profile: ServerProfile, task: RecentTask?) {
         if (opening != null) return
         val refresh = refreshes[profile.id]
@@ -385,6 +405,10 @@ private class HomeRefresh {
                     if(attentionCount>0) SummaryChip(stringResource(R.string.home_summary_attention,attentionCount),StatusColors.attention(),true)
                     if(runningCount>0) SummaryChip(stringResource(R.string.home_summary_running,runningCount),StatusColors.running(),false)
                 }
+                HomePullRefresh(pullRefreshing,
+                    enabled=menu==null && folderMenu==null && !sortMenu && !folderDialog && deletingFolder==null && movingServer==null && delete==null && trust==null && doctorProfile==null && doctorInvitation==null && creatingTmux==null && opening==null,
+                    onRefresh={pullRefresh()},modifier=Modifier.weight(1f).fillMaxWidth()) {
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                 if(profiles.isEmpty() && folders.isEmpty()) Surface(Modifier.fillMaxWidth().padding(top=32.dp,start=4.dp,end=4.dp),shape=RoundedCornerShape(22.dp),color=MaterialTheme.colorScheme.surface) {
                     Column(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=28.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)) {
                         BrandMark(56.dp)
@@ -393,7 +417,6 @@ private class HomeRefresh {
                         Button(onClick={edit=null;page="edit"},shape=RoundedCornerShape(14.dp),modifier=Modifier.padding(top=4.dp).height(46.dp)) { AppIcon(UiSymbol.PLUS,modifier=Modifier.size(18.dp)); Spacer(Modifier.width(6.dp));Text(stringResource(R.string.home_add_server)) }
                     }
                 }
-                Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                     // Search is local and does not trigger discovery. Expanded search results
                     // never overwrite saved folder/server collapse preferences.
                     val search = query.trim()
@@ -539,6 +562,7 @@ private class HomeRefresh {
                         Text(stringResource(R.string.home_no_results),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(Modifier.height(24.dp))
+                }
                 }
             }
         }

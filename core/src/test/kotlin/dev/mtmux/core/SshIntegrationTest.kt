@@ -10,6 +10,49 @@ import kotlin.test.*
 
 /** Opt-in: scripts/test_ssh.py creates a loopback-only, disposable OpenSSH fixture. */
 class SshIntegrationTest {
+    @Test fun `SFTP binary reads share SSH and cancelling a file channel leaves exec usable`() {
+        val original=login()
+        val source=File.createTempFile("mtmux-sftp-[*?]-", ".png")
+        val destination=File.createTempFile("mtmux-copy-", ".tmp")
+        val bytes=ByteArray(65537) { (it%256).toByte() }
+        source.writeBytes(bytes)
+        try {trusted().use {client ->
+            var handshakes=0
+            client.observe {if(it.phase==ConnectionPhase.TCP_CONNECT && it.result==TraceResult.OK) handshakes++}
+            client.connect(original)
+            client.remoteFiles().use {files ->
+                files.connect()
+                assertEquals(bytes.size.toLong(),files.download(source.path,destination,100_000))
+                assertContentEquals(bytes,destination.readBytes())
+                assertEquals(FileProblem.TOO_LARGE,assertFailsWith<RemoteFileException> {files.download(source.path,destination,20)}.problem)
+                files.close()
+                assertFailsWith<RemoteFileException> {files.canonical(source.path)}
+                assertEquals("terminal-alive",client.exec("printf terminal-alive").output)
+            }
+            assertEquals(1,handshakes)
+        }} finally {source.delete();destination.delete()}
+    }
+    @Test fun `SFTP cancellation interrupts an in flight copy and removes its partial file`() {
+        val original=login()
+        val source=File.createTempFile("mtmux-sftp-cancel-", ".png").apply {writeBytes(ByteArray(1024*1024) {7})}
+        val destination=File.createTempFile("mtmux-partial-", ".tmp")
+        try {trusted().use {client ->
+            client.connect(original)
+            client.remoteFiles().use {files ->
+                files.connect()
+                val began=CountDownLatch(1);val resume=CountDownLatch(1)
+                var failed=false
+                val worker=thread {
+                    try {files.download(source.path,destination,2L*1024*1024) {began.countDown();resume.await(3,TimeUnit.SECONDS)}}
+                    catch(_:RemoteFileException) {failed=true}
+                }
+                assertTrue(began.await(5,TimeUnit.SECONDS))
+                files.close();resume.countDown();worker.join(5000)
+                assertFalse(worker.isAlive);assertTrue(failed);assertFalse(destination.exists())
+                assertEquals("ready",client.exec("printf ready").output)
+            }
+        }} finally {source.delete();destination.delete()}
+    }
     @Test fun `doctor reads tmux over the authenticated chain without another SSH handshake`() {
         val path=System.getenv("MTMUX_TEST_TMUX")
         val original=login()

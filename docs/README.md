@@ -4,6 +4,10 @@
 
 版本变更摘要统一在根目录 [CHANGELOG.md](../CHANGELOG.md)；产品范围与路线在 [plan.md](../plan.md)。
 
+本地测试、Android WebView 排障与 GitHub 签名发布的固定流程见 [WebView 测试与发布操作说明](testing/webview-and-release-runbook.md)，其中明确区分桌面 Chromium、原生 IME 和真实 Android WebView 的验证范围。
+
+未发布工作区新增：[内置文件预览、分页点方向与首页下拉刷新](testing/terminal-file-preview.md)，包含实际 Android WebView / SFTP 验证说明。
+
 | 目录 | 内容 |
 | --- | --- |
 | [releases/](releases/) | 每个版本的详细交付记录（`<版本>.md`）：原因、实现、验证结果、截图与 APK SHA-256 |

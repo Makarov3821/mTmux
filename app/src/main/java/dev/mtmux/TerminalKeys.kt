@@ -39,7 +39,7 @@ private val keyPages = listOf(
 
 @Composable fun TerminalKeys(enabled: Boolean, modifiers: Int, onModifier: (Int) -> Unit, onKey: (String) -> Unit) {
     val pager = rememberPagerState(initialPage=TERMINAL_KEY_PAGER_START,pageCount={Int.MAX_VALUE})
-    val pageLabel = stringResource(R.string.keys_page,terminalKeyPage(pager.currentPage)+1,TERMINAL_KEY_PAGE_COUNT)
+    val pageLabel = stringResource(R.string.keys_page,terminalKeyVisualPage(pager.currentPage)+1,TERMINAL_KEY_PAGE_COUNT)
     val pending = if(modifiers == 0) "" else stringResource(R.string.keys_modifier_pending,TerminalKeyStroke.label(modifiers))
     val indicatorColor = MaterialTheme.colorScheme.onSurfaceVariant
     // Page dots show while paging and fade out after 5s without a swipe.
@@ -76,7 +76,7 @@ private val keyPages = listOf(
                 drawContent()
                 val step = 7.dp.toPx()
                 // Reduce the large virtual page index before converting to Float, keeping drag precision.
-                val position = terminalKeyPage(pager.currentPage) + pager.currentPageOffsetFraction
+                val position = terminalKeyVisualPage(pager.currentPage) - pager.currentPageOffsetFraction
                 clipRect {
                     // Draw edge copies so wrapping continues through the edge instead of jumping back.
                     for (cycle in -1..1) {

@@ -143,3 +143,100 @@ python3 scripts/summarize_android_results.py .tools/diagnostics/matrix/base-stan
 - 真实麦克风录音、ARM 真机上的动画手感、厂商输入法。
 - 截图图集还没按 0.9.2 重新生成到 `docs/screenshots/current/`。
 - `encryptedPrivateKeysRestoreAndConnectWithOneClick`、`TmuxDoctorUiTest#offlineDiagnosis…` 偶尔超时，原因未查。
+
+## 5. 流程复审补充（2026-11-01）
+
+以下为对照 [WebView 测试与发布操作说明](webview-and-release-runbook.md) 后增加的操作要求。前面的历史结果、原规则和脚本均保留；需要删改的表述或脚本问题另行汇报，不在本轮替换。
+
+### 5.1 固定实际测试对象与设备
+
+- 每轮记录产品提交、测试代码提交、未提交改动、完整用例列表、variant、设备序列号、API/ABI、WebView provider/版本、输入法、绘制和加速状态。当前脚本的 context 只截取前 20 条 git status，不能单独证明完整工作区或实际 APK 对应关系；另外保存完整 status 与相关文件摘要，不把凭据或未脱敏配置写入证据。
+- 设备名称 `mtmux-test` 是本机约定，其他机器的等效专用设备或 ARM 真机也可用于回归；关键是实际系统镜像、绘制、provider 与加速条件。`id` 组列表不足以单独证明进程能使用 KVM，应结合 accel-check 和启动日志确认。
+- 启动后先检查 `adb -s "$ANDROID_SERIAL" get-state`、`adb -s "$ANDROID_SERIAL" shell getprop sys.boot_completed`，再核对 `adb -s "$ANDROID_SERIAL" emu avd name`（仅模拟器）。序列号必须是本次实际设备，不默认认为新启动的一定是 5554；启动等待应有超时。禁止多个 agent 同时在同一设备安装、运行测试、force-stop 或重启。
+- standard/voice 共用包名，测试会替换调试安装；使用专用设备，不卸载或清除存有个人配置的正式安装。用例影响本地偏好和服务器列表时，明确测试数据范围及清理方式。
+- 基线 worktree 与当前仓库不要并行复用同一模拟器、输出目录或构建目录。旧仓库缺工具时显式使用当前工具路径；不能把新模型/新测试强灌到旧基线后仍称为原始版本测试。
+
+### 5.2 先采证，再重启和重跑
+
+每轮开始，以及异常结束后、重启/清日志之前，运行只读采集并指定不同目录：
+
+```bash
+bash scripts/collect_webview_diagnostics.sh "$ANDROID_SERIAL" .tools/diagnostics/matrix/<唯一轮次>/env-before
+# 运行本轮矩阵或定向测试后
+bash scripts/collect_webview_diagnostics.sh "$ANDROID_SERIAL" .tools/diagnostics/matrix/<唯一轮次>/env-after
+```
+
+同时保留对应 console、testlog、XML/HTML 报告及开始/结束时间。crash buffer 可能包含旧记录，必须与这次测试时间对齐；单个 SIGTRAP 日志不证明所有超时都由同一原因造成。没有 renderer 崩溃的 JS 超时，继续检查页面初始化、资源、桥接和线程阻塞。
+
+如需重启，只重启本轮独占的模拟器，记录理由、环境变化和轮次；先保存首次失败，重跑另建目录，不覆盖它。不要连续重跑直到出现一次 PASS 后删掉失败记录，也不要为规避问题加入产品禁 JIT/GPU、关闭同步或吞异常的开关。
+
+诊断与截图应先脱敏；`.tools/` 和生成图集继续 Git 忽略。当前跟踪的截图操作入口是 [docs/screenshots/README.md](../screenshots/README.md)，不是依赖可能未生成的 current 子目录说明。
+
+### 5.3 矩阵结果要检查完整性，不能只看汇总成功
+
+当前 `run_android_matrix.sh` 是逐类执行器，`DONE` 只表示循环走到了末尾；它不会汇总失败后返回失败状态。`summarize_android_results.py` 是报告工具，当前也没有“发现非 PASS 就非零退出”的门禁。不得把这两个脚本的退出码或 `DONE` 当成全绿。
+
+2026-11-01 的隔离输入验证发现当前汇总器还有两种边界：已有 test-results.log 但只有 runner 启动失败、没有单项状态时，会返回空结果；console 中 rc=1 而 log 有一项 PASS 时，仍会报告该项 PASS，不会自动说明整轮失败。该验证使用临时目录，没有运行或改变设备测试，也没有修改脚本。
+
+因此每轮至少交叉核对：
+
+1. 预期类/方法清单与实际类/方法清单一致。不存在目录、空目录、无测试、启动失败、进程崩溃、超时或类只执行一部分，均不能算通过；新增测试与旧基线没有的测试分别标识，不因旧版 ABSENT 直接推断产品回归。
+2. 每类 console 末尾的 `rc=`、Gradle/instrumentation 结束状态、testlog 单项状态和 XML 统计相互匹配。单项 PASS 与整轮失败可同时存在，两者都记录；`Task ... SKIPPED` 不是 JUnit skip，真正的 IGNORED/SKIP 逐项写原因。
+3. 比较总数、通过、失败、错误、忽略、未执行和重复项；按设备分别核对。当前汇总器只读取匹配到的第一份设备 log，不支持据此声称多设备都通过。
+4. 每轮使用新的 label，例如 `change-standard-20261101-01`。当前执行器复用 label 会覆盖同名类并可能残留旧类 console；预先拒绝非空轮次目录，不把不同提交/轮次混成一次结果。当前脚本会清前一类的构建结果，仍须保留本轮首次原始报告，不能仅保存最后一次重跑。
+5. 若测试和产品在执行期间继续被修改，停止将这一轮作为单一候选提交的发布证据，重新记录一致的候选版本后验证。
+
+汇总脚本仍可用于人工浏览和差异比较；增加严格失败退出、清单完整性与 runner 失败识别等脚本改动，留待用户决定，本轮不改。
+
+### 5.4 补齐桌面页面、模型与 APK 检查
+
+首次构建或依赖缓存不完整时，先准备固定输入，再使用前述 offline Gradle 命令：
+
+```bash
+python3 -m unittest discover -s scripts/tests
+python3 scripts/fetch_voice.py
+```
+
+offline 因依赖缺失失败要记为环境未准备，不是产品测试失败或测试通过；联网下载后重跑，不能修改固定模型哈希绕过。
+
+发布候选的终端页面除 Node 测试外，还需验证实际打包资产。以下 bundle 会写入跟踪目录，应在候选版本上执行并检查生成差异：
+
+```bash
+npm --prefix web ci --ignore-scripts
+npm --prefix web test
+npm --prefix web run bundle
+git diff --exit-code -- app/src/main/assets/terminal
+npm --prefix web run test:browser
+```
+
+本机 localhost HTTP 被拒绝时，可用 `TERMINAL_TEST_FILE=1 npm --prefix web run test:browser` 作为补充，并明确记录为桌面 file origin；不能替代 CI 默认 HTTP 路径或 Android WebView 验证。Node、桌面浏览器、真实 WebView、原生输入组件和离线截图的结果分别列出。
+
+两个 Release APK 还要验证模型/runtime 固定输入、standard 无语音负载及录音权限、voice 有正确模型与 ABI、包名/版本一致、签名证书、体积和 16 KiB 对齐；CI 中已有这些检查。后续文件预览的 SFTP 测试不能直接沿用当前 SSH fixture 宣称已覆盖：该 fixture 尚未配置 SFTP subsystem，必须另补集成环境。
+
+### 5.5 基线结论和偶发失败的表述
+
+“同一行失败”是定位线索，不足以独立证明同一个根因。对照至少保证同设备环境、等价测试步骤、同配置/数据/权限及相同可观察行为；必要时补断言保持原需求。原版和新版分别使用不同测试时，要写明变化和共有覆盖范围。
+
+未引入新增失败，只能表述为“在本次已执行用例与环境中未发现新增失败”，不推导为完整产品无回归。新增用例、真机麦克风、厂商 IME、后台/熄屏恢复等未覆盖项继续保留。
+
+偶发失败报告保留首次结果和全部重跑结果，写清用例、轮次、失败率、前后设备状态；一次重跑通过不能把原始矩阵改成全绿。对隐私窗口 FLAG_SECURE、跨服务器/旧连接输入、自动发送等关键行为，不因旧版也失败就忽略。预发行如仍有未解决问题，应在版本记录列明影响、当前证据和验证缺口；正式版发布前处理相关风险。
+
+### 5.6 发布核对绑定到同一个候选提交
+
+当前 Release APK、Android checks、Voice checks 是独立 workflow。Release APK 不会等待另两个成功，也不会运行完整 Android instrumentation；标签一推就可能先发布。因此先核对候选提交所需检查，再在已获授权的发布范围内推标签，不能依赖“先推标签、之后发现别的 CI 红了再说”。
+
+以具体 SHA 查询，不能只看最近 6 次运行：
+
+```bash
+candidate_sha=$(git rev-parse HEAD)
+gh run list --commit "$candidate_sha" --limit 50 \
+  --json databaseId,workflowName,event,headSha,status,conclusion
+```
+
+逐条确认候选提交、workflow、触发来源及结论。Voice checks 有 paths 过滤，没触发时说明原因；涉及 voice 的变动不能拿旧提交成功替代，需要按候选提交补验证。提交或版本调整后，记录哪些检查针对最终 SHA，哪些基于仅版本号不同的同一产品内容，不混称为全都测过。
+
+已获授权且暂不发布、仅需要正式签名测试 APK 时，可手动运行 `release.yml`，它上传 `signed-release-apks` artifact 而不创建 Release；当前令牌需要 Actions 写权限，权限不足不算构建成功，不擅自替换为正式标签。
+
+发布后确认 Release 的标签指向候选 SHA、draft/prerelease、稳定 Latest 与四个附件；尽量下载两 APK 及 SHA 文件，分别执行摘要、apksigner 证书和 aapt2 包名/版本核对。只下载一个时分别说明，不把另一个的服务端摘要当成本地验签。
+
+本机 debug / unsigned APK 无法代替正式签名覆盖安装；GitHub secrets 不需要导出到本地。代理导致 API 查询/下载失败时先重试或等待，保留失败证据，不重复创建/覆盖已发布标签。清理只针对本轮拥有的模拟器和确认干净的 worktree；原始结果超过最低保留周期前，不因下一版发布就自动删除仍关联未解决问题的证据。

@@ -146,6 +146,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         warmConnections.setCapacity(savedSshRetention(this).capacity)
         initializeVoiceFlavor(applicationContext)
+        scope.launch(Dispatchers.IO) {FilePreviewSession.cleanup(applicationContext)}
         enableEdgeToEdge(statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT), navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT))
         privacyDisplay = privacySettings.enabled()
         if (android.os.Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(false)
@@ -449,6 +450,9 @@ class MainActivity : AppCompatActivity() {
         var showTools by remember { mutableStateOf(false) }
         var showDetails by remember { mutableStateOf(false) }
         var copySnapshot by remember { mutableStateOf<TerminalSnapshot?>(null) }
+        var preview by remember { mutableStateOf<PreviewRequest?>(null) }
+        var externalLink by remember { mutableStateOf<String?>(null) }
+        var voiceActive by remember {mutableStateOf(false)}
         val focusManager = LocalFocusManager.current
         val keyboard = LocalSoftwareKeyboardController.current
         val directInput = remember { DirectTerminalInput(this) }
@@ -457,7 +461,7 @@ class MainActivity : AppCompatActivity() {
         val sticky=remember(wireToken,draftScopeKey,replyPane?.identity,showConfig) {StickyKeys()}
         val keyToken=wireToken
         val keyBinding=replyPane
-        val keysEnabled=!showConfig && keyToken.isNotEmpty() && !pastePending && !busy
+        val keysEnabled=!showConfig && keyToken.isNotEmpty() && !pastePending && !busy && preview==null
         fun clearModifiers() { if(sticky.modifiers!=0) {sticky.clear(); directInput.modifiers=0; directInput.restart()} }
         LaunchedEffect(keysEnabled,showTools,quickReplyToken,copySnapshot,editorOpen) {
             if((!keysEnabled || showTools || quickReplyToken!=null || copySnapshot!=null || editorOpen) && sticky.modifiers!=0) {
@@ -558,6 +562,37 @@ class MainActivity : AppCompatActivity() {
         val hideVoiceKeyboard: () -> Unit = {
             directInput.retire(); clearModifiers(); focusManager.clearFocus(force=true); keyboard?.hide()
         }
+        fun browser(uri:String) {
+            try {startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(uri).normalizeScheme()).addCategory(android.content.Intent.CATEGORY_BROWSABLE))}
+            catch(_:android.content.ActivityNotFoundException) {
+                (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("URL",uri))
+                status=TerminalStatus(uiText(R.string.preview_external_error),alert=true)
+            }
+        }
+        fun external(uri:String) {
+            val host=android.net.Uri.parse(uri).host?.lowercase()
+            if(host in listOf("localhost","127.0.0.1","::1","[::1]")) externalLink=uri else browser(uri)
+        }
+        val openLink by rememberUpdatedState<(String,String)->Unit>({token,uri ->
+            if(token==wireToken && token.isNotEmpty() && !showConfig && !editorOpen && !showTools && !showDetails && pendingReply==null && !voiceActive && quickReplyToken==null && copySnapshot==null && challenge==null && preview==null) {
+                val normalized=if(uri.contains("://")) uri else RemoteFilePaths.withoutLine(uri)
+                val parsed=android.net.Uri.parse(normalized)
+                when(parsed.scheme?.lowercase()) {
+                    "http","https" -> external(uri)
+                    null,"file" -> {
+                        val host=parsed.host
+                        if(parsed.scheme=="file" && !host.isNullOrEmpty() && host!="localhost" && host!=activeProfile?.host) {
+                            status=TerminalStatus(uiText(R.string.preview_error),alert=true)
+                        } else client?.let {connection ->
+                            hideVoiceKeyboard()
+                            preview=PreviewRequest(if(parsed.scheme=="file") parsed.path.orEmpty() else normalized,token,connection,replyPane,connectedPath,
+                                activeProfile?.let {privacySettings.label(it,privacyDisplay)} ?: getString(R.string.terminal_current_server))
+                        }
+                    }
+                    else -> status=TerminalStatus(uiText(R.string.preview_unsupported),alert=true)
+                }
+            }
+        })
         SideEffect {
             directInput.inputEnabled=keysEnabled && !editorOpen && !showTools && quickReplyToken==null && copySnapshot==null && pendingReply==null
             directInput.modifiers=sticky.modifiers
@@ -577,9 +612,10 @@ class MainActivity : AppCompatActivity() {
         LaunchedEffect(editorOpen,keysEnabled) {
             if(!editorOpen && keysEnabled && resumeDirectInput) {resumeDirectInput=false;showTerminalKeyboard()}
         }
-        LaunchedEffect(wireToken,draftScopeKey,showConfig) {
+        LaunchedEffect(wireToken,draftScopeKey,showConfig,replyPane) {
             directInput.restart()
             if(editorOpen && (editorToken!=wireToken || editorTarget!=draftScopeKey || showConfig)) editorOpen=false
+            if(showConfig || (wireToken.isNotEmpty() && preview?.let {it.token!=wireToken || it.binding!=replyPane}==true)) preview=null
         }
         DisposableEffect(directInput) { onDispose { directInput.retire() } }
         MaterialTheme(colorScheme = appColors(dark,palette),typography=appTypography,shapes=appShapes) {
@@ -656,7 +692,8 @@ class MainActivity : AppCompatActivity() {
                             onNotice = { status = it },
                             onReading = { reading = it },
                             onBinaryInput = { token, bytes -> submitBytes(token, bytes) },
-                            onFocusInput = {currentFocusInput()}
+                            onFocusInput = {currentFocusInput()},
+                            onOpenLink = {token,uri ->openLink(token,uri)}
                         ).also { terminalView = it }
                     }, update = { it.appearance(dark,palette=palette); it.viewport(visibleTerminalHeight / density.density) }, modifier = Modifier.fillMaxWidth().wrapContentHeight(Alignment.Top, unbounded = true).requiredHeight(gridHeight).align(Alignment.TopStart).testTag("terminal-webview"))
                     if (renderedBytes == 0L && !(busy && wireToken.isEmpty() && connectSteps.isNotEmpty()) && !(!busy && wireToken.isEmpty() && connectFailure != null)) {
@@ -766,7 +803,7 @@ class MainActivity : AppCompatActivity() {
                                 onReplies={directInput.retire();clearModifiers();quickReplyToken=wireToken}) {
                                 if(!editorOpen) VoiceInputControl(modifier=Modifier, enabled=keysEnabled,
                                     connectionToken=wireToken,targetKey=draftScopeKey,onHideKeyboard=hideVoiceKeyboard,
-                                    onOfferDraft=offerVoice,onCommitDraft=commitVoice,onStatus={status=it})
+                                    onOfferDraft=offerVoice,onCommitDraft=commitVoice,onStatus={status=it},onActive={voiceActive=it})
                             }
                         }
                     }
@@ -890,7 +927,7 @@ class MainActivity : AppCompatActivity() {
                                 horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                                 VoiceInputControl(modifier=Modifier,enabled=valid && !pastePending,
                                     connectionToken=wireToken,targetKey=draftScopeKey,onHideKeyboard=hideVoiceKeyboard,
-                                    onOfferDraft=offerVoice,onCommitDraft=commitVoice,onStatus={status=it})
+                                    onOfferDraft=offerVoice,onCommitDraft=commitVoice,onStatus={status=it},onActive={voiceActive=it})
                                 Spacer(Modifier.weight(1f))
                                 Button(onClick={sendDraft(draft.text,false,editorToken)},enabled=valid && draft.text.isNotEmpty() && !pastePending,
                                     shape=RoundedCornerShape(14.dp),modifier=Modifier.height(46.dp).testTag("insert-terminal")) {
@@ -900,6 +937,11 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
+                preview?.let {request -> key(request) { FilePreviewDialog(request,onClose={preview=null},onExternal={external(it)}) } }
+                externalLink?.let {uri -> AppDialog(onDismiss={externalLink=null},title=stringResource(R.string.preview_external_open),
+                    body=stringResource(R.string.preview_localhost),icon=UiSymbol.GLOBE,
+                    confirm=DialogAction(stringResource(R.string.preview_external_open),{externalLink=null;browser(uri)}),
+                    dismiss=DialogAction(stringResource(R.string.common_cancel),{externalLink=null})) }
                 challenge?.let { item ->
                     ProtectSensitiveContent()
                     HostKeyDialog(item,onDismiss={challenge=null},onTrust={

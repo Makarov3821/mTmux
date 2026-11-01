@@ -1,4 +1,4 @@
-/* No remote URLs, injected HTML, analytics, link handlers or clipboard escape support. */
+/* Trusted bundled terminal only. Links are classified by native UI, never navigated here. */
 const terminal = new Terminal({
   cursorBlink: true, fontSize: 14, scrollback: 3000,
   theme: { background: '#111916', foreground: '#e2eee8' },
@@ -67,6 +67,7 @@ new ResizeObserver(() => fit.fit()).observe(document.getElementById('terminal'))
 window.receive = (base64, id, token = connectionToken) => {
   writes = writes.then(() => new Promise(resolve => {
     if (token !== connectionToken) { NativeTerminal.ack(id); resolve(); return; }
+    fileLinks.invalidate();
     terminal.write(TerminalProtocol.decode(base64), () => { NativeTerminal.ack(id); resolve(); });
   }));
 };
@@ -143,6 +144,9 @@ window.resetTerminal = () => { writes = writes.then(() => terminal.reset()); };
 // Never substitute arrow keys when the application has not requested a mouse.
 const container = document.getElementById('terminal');
 const screen = terminal.element.querySelector('.xterm-screen');
+const fileLinks = TerminalLinks.install(terminal,screen,uri=> {
+  if(connected) NativeTerminal.openLink?.(connectionToken,uri);
+});
 // Touch targets must outlive xterm's replaceChildren() on every text redraw.
 // Otherwise a finger starting on a glyph remains targeted at a detached span
 // and subsequent touchmove events never reach our container.
@@ -202,7 +206,8 @@ container.addEventListener('touchstart', event => {
     y: event.touches[0].clientY, lastY: event.touches[0].clientY, pending: 0, direction: 0,
     cell: Math.max(1, screen.getBoundingClientRect().height / terminal.rows),
     remote: hasRemoteMouse(), firstWheel: true, wheelCredits: 0,
-    started: performance.now(), moved: false, token: connectionToken} : null;
+    started: performance.now(), moved: false, token: connectionToken,
+    link:fileLinks.hit(event.touches[0].clientX,event.touches[0].clientY)} : null;
   event.preventDefault();
   event.stopImmediatePropagation();
 }, {capture: true, passive: false});
@@ -230,6 +235,15 @@ container.addEventListener('touchmove', event => {
   event.stopImmediatePropagation();
 }, {capture: true, passive: false});
 container.addEventListener('touchend', event => {
+  if(gesture && !gesture.moved && gesture.token===connectionToken && connected && performance.now()-gesture.started<550 && gesture.link) {
+    const target=fileLinks.hit(gesture.x,gesture.y);
+    if(target?.uri && target.uri===gesture.link.uri && target.line===gesture.link.line && target.row===gesture.link.row) {
+      NativeTerminal.openLink?.(connectionToken,target.uri);
+      cancelGesture();event.preventDefault();event.stopImmediatePropagation();return;
+    }
+    // Output changed under the finger: do not click a different Agent control instead.
+    cancelGesture();event.preventDefault();event.stopImmediatePropagation();return;
+  }
   // A quick stroke can finish before the browser's next animation frame.
   // Commit at most one bounded frame now, then discard all backlog on release.
   if (gesture?.moved) {

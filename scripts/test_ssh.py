@@ -52,6 +52,7 @@ AllowTcpForwarding yes
 X11Forwarding no
 PermitTunnel no
 LogLevel ERROR
+Subsystem sftp /usr/lib/openssh/sftp-server
 """)
         # Dedicated tmux socket: tests never touch the user's default server.
         # Mirror the user's desktop wheel bindings in an isolated server only.
@@ -107,7 +108,8 @@ bind -n WheelDownPane {
                     try:
                         # All credentials here are generated, temporary fixture keys, never user keys.
                         variant = options.android_variant.capitalize()
-                        command = ["./gradlew", f":app:connected{variant}DebugAndroidTest", "--console=plain",
+                        command = ["./gradlew", f":app:connected{variant}DebugAndroidTest", "--console=plain", "--no-daemon",
+                                   "-Pkotlin.compiler.execution.strategy=in-process", "--max-workers=2",
                                    f"-Pandroid.testInstrumentationRunnerArguments.fixturePort={port}",
                                    f"-Pandroid.testInstrumentationRunnerArguments.fixtureTmux={wrapper}",
                                    "-Pandroid.testInstrumentationRunnerArguments.fixtureMouseCommand=" + shlex.join([sys.executable, str(Path(__file__).resolve().with_name("mouse_tui_fixture.py"))]),

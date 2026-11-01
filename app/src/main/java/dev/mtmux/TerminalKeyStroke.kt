@@ -72,6 +72,8 @@ object TerminalKeyStroke {
 internal const val TERMINAL_KEY_PAGE_COUNT = 4
 internal const val TERMINAL_KEY_PAGER_START = 1_073_741_820 // Middle of Int range, aligned to page zero.
 internal fun terminalKeyPage(page: Int) = Math.floorMod(page, TERMINAL_KEY_PAGE_COUNT)
+// The pager is reversed: leftward swipes decrease its index, while dots advance right.
+internal fun terminalKeyVisualPage(page: Int) = Math.floorMod(-page, TERMINAL_KEY_PAGE_COUNT)
 
 /** An obsolete IME connection must not replay the composing key after its modifier was consumed. */
 internal class OneShotInputGate(private val onText: (String) -> Boolean, private val onBackspace: () -> Boolean,

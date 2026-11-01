@@ -45,6 +45,23 @@ class SshClient(private val pins: PinStore, private val confirmUnknownHost: ((Ho
     fun observe(observer: (ConnectionTrace) -> Unit) { trace.observer = observer }
     fun isReusable() = !cancelled && session?.isConnected == true && terminal == null && commands.isEmpty()
     fun reportReuse() { checkActive(); trace.instant(ConnectionPhase.SSH_REUSED) }
+    /** Allocate before connecting so callers can cancel a blocked subsystem initialization. */
+    fun remoteFiles(): RemoteFiles {
+        checkActive()
+        val connection = session ?: fail(ErrorCode.NOT_CONNECTED)
+        val channel = connection.openChannel("sftp") as com.jcraft.jsch.ChannelSftp
+        ownChannel(channel)
+        return RemoteFiles(channel) { commands.remove(channel) }
+    }
+
+    fun paneDirectory(binding: PaneBinding, path: String): String {
+        val target = binding.target
+        val result = exec("${Tmux.quote(path)} -u display-message -p -t ${Tmux.quote(target)} " +
+            Tmux.quote(Tmux.bindingFormat+"\n#{pane_current_path}"), timeoutMs = 5_000)
+        ensure(result.status == 0, ErrorCode.TMUX_TARGET_CHANGED)
+        ensure(result.output.substringBefore('\n').trimEnd('\r')==binding.identity,ErrorCode.TMUX_TARGET_CHANGED)
+        return RemoteFilePaths.valid(result.output.substringAfter('\n').trimEnd('\r', '\n'))
+    }
     /** No periodic application heartbeat while a bounded idle chain is parked. */
     fun setIdle(idle: Boolean) {
         checkActive()

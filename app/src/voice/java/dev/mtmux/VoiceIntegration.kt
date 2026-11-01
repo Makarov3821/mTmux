@@ -49,7 +49,7 @@ internal fun initializeVoiceFlavor(context: android.content.Context) {
     modifier: Modifier, enabled: Boolean, connectionToken: String, targetKey: String,
     onHideKeyboard: () -> Unit, onOfferDraft: (String,String,String) -> VoiceDraftOffer,
     onCommitDraft: (String,String,String,Boolean) -> Boolean,
-    onStatus: (TerminalStatus) -> Unit
+    onStatus: (TerminalStatus) -> Unit, onActive: (Boolean) -> Unit = {}
 ) {
     val context=LocalContext.current
     val scope=rememberCoroutineScope()
@@ -67,6 +67,9 @@ internal fun initializeVoiceFlavor(context: android.content.Context) {
     val latestOffer by rememberUpdatedState(onOfferDraft)
     val latestCommit by rememberUpdatedState(onCommitDraft)
     val latestStatus by rememberUpdatedState(onStatus)
+    val latestActive by rememberUpdatedState(onActive)
+    LaunchedEffect(state.phase) {latestActive(state.phase!=VoicePhase.IDLE)}
+    DisposableEffect(Unit) {onDispose {latestActive(false)}}
     var errorText by remember {mutableIntStateOf(R.string.voice_error_generic)}
     var resultText by remember {mutableStateOf("")}
     var capturedToken by remember {mutableStateOf("")}

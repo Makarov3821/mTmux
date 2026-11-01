@@ -519,4 +519,29 @@
     <plurals name="doctor_unchecked_count">
         <item quantity="other">未检查 · %1$d 项</item>
     </plurals>
+    <string name="home_pull_hint">下拉刷新已展开分组</string>
+    <string name="home_pull_release">松开刷新</string>
+    <string name="home_pull_refreshing">正在刷新已展开分组</string>
+    <string name="home_pull_no_targets">已展开分组中没有可刷新的服务器</string>
+    <string name="home_pull_finished">刷新结束，请查看各服务器卡片的结果。</string>
+    <string name="preview_title">文件预览</string>
+    <string name="preview_not_found">文件不存在，请检查基准目录及 SFTP 路径。</string>
+    <string name="preview_permission">当前 SSH 用户没有读取此文件的权限。</string>
+    <string name="preview_loading">正在读取远端文件…</string>
+    <string name="preview_error">无法读取文件，请检查路径、权限及服务器的 SFTP 服务。</string>
+    <string name="preview_limit">文件超过预览大小限制。</string>
+    <string name="preview_unsupported">暂不支持预览此文件类型。</string>
+    <string name="preview_timeout">文件传输超时，可以重试。</string>
+    <string name="preview_encoding">文档不是有效的 UTF-8 文本。</string>
+    <string name="preview_blocked">部分资源不可用或已被阻止。预览支持静态本地内容。</string>
+    <string name="preview_base">基准目录</string>
+    <string name="preview_base_help">相对路径按此目录读取；如果 Agent 在其他项目中工作，可在这里修改。</string>
+    <string name="preview_retry">打开 / 重试</string>
+    <string name="preview_path">远端路径</string>
+    <string name="preview_image_sampled">大图已降低分辨率显示</string>
+    <string name="preview_external_error">没有可用的浏览器，已复制链接。</string>
+    <string name="preview_localhost">此地址将访问手机本机，而不是 SSH 服务器。</string>
+    <string name="preview_external_open">用浏览器打开</string>
+    <string name="preview_copy_path">复制路径</string>
+    <string name="preview_static">静态预览 · 已禁用脚本和互联网资源</string>
 </resources>

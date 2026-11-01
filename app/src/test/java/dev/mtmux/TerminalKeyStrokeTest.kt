@@ -54,6 +54,8 @@ class TerminalKeyStrokeTest {
         assertEquals(0,terminalKeyPage(TERMINAL_KEY_PAGER_START))
         assertEquals(listOf(0,1,2,3,0,1), (0..5).map {terminalKeyPage(TERMINAL_KEY_PAGER_START+it)})
         assertEquals(listOf(0,3,2,1,0,3), (0..5).map {terminalKeyPage(TERMINAL_KEY_PAGER_START-it)})
+        assertEquals(listOf(0,1,2,3,0,1), (0..5).map {terminalKeyVisualPage(TERMINAL_KEY_PAGER_START-it)})
+        assertEquals(listOf(0,3,2,1,0,3), (0..5).map {terminalKeyVisualPage(TERMINAL_KEY_PAGER_START+it)})
     }
     @Test fun composingKeyIsConsumedOnceAndCannotBeReplayedByOldIme() {
         val sticky=StickyKeys();sticky.toggle(ctrl)

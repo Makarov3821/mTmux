@@ -38,7 +38,8 @@ class TerminalView(
     private val onNotice: (TerminalStatus) -> Unit,
     private val onReading: (Boolean) -> Unit = {},
     private val onBinaryInput: (String, ByteArray) -> Unit = { _, _ -> },
-    private val onFocusInput: () -> Unit = {}
+    private val onFocusInput: () -> Unit = {},
+    private val onOpenLink: (String, String) -> Unit = { _, _ -> }
 ) : WebView(context) {
     private val acknowledgements = ConcurrentHashMap<String, CountDownLatch>()
     private val sequence = AtomicLong()
@@ -165,6 +166,10 @@ class TerminalView(
     }
 
     private inner class Bridge {
+        @JavascriptInterface fun openLink(token: String, uri: String) {
+            if(uri.length>8192 || uri.any { it.isISOControl() }) return
+            post { if(!disposed && token==activeToken && token.isNotEmpty()) onOpenLink(token,uri) }
+        }
         @JavascriptInterface fun focusInput() { post { if (!disposed && activeToken.isNotEmpty()) onFocusInput() } }
         @JavascriptInterface fun binaryInput(token: String, encoded: String) {
             if (encoded.length > 131072) return

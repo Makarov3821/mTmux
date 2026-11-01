@@ -8,7 +8,7 @@ import androidx.compose.ui.Modifier
     modifier: Modifier, enabled: Boolean, connectionToken: String, targetKey: String,
     onHideKeyboard: () -> Unit, onOfferDraft: (String,String,String) -> VoiceDraftOffer,
     onCommitDraft: (String,String,String,Boolean) -> Boolean,
-    onStatus: (TerminalStatus) -> Unit
+    onStatus: (TerminalStatus) -> Unit, onActive: (Boolean) -> Unit = {}
 ) = Unit
 
 
