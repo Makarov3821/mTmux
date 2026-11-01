@@ -10,13 +10,13 @@ Android 上的 SSH + tmux Agent 控制端。目标是离开电脑后，打开手
 
 **0.9.3-rc.1 预发行版**修复 0.9.2 真机反馈的首页状态总览、对齐、终端宽度与按键栏问题，详见 [0.9.3-rc.1](docs/releases/0.9.3-rc.1.md)。
 
-**0.9.2 预发行版**为界面改版：新首页、终端阶段卡与断线卡片、下半屏语音浮层；并修复直接输入时键盘使终端缩小的问题。正式 Latest 保留 0.9.0。详见 [0.9.2](docs/releases/0.9.2.md)。程序图集在本地生成并被 Git 忽略，复现见 [截图说明](docs/screenshots/README.md)。
+**0.9.2 预发行版**为界面改版：新首页、终端阶段卡与断线卡片、下半屏语音浮层；并修复直接输入时键盘使终端缩小的问题。该次预发行未更新正式 Latest。详见 [0.9.2](docs/releases/0.9.2.md)。程序图集在本地生成并被 Git 忽略，复现见 [截图说明](docs/screenshots/README.md)。
 
 **0.9.0（versionCode 36，应用 ID `dev.mtmux`）：voice 切换为离线 X-ASR 480ms INT8，自带中英识别、标点和大小写；新增可选 tmux Doctor，修复键盘唤起时输入区避让。** 按住说话、上滑取消和可编辑卡片继续保留。实现、升级与验证范围见 [0.9.0 发布记录](docs/releases/0.9.0.md)。
 
 发布提供 standard / voice 两份既有证书签名 APK，使用相同包名与递增版本，可覆盖旧正式版保留配置。X-ASR 的模型与包体检查见 [迁移记录](docs/testing/voice-xasr.md)；独立 [Audio Lab](test-audio/README.md) 保留历史模型对照，不参与主应用发布。
 
-版本功能清单见 [CHANGELOG.md](CHANGELOG.md)；详细记录见 [0.9.0](docs/releases/0.9.0.md)。
+版本功能清单见 [CHANGELOG.md](CHANGELOG.md)；详细记录见 [0.9.3](docs/releases/0.9.3.md)。
 
 0.8.4 终端底栏：发送合入输入框，工具与快捷回复在各自区域内居中，voice 版中央使用主题配色的圆形声波按钮；快捷键新增 Ctrl / Shift / Alt，点击高亮后作用于下一次按键并释放，四页双向循环。详见 [键盘验证](docs/testing/terminal-keyboard.md) 和 底栏效果图（历史截图已清理）（布局示意，非实机截图）。
 
