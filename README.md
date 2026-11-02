@@ -1,61 +1,65 @@
 # mTmux
 
-在手机上继续你的远端终端工作。
+[English](README.md) · [简体中文](README_zh.md)
 
-mTmux 是面向 SSH 与 tmux 工作流的 Android 客户端。离开电脑后，你可以在手机上接入远端会话，查看任务输出、回复终端 Agent，并阅读它生成的文档和图片。
+Keep working in your remote terminal from your phone.
 
-[下载 APK](https://github.com/Makarov3821/mTmux/releases/latest) · [使用指南](docs/usage.md) · [版本变化](CHANGELOG.md)
+mTmux is an Android client for SSH and tmux workflows. When you are away from your computer, connect to remote sessions, check task output, reply to terminal agents, and view the documents and images they generate.
 
-## 适合谁
+[Download APK](https://github.com/Makarov3821/mTmux/releases/latest) · [User guide](docs/usage-en.md) · [Changelog](CHANGELOG.md)
 
-- 在远端 Linux 服务器或开发机上使用 tmux，希望随时接着操作终端的开发者。
-- 使用 Codex、OpenCode 等终端 Agent，需要在手机上查看进度、补充指令或阅读结果的人。
-- 管理多台服务器，希望把常用会话集中在一个手机界面里的人。
+## Who it is for
 
-## 主要特色
+- Developers who use tmux on a remote Linux server or development machine and want to continue their terminal work on the go.
+- Users of terminal agents such as Codex and OpenCode who need to check progress, send follow-up instructions, or read results from their phone.
+- Anyone managing multiple servers who wants their regular sessions together in one mobile interface.
 
-- **服务器与会话管理**：分组、搜索服务器，查看 tmux 会话和任务状态，直接进入已有会话或新建终端。
-- **适合手机的终端操作**：直接键盘输入、触屏滚动、Ctrl／Shift／Alt 组合键、功能键和快捷回复。
-- **文档与图片预览**：在终端中点击 Markdown、HTML 和常见图片路径即可查看，图片支持缩放和拖动。
-- **离线语音输入**：voice 版支持中英文语音转写，识别结果可编辑后插入终端。
-- **连接与环境配置**：支持密码、私钥和多级跳板，并提供 tmux Doctor 检查服务器环境。
+## Features
 
-## 安装与开始使用
+- **Server and session management**: Group and search servers, view tmux sessions and task status, and join an existing session or create a new terminal.
+- **Mobile terminal controls**: Direct keyboard input, touch scrolling, Ctrl / Shift / Alt combinations, function keys, and quick replies.
+- **Document and image previews**: Tap Markdown, HTML, and common image paths in the terminal to open them. Images support zooming and panning.
+- **Offline speech input**: The voice build transcribes Chinese and English speech. Edit the result before inserting it into the terminal.
+- **Connection and environment setup**: Password and private-key authentication, multiple jump hosts, and tmux Doctor to check the server environment.
 
-从 [GitHub Releases](https://github.com/Makarov3821/mTmux/releases/latest) 下载 APK，按需要选择一种版本：
+## Installation and getting started
 
-| 版本 | 适合的使用方式 |
+Download an APK from [GitHub Releases](https://github.com/Makarov3821/mTmux/releases/latest) and choose a build:
+
+| Build | Use case |
 | --- | --- |
-| standard | 使用键盘和终端工具输入 |
-| voice | 在 standard 功能上增加离线语音输入 |
+| standard | Keyboard input and terminal tools |
+| voice | Everything in standard, plus offline speech input |
 
-手机需要 Android 8.0 或以上版本；服务器需要能通过 SSH 登录，建议使用 tmux 3.2a 或以上版本。
+Your phone needs Android 8.0 or later. The server must be accessible over SSH; tmux 3.2a or later is recommended.
 
-1. 添加服务器，填写地址、用户名和认证信息。
-2. 保存时核对主机指纹，按需要运行 tmux Doctor。
-3. 在首页选择 tmux 会话，或新建一个终端开始使用。
+1. Add a server with its address, username, and authentication details.
+2. Verify the host fingerprint when saving, and optionally run tmux Doctor.
+3. Select a tmux session on the home screen, or create a new terminal.
 
-首次配置、跳板、语音和文件预览的详细步骤见 [使用指南](docs/usage.md)。
+See the [user guide](docs/usage-en.md) for initial setup, jump hosts, speech input, and file previews.
 
-## 二次开发
+## Development
 
-项目使用 Kotlin、Jetpack Compose 和 xterm.js，SSH 与 tmux 逻辑位于独立的 core 模块。
+The project uses Kotlin, Jetpack Compose, and xterm.js. SSH and tmux logic lives in the separate core module.
 
-准备 JDK 17、Android SDK Platform 36 和 Build Tools 35.0.0，配置好 SDK 后可使用 Android Studio 打开项目，或在仓库根目录构建 standard 调试版：
+Install JDK 17, Android SDK Platform 36, and Build Tools 35.0.0. Once the SDK is configured, open the project in Android Studio or build the standard debug APK from the repository root:
 
 ```bash
 ./gradlew :app:assembleStandardDebug
 ```
 
-模块结构、voice 构建、网页资产修改和测试入口见 [开发指南](docs/development.md)。
+See the [development guide](docs/development-en.md) for the module layout, voice builds, web assets, and testing.
 
-## 文档与反馈
+## Documentation and feedback
 
-- [使用指南](docs/usage.md)：连接服务器、操作终端、使用语音和文件预览。
-- [文档目录](docs/README.md)：开发、维护和历史记录入口。
-- [隐私与安全说明](docs/privacy-and-security.md)：凭据、指纹、缓存和截图设置。
-- [问题反馈](https://github.com/Makarov3821/mTmux/issues)：请附上版本、复现步骤和实际表现；日志导出方法见使用指南。
+Other reference documents and the changelog are currently in Chinese.
 
-## 许可证
+- [User guide](docs/usage-en.md): Connecting to servers, terminal controls, speech input, and file previews.
+- [Documentation index](docs/README.md): Development, maintenance, and historical records.
+- [Privacy and security](docs/privacy-and-security.md): Credentials, host fingerprints, caches, and screenshot settings.
+- [Report an issue](https://github.com/Makarov3821/mTmux/issues): Include the app version, steps to reproduce, and actual behavior. The user guide explains how to export logs.
 
-项目自有代码采用 **GPL-3.0-only**，许可证正文见 [LICENSE](LICENSE)。第三方组件的版权与许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+## License
+
+The project's own code is licensed under **GPL-3.0-only**. See [LICENSE](LICENSE) for the full text and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for third-party copyrights and licenses.

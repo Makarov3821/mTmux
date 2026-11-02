@@ -14,6 +14,6 @@
 
 - 界面英文与中文资源同步修改；core 输出结构化错误和进度，界面层负责翻译，诊断字段保持英文。
 - 修改 web 源码后重建对应的 app 终端与预览资产，不只修改生成文件。
-- 构建与模块入口见 [开发指南](docs/development.md)。测试和发布沿用 [固定流程](docs/testing/webview-and-release-runbook.md) 与 [改动验收流程](docs/testing/ui-redesign-change-and-release-routine.md)，分别记录桌面浏览器、Android WebView、真实 SSH 夹具和真机的结果；跳过不计为通过。
+- 构建与模块入口见 [开发指南](docs/development-zh.md)。测试和发布沿用 [固定流程](docs/testing/webview-and-release-runbook.md) 与 [改动验收流程](docs/testing/ui-redesign-change-and-release-routine.md)，分别记录桌面浏览器、Android WebView、真实 SSH 夹具和真机的结果；跳过不计为通过。
 - test-audio 是独立实验项目，不作为主应用构建或发布的依赖。
 - 调试日志、生成图集、APK、模型下载、凭据和本机环境不纳入普通源码提交；沿用 .gitignore。

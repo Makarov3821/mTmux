@@ -1,5 +1,7 @@
 # 开发指南
 
+[English](development-en.md) · [简体中文](development-zh.md)
+
 ## 环境与模块
 
 使用 JDK 17、Android SDK Platform 36、Build Tools 35.0.0 和仓库自带 Gradle Wrapper。可在 Android Studio 打开项目并配置 SDK，命令行构建可设置 `ANDROID_HOME` 后在根目录执行：

@@ -1,5 +1,7 @@
 # 使用指南
 
+[English](usage-en.md) · [简体中文](usage-zh.md)
+
 本指南对应主分支当前实现。已发布版本的变化见 [CHANGELOG](../CHANGELOG.md)。
 
 ## 安装与服务器准备
