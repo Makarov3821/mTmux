@@ -120,7 +120,7 @@ internal data class ServerDraft(val profile: ServerProfile, val credentials: Sav
         onDismiss = { approval.answer.complete(false); prompt = null },
         onTrust = { approval.answer.complete(true); prompt = null; trusted++ },
         trustLabel = stringResource(R.string.editor_trust_continue),
-        subtitle = progress.string() + "\n" + stringResource(R.string.trust_verify_hint),
+        subtitle = progress.string(),
         headerEnd = { Surface(shape = androidx.compose.foundation.shape.CircleShape, color = MaterialTheme.colorScheme.surfaceVariant) {
             Text(stringResource(R.string.editor_hop_of, current + 1, hops + 1), Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                 style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
@@ -159,7 +159,6 @@ internal data class ServerDraft(val profile: ServerProfile, val credentials: Sav
                 }
             } else {
                 Text(stringResource(R.string.editor_verifying_title), style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
-                Text(stringResource(R.string.editor_verifying_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             RouteChips(route, Modifier.padding(vertical = 10.dp))
             names.forEachIndexed { i, name ->
@@ -175,10 +174,6 @@ internal data class ServerDraft(val profile: ServerProfile, val credentials: Sav
             if (failure == null) Text(progress, Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(10.dp))
             if (failure != null) {
-                Text(stringResource(R.string.editor_save_anyway_hint), Modifier.fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant, androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).padding(12.dp),
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TonalActionButton(DialogAction(stringResource(R.string.editor_back_edit), onDismiss, enabled = !committing), Modifier.weight(1f))
                     PrimaryActionButton(DialogAction(stringResource(R.string.editor_retry_verification), onRetry, "retry-server-check", enabled = !committing), Modifier.weight(1f))

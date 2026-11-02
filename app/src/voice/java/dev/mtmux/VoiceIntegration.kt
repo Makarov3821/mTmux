@@ -229,7 +229,7 @@ internal fun initializeVoiceFlavor(context: android.content.Context) {
 
     when(state.phase) {
         VoicePhase.ERROR -> if(errorText==R.string.voice_error_permission) AppSheet(onDismiss={cancelAll()}) {
-            SheetHeader(stringResource(R.string.voice_title),stringResource(R.string.voice_local_badge),UiSymbol.MIC,Tone.WARNING)
+            SheetHeader(stringResource(R.string.voice_title),icon=UiSymbol.MIC,tone=Tone.WARNING)
             Text(stringResource(errorText),Modifier.padding(horizontal=12.dp,vertical=8.dp).testTag("voice-error"),style=MaterialTheme.typography.bodyMedium)
             Row(Modifier.fillMaxWidth().padding(12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 TonalActionButton(DialogAction(stringResource(R.string.common_close),{cancelAll()}),Modifier.weight(1f))
@@ -240,7 +240,7 @@ internal fun initializeVoiceFlavor(context: android.content.Context) {
             }
         } else VoiceErrorHint(stringResource(errorText)) {cancelAll()}
         VoicePhase.RESULT -> AppSheet(onDismiss={cancelAll()}) {
-            SheetHeader(stringResource(R.string.voice_title),stringResource(R.string.voice_result_help),UiSymbol.MIC,Tone.ACCENT)
+            SheetHeader(stringResource(R.string.voice_title),icon=UiSymbol.MIC,tone=Tone.ACCENT)
             InsetPanel(Modifier.padding(horizontal=12.dp).testTag("voice-result")) {SelectionContainer {Text(resultText,style=MaterialTheme.typography.bodyLarge)}}
             Column(Modifier.fillMaxWidth().padding(12.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                 PrimaryActionButton(DialogAction(stringResource(R.string.quick_reply_append),{
@@ -286,7 +286,6 @@ internal fun initializeVoiceFlavor(context: android.content.Context) {
                         TextButton(onClick=onCancel,enabled=visible){Text(stringResource(R.string.common_cancel))}
                     }
                     LinearProgressIndicator(Modifier.fillMaxWidth().height(8.dp),trackColor=MaterialTheme.colorScheme.surface,strokeCap=androidx.compose.ui.graphics.StrokeCap.Round)
-                    Text(stringResource(R.string.voice_result_help),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

@@ -27,7 +27,7 @@ import dev.mtmux.core.PrivateKeyText
         else {draft=value;error=null}
     }
     ProtectSensitiveContent()
-    AppDialog(onDismiss=onDismiss,properties=protectedDialogProperties,title=stringResource(R.string.editor_key_paste),body=stringResource(R.string.key_paste_help),icon=UiSymbol.KEY,
+    AppDialog(onDismiss=onDismiss,properties=protectedDialogProperties,title=stringResource(R.string.editor_key_paste),icon=UiSymbol.KEY,
         confirm=DialogAction(stringResource(R.string.key_paste_import),{
             runCatching {PrivateKeyText.decode(draft)}.onSuccess { onImport(it);draft="" }.onFailure {error=errorText(it)}
         },"confirm-key-paste",enabled=draft.isNotBlank() && error==null),

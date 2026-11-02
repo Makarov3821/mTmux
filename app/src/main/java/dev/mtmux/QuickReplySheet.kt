@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
     var error by remember { mutableStateOf<UiText?>(null) }
     fun save(next: List<String>) { runCatching { store.save(next);replies=next;editIndex=null;error=null }.onFailure {error=errorText(it)} }
     AppSheet(onDismiss=onDismiss) {
-        SheetHeader(stringResource(R.string.terminal_quick_replies),stringResource(R.string.quick_reply_help),UiSymbol.REPLY)
+        SheetHeader(stringResource(R.string.terminal_quick_replies),icon=UiSymbol.REPLY)
         Column(Modifier.fillMaxWidth().heightIn(max=460.dp).verticalScroll(rememberScrollState()).padding(horizontal=8.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
             replies.forEachIndexed { index, text ->
                 Surface(shape=androidx.compose.foundation.shape.RoundedCornerShape(14.dp),color=MaterialTheme.colorScheme.surfaceVariant) {

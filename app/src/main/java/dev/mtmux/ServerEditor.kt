@@ -191,7 +191,6 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
                         }
                     }
                 }
-                if (folders.isEmpty()) Text(stringResource(R.string.editor_folder_none_hint), style = MaterialTheme.typography.bodySmall)
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     AppIcon(UiSymbol.ROUTE, modifier = Modifier.size(19.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("Jump Host", Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
@@ -226,10 +225,6 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
                 SettingRow(stringResource(R.string.editor_tmux_mouse), icon = UiSymbol.HAND) { Switch(mouse, { mouse = it; dirty = true }) }
             }
             }
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                AppIcon(UiSymbol.LOCK, modifier = Modifier.size(13.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(stringResource(R.string.editor_keystore_note), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
             Spacer(Modifier.height(12.dp))
         }
     }
@@ -244,7 +239,7 @@ private class AuthFields(host: String = "", port: Int = 22, user: String = "", k
         val privacy = remember { PrivacyDisplay(context) }
         val candidates = remember { store.all().filter { it.id != initial?.id } }
         AppSheet(onDismiss = { pickJump = false }, secure = true) {
-            SheetHeader(stringResource(R.string.editor_jump_pick_title), stringResource(R.string.editor_jump_pick_help), UiSymbol.ROUTE)
+            SheetHeader(stringResource(R.string.editor_jump_pick_title), icon = UiSymbol.ROUTE)
             Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
                 if (candidates.isEmpty()) Text(stringResource(R.string.editor_jump_pick_empty), Modifier.padding(16.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 candidates.forEach { candidate ->

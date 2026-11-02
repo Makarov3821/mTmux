@@ -866,7 +866,6 @@ class MainActivity : AppCompatActivity() {
                                 Switch(checked = remoteTouch, onCheckedChange = { remoteTouch = it; terminalView?.remoteTouch(it); terminalPreferences.edit { putBoolean("remoteTouch", it) } })
                                 Text(stringResource(if (remoteTouch) R.string.tools_touch_remote else R.string.tools_touch_local))
                             }
-                            Text(stringResource(R.string.tools_touch_help), style = MaterialTheme.typography.bodySmall)
                             ScrollSpeedControl(scrollSensitivity, { value ->
                                 scrollSensitivity=value
                                 terminalView?.scrollSensitivity(value)
@@ -921,8 +920,6 @@ class MainActivity : AppCompatActivity() {
                                 textStyle=MaterialTheme.typography.bodyLarge,
                                 modifier=Modifier.fillMaxWidth().heightIn(max=260.dp).testTag("command-input"),
                                 minLines=3,maxLines=8)
-                            Text(stringResource(R.string.terminal_editor_help),Modifier.padding(horizontal=4.dp),style=MaterialTheme.typography.labelSmall,
-                                color=MaterialTheme.colorScheme.onSurfaceVariant)
                             Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,
                                 horizontalArrangement=Arrangement.spacedBy(10.dp)) {
                                 VoiceInputControl(modifier=Modifier,enabled=valid && !pastePending,
@@ -939,7 +936,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 preview?.let {request -> key(request) { FilePreviewDialog(request,onClose={preview=null},onExternal={external(it)}) } }
                 externalLink?.let {uri -> AppDialog(onDismiss={externalLink=null},title=stringResource(R.string.preview_external_open),
-                    body=stringResource(R.string.preview_localhost),icon=UiSymbol.GLOBE,
+                    body=uri.toString(),icon=UiSymbol.GLOBE,
                     confirm=DialogAction(stringResource(R.string.preview_external_open),{externalLink=null;browser(uri)}),
                     dismiss=DialogAction(stringResource(R.string.common_cancel),{externalLink=null})) }
                 challenge?.let { item ->
@@ -948,7 +945,7 @@ class MainActivity : AppCompatActivity() {
                         pins.edit { putString(item.endpoint, item.key) }
                         challenge = null
                         status = TerminalStatus(uiText(R.string.status_host_key_saved))
-                    },subtitle=stringResource(R.string.host_key_verify_hint)+" "+stringResource(if (item.changed) R.string.host_key_changed_hint else R.string.host_key_first_hint))
+                    })
                 }
             }
         }

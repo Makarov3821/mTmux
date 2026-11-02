@@ -392,8 +392,8 @@ open class UiCatalogTest {
         host("02-host-changed","[192.0.2.10]:22","SHA256:ZgNwJk7mDemoFingerprintForUiCatalogOnly",true,false)
         render { Backdrop(true); VerificationPanel(listOf("跳板 1","目标服务器"),1,null,false,"目标服务器 · 正在连接并验证身份…",{},{},{}) }
         shot("dialogs","03-server-checking",text(R.string.editor_verifying_title),"state-fixture","ServerVerification.kt","固定验证进度，不进行网络认证。")
-        host("04-server-fingerprint","[192.0.2.10]:22","SHA256:ZgNwJk7mDemoFingerprintForUiCatalogOnly",false,true,"正在验证目标服务器\n"+text(R.string.trust_verify_hint),"第 2 / 2 台")
-        host("05-jump-fingerprint","[192.0.2.40]:22","SHA256:DemoJumpHostFingerprintOnly",false,true,"正在验证跳板 1\n"+text(R.string.trust_verify_hint),"第 1 / 2 台")
+        host("04-server-fingerprint","[192.0.2.10]:22","SHA256:ZgNwJk7mDemoFingerprintForUiCatalogOnly",false,true,"正在验证目标服务器","第 2 / 2 台")
+        host("05-jump-fingerprint","[192.0.2.40]:22","SHA256:DemoJumpHostFingerprintOnly",false,true,"正在验证跳板 1","第 1 / 2 台")
         render { Backdrop(true); VerificationPanel(listOf("跳板 1","目标服务器"),1,"目标服务器：连接超时",false,"",{},{},{}) }
         shot("dialogs","06-save-anyway",text(R.string.editor_check_failed),"state-fixture","ServerVerification.kt","固定失败状态，展示重试 / Save anyway / 取消。")
         render { Backdrop(); NewTmuxPanel("开发服务器","3.4","code-review",{},true,null,{},{}) }
@@ -427,7 +427,7 @@ open class UiCatalogTest {
                 when (error) {
                     null -> VoiceTranscribingBubble {}
                     R.string.voice_error_permission -> AppSheet(onDismiss={}) {
-                        SheetHeader(stringResource(R.string.voice_title),stringResource(R.string.voice_local_badge),UiSymbol.MIC,Tone.WARNING)
+                        SheetHeader(stringResource(R.string.voice_title),icon=UiSymbol.MIC,tone=Tone.WARNING)
                         Text(stringResource(error),Modifier.padding(horizontal=12.dp,vertical=8.dp),style=MaterialTheme.typography.bodyMedium)
                         Row(Modifier.fillMaxWidth().padding(12.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                             TonalActionButton(DialogAction(stringResource(R.string.common_close),{}),Modifier.weight(1f))

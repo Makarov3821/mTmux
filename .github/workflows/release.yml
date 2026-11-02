@@ -98,7 +98,6 @@ jobs:
             if [ -n "$expected" ] && [ "$actual" != "$expected" ]; then echo "::error::$apk is signed with a different key"; exit 1; fi
           done
           echo "Certificate SHA-256: $certificate"
-          standard_size=$(stat -c %s "$standard"); voice_size=$(stat -c %s "$voice")
           ! "$aapt" dump permissions "$standard" | grep RECORD_AUDIO
           "$aapt" dump permissions "$voice" | grep RECORD_AUDIO
           [ "$("$aapt" dump badging "$standard" | sed -n '1p')" = "$("$aapt" dump badging "$voice" | sed -n '1p')" ] \
@@ -113,20 +112,11 @@ jobs:
           sha256sum "$voice_name" > "$voice_name.sha256"
           echo "STANDARD_APK_NAME=$standard_name" >> "$GITHUB_ENV"
           echo "VOICE_APK_NAME=$voice_name" >> "$GITHUB_ENV"
-          cat > release-notes.md <<EOF
-          Two APKs use the same package, version, and release certificate; install one flavor at a time.
-
-          - **standard**: no microphone permission, speech model, or voice native library (${standard_size} bytes)
-          - **voice**: offline X-ASR 480ms INT8 Chinese/English with native punctuation and casing, arm64-v8a + x86_64 (${voice_size} bytes)
-          - Pinned model/runtime files: \`voice/model.lock.json\`, \`voice/runtime.lock.json\`
-          - Certificate SHA-256: \`$certificate\`
-
-          Voice audio and transcription stay on device. Recognition opens an editable card; inserting text into the terminal requires confirmation and never presses Enter automatically.
-          EOF
+          printf 'mTmux %s\n' "$GITHUB_REF_NAME" > release-notes.md
           version_notes="docs/releases/${GITHUB_REF_NAME#v}.md"
           if [ -f "$version_notes" ]; then
-            printf '\n' >> release-notes.md
-            cat "$version_notes" >> release-notes.md
+            printf '\n[Change record](https://github.com/%s/blob/%s/%s)\n' \
+              "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" "$version_notes" >> release-notes.md
           fi
       - uses: actions/upload-artifact@v7
         with:

@@ -290,7 +290,7 @@ class TerminalUiTest {
         compose.onNodeWithTag("settings").performClick()
         compose.onNodeWithText("首页任务状态灯").assertDoesNotExist()
         compose.onNodeWithTag("export-debug-log").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("最多保留最近 10 MiB",substring=true).assertExists()
+        compose.onNodeWithText("最多保留最近 10 MiB",substring=true).assertDoesNotExist()
         saveScreenshot("debug-log-settings")
         compose.onNodeWithTag("export-debug-log").performClick()
         val automation=InstrumentationRegistry.getInstrumentation().uiAutomation

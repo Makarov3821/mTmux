@@ -3,12 +3,8 @@ package dev.mtmux
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import dev.mtmux.core.SshRetention
 import dev.mtmux.core.SshClient
 import dev.mtmux.core.WarmConnectionPool
@@ -33,7 +29,4 @@ fun savedSshRetention(context: android.content.Context) = SshRetention.fromCapac
         context.getSharedPreferences("terminal-settings", 0).edit().putInt(RETENTION_KEY, option.capacity).apply()
         pool.setCapacity(option.capacity)
     })
-    Text(stringResource(if (selected == SshRetention.NONE) R.string.ssh_retention_disabled else R.string.ssh_retention_enabled,
-        selected.capacity), style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("ssh-retention-help"))
-    Text(stringResource(R.string.ssh_retention_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }

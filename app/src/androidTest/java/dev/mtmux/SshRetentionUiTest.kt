@@ -32,7 +32,7 @@ class SshRetentionUiTest {
             compose.activityRule.scenario.recreate()
             compose.onNodeWithTag("settings").performClick()
             compose.onNodeWithTag("ssh-retention-NONE").performScrollTo().assertIsSelected()
-            compose.onNodeWithTag("ssh-retention-help").assertTextEquals("使用结束即关闭，不保留空闲连接。")
+            compose.onNodeWithTag("ssh-retention-help").assertDoesNotExist()
         } finally { prefs.edit().putInt("sshIdleCapacity", previous).commit() }
     }
 

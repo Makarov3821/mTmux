@@ -133,7 +133,6 @@ import kotlinx.coroutines.*
                 shape = appFieldShape, colors = appFieldColors(), textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Monospace),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { if (!busy) onCreate() }),
                 label = { Text(stringResource(R.string.tmux_name_label)) }, modifier = Modifier.fillMaxWidth().testTag("new-tmux-name"))
-            Text(stringResource(R.string.tmux_name_hint), Modifier.padding(horizontal = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (busy) StepRow(stringResource(R.string.tmux_creating), StepState.ACTIVE)
             error?.let { NoticeStrip(it, Tone.DANGER, UiSymbol.ALERT_CIRCLE, Modifier.testTag("new-tmux-error")) }
             Row(Modifier.padding(top = 4.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

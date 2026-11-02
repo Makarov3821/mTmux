@@ -45,13 +45,12 @@ import dev.mtmux.core.WarmConnectionPool
                         TextButton(onClick={onFont((font+1).coerceAtMost(28))},contentPadding=PaddingValues(0.dp),modifier=Modifier.size(40.dp)) { Text("+",style=MaterialTheme.typography.titleMedium) }
                     }
                 }
-                SettingRow(stringResource(R.string.settings_touch),icon=UiSymbol.HAND,help=stringResource(R.string.settings_touch_help)) { Switch(touch,onTouch) }
+                SettingRow(stringResource(R.string.settings_touch),icon=UiSymbol.HAND) { Switch(touch,onTouch) }
                 ScrollSpeedControl(speed,onSpeed,"settings-speed")
             }
             BentoCard(title=stringResource(R.string.settings_preview)) { PreviewSettings() }
             BentoCard(title=stringResource(R.string.settings_privacy)) {
                 SettingRow(stringResource(R.string.settings_privacy_display),icon=UiSymbol.EYE) { Switch(privacy,onPrivacy,modifier=Modifier.testTag("privacy-display")) }
-                Text(stringResource(R.string.settings_privacy_help),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
             BentoCard(title=stringResource(R.string.log_title)) { DebugLogSettings() }
             Spacer(Modifier.height(24.dp))

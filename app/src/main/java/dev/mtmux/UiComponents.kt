@@ -385,7 +385,6 @@ enum class RouteState { NORMAL, DONE, CURRENT, FAILED }
         }
         Slider(value = ScrollSpeed.normalize(value), onValueChange = { onChange(ScrollSpeed.normalize(it)) },
             valueRange = 1f..10f, steps = 8, modifier = Modifier.padding(start = 31.dp).testTag(tag))
-        Text(stringResource(R.string.scroll_speed_help), Modifier.padding(start = 31.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

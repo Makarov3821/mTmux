@@ -48,7 +48,6 @@ data class TerminalSnapshot(val text: String, val clipped: Boolean, val viewport
                         copied=true
                     },enabled=snapshot.text.isNotEmpty(),modifier=Modifier.testTag("copy-all-terminal")) { AppIcon(if(copied) UiSymbol.CHECK else UiSymbol.COPY,modifier=Modifier.size(16.dp));Spacer(Modifier.width(6.dp));Text(stringResource(if(copied) R.string.copy_done else R.string.copy_all)) }
                 }
-                Text(stringResource(R.string.copy_help),Modifier.padding(horizontal=4.dp),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 if(snapshot.clipped) NoticeStrip(stringResource(R.string.copy_clipped),Tone.WARNING,UiSymbol.INFO,Modifier.padding(top=8.dp))
                 if(snapshot.text.isEmpty()) Text(stringResource(R.string.copy_empty),Modifier.padding(start=4.dp,top=24.dp),color=MaterialTheme.colorScheme.onSurfaceVariant)
                 Surface(Modifier.weight(1f).fillMaxWidth().padding(top=12.dp,bottom=8.dp),shape=androidx.compose.foundation.shape.RoundedCornerShape(18.dp),color=MaterialTheme.colorScheme.surface) {

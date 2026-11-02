@@ -29,7 +29,6 @@ import kotlinx.coroutines.*
             finally { busy = false }
         } else result = if(uri==null) R.string.log_save_cancelled else R.string.log_snapshot_stale
     }
-    Text(stringResource(R.string.log_help),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
         FilledTonalButton(shape=androidx.compose.foundation.shape.RoundedCornerShape(12.dp),enabled=!busy && payload==null,onClick={
             scope.launch {

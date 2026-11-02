@@ -414,7 +414,6 @@ private class HomeRefresh {
                     Column(Modifier.fillMaxWidth().padding(horizontal=20.dp,vertical=28.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(12.dp)) {
                         BrandMark(56.dp)
                         Text(stringResource(R.string.home_empty),style=MaterialTheme.typography.titleMedium.copy(fontWeight=FontWeight.Bold),textAlign=TextAlign.Center)
-                        Text(stringResource(R.string.home_empty_detail),style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant,textAlign=TextAlign.Center)
                         Button(onClick={edit=null;page="edit"},shape=RoundedCornerShape(14.dp),modifier=Modifier.padding(top=4.dp).height(46.dp)) { AppIcon(UiSymbol.PLUS,modifier=Modifier.size(18.dp)); Spacer(Modifier.width(6.dp));Text(stringResource(R.string.home_add_server)) }
                     }
                 }
@@ -591,7 +590,7 @@ private class HomeRefresh {
         SheetDivider()
         SheetAction(UiSymbol.CLOSE,stringResource(R.string.common_cancel),{movingServer=null})
     } }
-    delete?.let { profile -> AppDialog(onDismiss={delete=null},title=stringResource(R.string.delete_server_title, privacySettings.label(profile, privacyDisplay)),body=stringResource(R.string.delete_server_body),
+    delete?.let { profile -> AppDialog(onDismiss={delete=null},title=stringResource(R.string.delete_server_title, privacySettings.label(profile, privacyDisplay)),
         icon=UiSymbol.SERVER,tone=Tone.DANGER,
         confirm=DialogAction(stringResource(R.string.common_delete),{
             runCatching { store.delete(profile.id);revisions[profile.id]=(revisions[profile.id] ?: 0)+1;jobs.remove(profile.id)?.cancel();profiles=store.all();rows.remove(profile.id);delete=null }.onFailure { message=uiText(R.string.delete_server_failed) }
@@ -636,7 +635,7 @@ private class HomeRefresh {
     headerEnd: (@Composable () -> Unit)? = null, route: List<Pair<String,RouteState>>? = null, fingerprintTag: String = "editor-fingerprint", trustTag: String = "editor-trust-key") {
     AppDialog(onDismiss=onDismiss,properties=protectedDialogProperties,headerEnd=headerEnd,
         title=stringResource(if(item.changed) R.string.trust_changed_title else R.string.trust_verify_title),
-        body=subtitle ?: stringResource(R.string.trust_verify_hint),
+        body=subtitle,
         icon=if(item.changed) UiSymbol.SHIELD_ALERT else UiSymbol.SHIELD,tone=if(item.changed) Tone.DANGER else Tone.ACCENT,stacked=true,
         confirm=if(!item.changed) DialogAction(trustLabel ?: stringResource(R.string.host_key_trust),onTrust,trustTag) else null,
         dismiss=DialogAction(stringResource(if(item.changed) R.string.common_close else R.string.common_cancel),onDismiss)) {

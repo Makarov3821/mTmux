@@ -41,7 +41,6 @@ private enum class DoctorAction { CHECK, INITIALIZE, UNDO }
                 ToneBadge(UiSymbol.CHECK,Tone.SUCCESS)
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.doctor_saved_title),style=MaterialTheme.typography.titleMedium.copy(fontWeight=FontWeight.Bold))
-                    Text(stringResource(R.string.doctor_saved_detail),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Surface(shape=RoundedCornerShape(18.dp),color=MaterialTheme.colorScheme.surfaceVariant) {
@@ -50,7 +49,6 @@ private enum class DoctorAction { CHECK, INITIALIZE, UNDO }
                         ToneBadge(UiSymbol.SPARKLE,Tone.ACCENT,36.dp,18.dp)
                         Column(Modifier.weight(1f)) {
                             Text(stringResource(R.string.doctor_invite_title),style=MaterialTheme.typography.titleSmall.copy(fontWeight=FontWeight.SemiBold))
-                            Text(stringResource(R.string.doctor_invite_body),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
@@ -217,7 +215,7 @@ private enum class DoctorAction { CHECK, INITIALIZE, UNDO }
         onTrust={prompt.answer.complete(true);approval=null},fingerprintTag="doctor-fingerprint",trustTag="doctor-trust-key")
     AppSheet(onDismiss=::dismiss,floating=false,secure=true) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal=8.dp)) {
-            SheetHeader(stringResource(R.string.doctor_title),listOfNotNull(profile.name,checkedLabel ?: stringResource(R.string.doctor_readonly)).joinToString(" · "))
+            SheetHeader(stringResource(R.string.doctor_title),listOfNotNull(profile.name,checkedLabel).joinToString(" · "))
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal=4.dp),verticalArrangement=Arrangement.spacedBy(10.dp)) {
                 val findings=report?.findings().orEmpty()
                 val failures=findings.count { it.grade==DoctorGrade.FAIL }
@@ -270,7 +268,7 @@ private enum class DoctorAction { CHECK, INITIALIZE, UNDO }
 }
 
 @Composable internal fun DoctorUndoDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    AppDialog(onDismiss=onDismiss,properties=protectedDialogProperties,title=stringResource(R.string.doctor_undo_title),body=stringResource(R.string.doctor_undo_help),
+    AppDialog(onDismiss=onDismiss,properties=protectedDialogProperties,title=stringResource(R.string.doctor_undo_title),
         icon=UiSymbol.ARROW_LEFT,tone=Tone.DANGER,
         confirm=DialogAction(stringResource(R.string.doctor_undo_short),onConfirm,"doctor-confirm-undo",danger=true),
         dismiss=DialogAction(stringResource(R.string.common_cancel),onDismiss))
@@ -281,7 +279,7 @@ private enum class DoctorAction { CHECK, INITIALIZE, UNDO }
     AppSheet(onDismiss=onDismiss,floating=false,secure=true) {
         Column(Modifier.fillMaxWidth().imePadding().padding(horizontal=12.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
             Text(stringResource(R.string.doctor_config_preview),style=MaterialTheme.typography.titleMedium.copy(fontWeight=FontWeight.Bold))
-            Text(stringResource(R.string.doctor_config_scope,"$home/.tmux.conf"),style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("$home/.tmux.conf",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             ConfigFileBlock("~/.tmux.conf",TmuxConfigBootstrap.template(history.toIntOrNull()?.takeIf {it in 2000..500000} ?: 10000))
             Text(stringResource(R.string.doctor_history_lines),Modifier.padding(top=4.dp),style=MaterialTheme.typography.labelLarge,color=MaterialTheme.colorScheme.onSurfaceVariant)
             Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
@@ -292,10 +290,6 @@ private enum class DoctorAction { CHECK, INITIALIZE, UNDO }
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant).clickable {onFirstSetup(!firstSetup)}.padding(end=12.dp),verticalAlignment=Alignment.CenterVertically) {
                 Checkbox(firstSetup,onFirstSetup,modifier=Modifier.testTag("doctor-first-setup"))
                 Text(stringResource(R.string.doctor_first_setup),Modifier.weight(1f),style=MaterialTheme.typography.bodyMedium)
-            }
-            Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                AppIcon(UiSymbol.INFO,modifier=Modifier.size(14.dp),tint=MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(stringResource(R.string.doctor_config_pending),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Row(Modifier.padding(top=4.dp,bottom=4.dp),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 QuietActionButton(DialogAction(stringResource(R.string.common_cancel),onDismiss))
@@ -366,8 +360,7 @@ private enum class DoctorAction { CHECK, INITIALIZE, UNDO }
         if(DoctorCheck.WHEEL in visible) add(Row("doctor-row-touch",if(remoteTouch) DoctorGrade.PASS else DoctorGrade.WARNING,stringResource(R.string.doctor_check_touch),
             stringResource(if(remoteTouch) R.string.doctor_touch_on else R.string.doctor_touch_off)))
         report.findings().filter {it.check in visible}.forEach { finding -> add(Row("doctor-row-${finding.check.name.lowercase()}",finding.grade,stringResource(doctorTitle(finding.check)),
-            stringResource(doctorReason(finding.reason)),finding.detail,
-            if(finding.check==DoctorCheck.MOUSE && autoMouse && finding.reason==DoctorReason.MOUSE_OFF) stringResource(R.string.doctor_auto_mouse) else null)) }
+            stringResource(doctorReason(finding.reason)),finding.detail)) }
     }
     val passing=rows.filter { it.grade==DoctorGrade.PASS }
     val unknown=if(collapsePassing) rows.filter { it.grade==DoctorGrade.UNKNOWN } else emptyList()
