@@ -1398,9 +1398,12 @@ class TerminalUiTest {
             // The dropdown owns a separate window. Finish dismissing it and the IME before
             // scrolling/tapping the switch, so its physical click uses settled coordinates.
             compose.waitUntil(10000){compose.onAllNodesWithTag("editor-folder-${folder.id}").fetchSemanticsNodes().isEmpty()}
+            // Release the password field too: a pending IME/bring-into-view request can
+            // otherwise restore its viewport after performScrollTo and hide the switch.
+            compose.runOnUiThread { appWindows().forEach { it.findFocus()?.clearFocus() } }
             hideKeyboard()
             try {
-                compose.onNodeWithTag("jump-enabled").performScrollTo().assertIsOff().performClick().assertIsOn()
+                compose.onNodeWithTag("jump-enabled").performScrollTo().assertIsDisplayed().assertIsOff().performClick().assertIsOn()
                 compose.waitUntil(10000){compose.onAllNodesWithTag("jump-from-saved").fetchSemanticsNodes().isNotEmpty()}
             } catch(error:Throwable) {
                 println("JUMP_IMPORT_FAILURE\n"+compose.onRoot(useUnmergedTree=true).printToString())

@@ -105,7 +105,7 @@ private enum class DoctorAction { CHECK, INITIALIZE, UNDO }
         lifecycle.addObserver(observer)
         onDispose {lifecycle.removeObserver(observer)}
     }
-    LaunchedEffect(attempt) {
+    LaunchedEffect(attempt) { withContext(Dispatchers.Main.immediate) {
         busy=true;error=null;historical=stored!=null
         val actionNow=action
         val detailNow=detailed || actionNow!=DoctorAction.CHECK
@@ -208,7 +208,7 @@ private enum class DoctorAction { CHECK, INITIALIZE, UNDO }
             busy=false
         }
         if(createReady && isActive && !operation.cancelled) latestCreate()
-    }
+    } }
     val report=stored?.report
     val prompt=approval
     val checkedLabel=stored?.let { stringResource(if(historical) R.string.doctor_historical else R.string.doctor_checked,
