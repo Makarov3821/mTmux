@@ -21,6 +21,9 @@ import org.junit.Test
 import org.junit.Assume.assumeTrue
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.mtmux.core.Login
+import dev.mtmux.core.PinStore
+import dev.mtmux.core.SshClient
+import dev.mtmux.core.Tmux
 import java.util.Base64
 import org.junit.runner.RunWith
 import java.util.concurrent.CountDownLatch
@@ -394,7 +397,7 @@ class TerminalUiTest {
         }
     }
 
-    @Test fun bottomQuickRepliesNeverSendWithoutConfirmation() {
+    @Test fun bottomQuickRepliesSendImmediatelyAndKeepTheLocalDraft() {
         val args=InstrumentationRegistry.getArguments()
         assumeTrue(args.containsKey("fixtureTmux"))
         val store=ServerProfiles(compose.activity)
@@ -404,59 +407,102 @@ class TerminalUiTest {
         ServerCache(compose.activity).markAttempt(profile)
         compose.activity.getSharedPreferences("host-pins",0).edit().putString(profile.trustEndpoint(),args.getString("fixtureHostKey")).commit()
         val prefs=compose.activity.getSharedPreferences("terminal-settings",0)
-        prefs.edit().remove("quick-replies").commit()
+        val savedReplies=prefs.getString("quick-replies",null)
+        val firstReply="printf 'MTMUX_QUICK_%s\\n' SENT_ONE"
+        val editedReply="printf 'MTMUX_QUICK_%s\\n' EDITED"
+        QuickReplies(compose.activity).save(listOf(firstReply,"another reply"))
         try {
             compose.activityRule.scenario.recreate()
             val view=terminal()
-            val scriptErrors=java.util.concurrent.CopyOnWriteArrayList<String>()
-            compose.runOnUiThread {
-                val previous=view.webChromeClient
-                view.webChromeClient=object : android.webkit.WebChromeClient() {
-                    override fun onConsoleMessage(message: android.webkit.ConsoleMessage): Boolean {
-                        if(message.messageLevel()==android.webkit.ConsoleMessage.MessageLevel.ERROR) scriptErrors.add(message.message())
-                        return previous?.onConsoleMessage(message) ?: true
-                    }
-                }
-            }
             compose.onNodeWithTag("ssh-${profile.id}").performClick()
-            try { compose.waitUntil(30000) { evaluate(view,"typeof connected !== 'undefined' && connected")=="true" && evaluate(view,"terminalSnapshot().text").contains("MTMUX_SSH_WELCOME") } }
-            catch(error: Throwable) {saveScreenshot("failure-agent-status");throw AssertionError("Synthetic terminal script errors: $scriptErrors",error)}
-            val token=evaluate(view,"connectionToken").trim('"')
+            compose.waitUntil(30000) {evaluate(view,"typeof connected !== 'undefined' && connected")=="true" && evaluate(view,"terminalSnapshot().text").contains("MTMUX_SSH_WELCOME")}
             evaluate(view,"window.replyInputs=[];terminal.onData(d=>replyInputs.push(d));")
             compose.onNodeWithTag("agent-card").assertDoesNotExist()
             compose.onNodeWithTag("hide-keyboard").assertDoesNotExist()
             val toolsButton=compose.onNodeWithTag("terminal-tools").fetchSemanticsNode().boundsInRoot
             val repliesButton=compose.onNodeWithTag("quick-replies").fetchSemanticsNode().boundsInRoot
-            compose.onNodeWithTag("command-input").assertDoesNotExist()
             assertTrue(toolsButton.right<=repliesButton.left)
             assertEquals(toolsButton.center.y,repliesButton.center.y,1f)
-            saveScreenshot("terminal-bottom-replies")
+            // Use an identical local draft: a direct quick reply must not clear it on acknowledgement.
+            draftNode().performTextReplacement(firstReply)
             openReplies()
             compose.onNodeWithTag("quick-reply-0").performClick()
-            draftNode().assertTextContains("继续")
-            openReplies()
-            compose.onNodeWithTag("quick-reply-1").performClick()
-            compose.onNodeWithText("保留已有草稿？").assertExists()
-            compose.onNodeWithTag("append-quick-reply").performClick()
-            draftNode().assertTextContains("继续\n请总结当前进展和剩余问题。")
+            compose.onNodeWithTag("command-input").assertDoesNotExist()
+            compose.onNodeWithTag("append-quick-reply").assertDoesNotExist()
+            compose.waitUntil(30000) {evaluate(view,"terminalSnapshot().text.split('\\n').filter(l=>l.trim()==='MTMUX_QUICK_SENT_ONE').length")=="1"}
+            draftNode().assertTextContains(firstReply)
             openReplies()
             compose.onNodeWithTag("edit-quick-reply-0").performClick()
-            compose.onNodeWithTag("quick-reply-editor").performTextReplacement("我的常用回复")
+            compose.onNodeWithTag("quick-reply-editor").performTextReplacement(editedReply)
             compose.onNodeWithTag("save-quick-reply").performClick()
-            assertEquals("我的常用回复",QuickReplies(compose.activity).all().first())
-            saveScreenshot("quick-replies")
+            assertEquals(editedReply,QuickReplies(compose.activity).all().first())
             compose.onNodeWithTag("quick-reply-0").performClick()
-            compose.onNodeWithTag("replace-quick-reply").performClick()
-            draftNode().assertTextContains("我的常用回复")
-            assertEquals("[]",evaluate(view,"replyInputs"))
+            compose.waitUntil(30000) {evaluate(view,"terminalSnapshot().text.split('\\n').filter(l=>l.trim()==='MTMUX_QUICK_EDITED').length")=="1"}
+            draftNode().assertTextContains(firstReply)
             openReplies()
+            evaluate(view,"replyInputs=[]")
             disconnectFixture()
             compose.onNodeWithTag("quick-reply-0").performClick()
-            draftNode().assertTextContains("我的常用回复")
-            compose.onNodeWithText("连接已改变；快捷回复未填入").assertExists()
+            compose.onNodeWithText(compose.activity.getString(R.string.status_quick_reply_stale)).assertExists()
+            assertEquals("[]",evaluate(view,"replyInputs"))
+            draftNode().assertTextContains(firstReply)
         } finally {
             store.delete(profile.id)
-            prefs.edit().remove("quick-replies").commit()
+            prefs.edit().apply {if(savedReplies==null) remove("quick-replies") else putString("quick-replies",savedReplies)}.commit()
+        }
+    }
+
+    @Test fun quickRepliesSubmitToBoundPaneWithoutFollowingDesktopFocus() {
+        val args=InstrumentationRegistry.getArguments()
+        assumeTrue(args.containsKey("fixtureTmux"))
+        val port=args.getString("fixturePort")!!.toInt()
+        val path=args.getString("fixtureTmux")!!
+        val login=Login("127.0.0.1",port,args.getString("fixtureUser")!!,"",Base64.getDecoder().decode(args.getString("fixtureKey")))
+        val controller=SshClient(object:PinStore {override fun get(endpoint:String)=args.getString("fixtureHostKey")})
+        controller.connect(login)
+        val tmux=Tmux.quote(path)
+        val session=controller.exec("$tmux new-session -d -P -F '#{session_id}' -s quick-bound -x 80 -y 24 'stty -echo; cat'").output.trim()
+        val prefs=compose.activity.getSharedPreferences("terminal-settings",0)
+        val savedReplies=prefs.getString("quick-replies",null)
+        QuickReplies(compose.activity).save(listOf("QUICK_BOUND_SENT"))
+        try {
+            val bound=controller.bindPane(session,path)
+            showTerminalForFixture()
+            val view=terminal()
+            compose.waitUntil(30000) {evaluate(view,"typeof window.receive")=="\"function\""}
+            compose.runOnUiThread {
+                compose.activity.getSharedPreferences("host-pins",0).edit().putString("[127.0.0.1]:$port",args.getString("fixtureHostKey")).commit()
+                val connect=MainActivity::class.java.getDeclaredMethod("connect",Login::class.java,String::class.java,String::class.java,Boolean::class.javaPrimitiveType)
+                connect.isAccessible=true
+                connect.invoke(compose.activity,login,path,session,false)
+            }
+            compose.waitUntil(30000) {evaluate(view,"connected")=="true"}
+            fun capture(pane:String)=controller.exec(Tmux.history(pane,path)).output
+            fun submitted()=capture(bound.pane).lineSequence().count {it.trim()=="QUICK_BOUND_SENT"}
+            openReplies()
+            compose.onNodeWithTag("quick-reply-0").performClick()
+            // Echo is disabled: cat only prints the line once Enter has actually reached the pane.
+            compose.waitUntil(10000) {submitted()==1}
+            compose.onNodeWithTag("command-input").assertDoesNotExist()
+            openReplies()
+            val second=controller.exec("$tmux split-window -h -P -F '#{pane_id}' -t '${bound.pane}' 'stty -echo; cat'").output.trim()
+            assertTrue(second,second.matches(Regex("%[0-9]+")))
+            compose.onNodeWithTag("quick-reply-0").performClick()
+            compose.waitUntil(10000) {compose.onAllNodesWithText(compose.activity.getString(R.string.status_input_blocked)).fetchSemanticsNodes().isNotEmpty()}
+            assertEquals(1,submitted())
+            assertFalse(capture(second).contains("QUICK_BOUND_SENT"))
+            controller.exec("$tmux select-pane -t '${bound.pane}'")
+            openReplies()
+            compose.onNodeWithTag("quick-reply-0").performClick()
+            compose.waitUntil(10000) {submitted()==2}
+            assertFalse(capture(second).contains("QUICK_BOUND_SENT"))
+            disconnectFixture()
+        } finally {
+            try {controller.exec("$tmux kill-session -t '$session'")}
+            finally {
+                controller.close()
+                prefs.edit().apply {if(savedReplies==null) remove("quick-replies") else putString("quick-replies",savedReplies)}.commit()
+            }
         }
     }
 
@@ -1908,10 +1954,24 @@ class TerminalUiTest {
 
     @Test fun flavorExposesOnlyItsVoiceCapability() {
         val voice = BuildConfig.FLAVOR == "voice"
-        compose.activity.getSharedPreferences("voice-settings",0).edit().clear().commit()
+        val prefs=compose.activity.getSharedPreferences("terminal-settings",0)
+        val saved=prefs.getBoolean("voiceSendWithEnter",true)
+        val hadSetting=prefs.contains("voiceSendWithEnter")
+        prefs.edit().remove("voiceSendWithEnter").commit()
         compose.onNodeWithTag("settings").performClick()
-        // Neither flavor has voice settings any more; the voice entry was removed from Settings.
         compose.onNodeWithTag("voice-model-info").assertDoesNotExist()
+        try {
+            if(voice) {
+                compose.onNodeWithTag("voice-send-direct").performScrollTo().assertIsOn().performClick().assertIsOff()
+                assertFalse(savedVoiceSendWithEnter(compose.activity))
+                compose.activityRule.scenario.recreate()
+                compose.onNodeWithTag("settings").performClick()
+                compose.onNodeWithTag("voice-send-direct").performScrollTo().assertIsOff().performClick().assertIsOn()
+                assertTrue(savedVoiceSendWithEnter(compose.activity))
+            } else compose.onNodeWithTag("voice-send-direct").assertDoesNotExist()
+        } finally {
+            prefs.edit().apply {if(hadSetting) putBoolean("voiceSendWithEnter",saved) else remove("voiceSendWithEnter")}.commit()
+        }
         compose.onNodeWithTag("settings-back").performClick()
         showTerminalForFixture()
         val control=compose.onNodeWithTag("voice-input")

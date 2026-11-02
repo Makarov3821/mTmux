@@ -19,7 +19,7 @@ mTmux is an Android client for SSH and tmux workflows. When you are away from yo
 - **Server and session management**: Group and search servers, view tmux sessions and task status, and join an existing session or create a new terminal.
 - **Mobile terminal controls**: Direct keyboard input, touch scrolling, Ctrl / Shift / Alt combinations, function keys, and quick replies.
 - **Document and image previews**: Tap Markdown, HTML, and common image paths in the terminal to open them. Images support zooming and panning.
-- **Offline speech input**: The voice build transcribes Chinese and English speech. Edit the result before inserting it into the terminal.
+- **Offline speech input**: The voice build transcribes Chinese and English speech. Review and edit the result, then send it to the terminal.
 - **Connection and environment setup**: Password and private-key authentication, multiple jump hosts, and tmux Doctor to check the server environment.
 
 ## Installation and getting started

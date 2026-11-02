@@ -402,10 +402,7 @@ open class UiCatalogTest {
             render { Backdrop(); NewTmuxPanel("开发服务器","3.4","code-review",{},false,stringResource(message),{},{}) }
             shot("dialogs",name,text(message),"state-fixture","NewTmuxDialog.kt","固定远端响应分支，不进行 SSH 连接。")
         }
-        render { TerminalFixture(); AppDialog(onDismiss={},title=stringResource(R.string.quick_reply_keep_title),body=stringResource(R.string.quick_reply_keep_body),icon=UiSymbol.REPLY,
-            confirm=DialogAction(stringResource(R.string.quick_reply_append),{}),dismiss=DialogAction(stringResource(R.string.quick_reply_replace),{}),
-            extra=DialogAction(stringResource(R.string.common_cancel),{})) }
-        shot("dialogs","10-reply-conflict","快捷回复：追加、替换或取消","state-fixture","MainActivity.kt","固定已有本地草稿的确认分支。")
+
     }
     @OptIn(ExperimentalMaterial3Api::class)
     private fun captureVoice() {

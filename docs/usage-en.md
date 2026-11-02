@@ -58,8 +58,8 @@ Tap the terminal or the keyboard button at the top to type directly. Chinese tex
 
 - Tap Ctrl, Shift, or Alt before entering a character. Multiple modifiers can be combined and are released after the next keystroke.
 - The bottom shortcut bar cycles through pages of common keys, arrow keys, and function keys.
-- Quick replies open in the editor card. If a draft already exists, choose whether to append or replace it.
-- Use the top edit button or **Tools → Edit text** for longer text. **Insert into terminal** writes to the current target without pressing Enter automatically.
+- Tapping a quick reply sends it and presses Enter. Use the edit icon to change a saved reply. An existing local draft is neither replaced nor cleared.
+- Use the top edit button or **Tools → Edit text** for longer text. New manual drafts use **Insert into terminal**, which writes to the current target without pressing Enter. Speech drafts use the behavior described below.
 - **Tools → Select & copy** opens a copy of the loaded terminal text. Use the system selection handles to copy it. Scroll in the terminal first to load earlier content.
 
 With remote touch enabled, vertical swipes send wheel events, taps send left clicks, and a long press followed by release sends a right click. Scroll speed ranges from 1× to 10×. Higher settings send more wheel events; tmux or the remote program determines the number of lines scrolled. A plain shell without mouse support scrolls the phone's local terminal history.
@@ -70,7 +70,9 @@ A tmux attachment shares display focus and size with desktop clients. If the rep
 
 The voice build requests microphone permission on first use. Hold the speech button, wait until preparation finishes and the recording halo appears, then speak. The recording indicator shows the remaining time and changes color near the limit.
 
-Release to transcribe, or slide upward to cancel. Each recording can last up to 60 seconds. Review, edit, or append to the transcription in the editor card before inserting it into the terminal. Recognition supports Chinese, English, and mixed speech, with punctuation and capitalization.
+Release to transcribe, or slide upward to cancel. Each recording can last up to 60 seconds. The transcription stays in the editor card for review, editing, or additional speech. By default, tapping **Send** sends the card's text to the remote terminal and presses Enter. Recognition supports Chinese, English, and mixed speech, with punctuation and capitalization.
+
+Turn off **Settings → Voice input → Send directly after editing** to restore **Insert into terminal**; press Enter manually after insertion. The switch is on by default and appears only in the voice build. Reopening an existing speech draft keeps this behavior. New manual text drafts retain their original insertion behavior.
 
 ## Document and image previews
 

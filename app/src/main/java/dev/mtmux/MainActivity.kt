@@ -416,8 +416,7 @@ class MainActivity : AppCompatActivity() {
         val dark=appearance.dark(isSystemInDarkTheme())
         val currentDark by rememberUpdatedState(dark)
         val currentPalette by rememberUpdatedState(palette)
-        var quickReplyToken by remember { mutableStateOf<String?>(null) }
-        var pendingReply by remember { mutableStateOf<Pair<String,String>?>(null) }
+        var quickReplyTarget by remember { mutableStateOf<Pair<String,String>?>(null) }
         LaunchedEffect(dark,palette) {
             val background=appColors(dark,palette).background.toArgb()
             window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(background))
@@ -431,6 +430,8 @@ class MainActivity : AppCompatActivity() {
         var remoteTouch by remember { mutableStateOf(terminalPreferences.getBoolean("remoteTouch", true)) }
         var scrollSensitivity by remember { mutableFloatStateOf(savedScrollSpeed(terminalPreferences)) }
         val draft = remember { TerminalDraft() }
+        val voiceDraftTargets = remember { mutableStateMapOf<String,Boolean>() }
+        val voiceSendWithEnter = rememberVoiceSendWithEnter()
         var draftTarget by remember { mutableStateOf("") }
         val drafts = remember { mutableMapOf<String, String>() }
         LaunchedEffect(wireToken, draftScopeKey) {
@@ -463,8 +464,8 @@ class MainActivity : AppCompatActivity() {
         val keyBinding=replyPane
         val keysEnabled=!showConfig && keyToken.isNotEmpty() && !pastePending && !busy && preview==null
         fun clearModifiers() { if(sticky.modifiers!=0) {sticky.clear(); directInput.modifiers=0; directInput.restart()} }
-        LaunchedEffect(keysEnabled,showTools,quickReplyToken,copySnapshot,editorOpen) {
-            if((!keysEnabled || showTools || quickReplyToken!=null || copySnapshot!=null || editorOpen) && sticky.modifiers!=0) {
+        LaunchedEffect(keysEnabled,showTools,quickReplyTarget,copySnapshot,editorOpen) {
+            if((!keysEnabled || showTools || quickReplyTarget!=null || copySnapshot!=null || editorOpen) && sticky.modifiers!=0) {
                 clearModifiers()
             }
         }
@@ -522,20 +523,22 @@ class MainActivity : AppCompatActivity() {
         BackHandler(enabled = !showConfig) { home() }
         // Returning home from outside the composable (remote exit) must also drop the terminal's input focus.
         LaunchedEffect(showConfig) { if (showConfig) { focusManager.clearFocus(force = true); keyboard?.hide() } }
-        fun sendDraft(text: String, enter: Boolean, token: String = wireToken) {
+        fun sendDraft(text: String, enter: Boolean, token: String = wireToken, clearDraft: Boolean = true) {
             if (token.isEmpty() || token != wireToken || pastePending) return
             draftSequence++
-            val request = PendingDraft(draftSequence.toString(), token, draftScopeKey, replyPane, text, enter)
+            val request = PendingDraft(draftSequence.toString(), token, draftScopeKey, replyPane, text, enter, clearDraft)
             pendingDraft = request
             pastePending = true
             terminalView?.sendDraft(text, token, request.id, enter)
         }
-        fun openEditor() {
+        fun openEditor(fromVoice: Boolean = false) {
+            if(fromVoice) voiceDraftTargets[draftScopeKey]=true
+            else if(draft.text.isEmpty()) voiceDraftTargets.remove(draftScopeKey)
             directInput.retire(); clearModifiers()
             editorToken=wireToken; editorTarget=draftScopeKey; editorOpen=true
         }
         fun showTerminalKeyboard() {
-            if (!keysEnabled || editorOpen || showTools || quickReplyToken != null) return
+            if (!keysEnabled || editorOpen || showTools || quickReplyTarget != null) return
             terminalView?.inputFocus(true)
             directInput.showKeyboard()
         }
@@ -546,7 +549,7 @@ class MainActivity : AppCompatActivity() {
                 text.isBlank() -> VoiceDraftOffer.NO_SPEECH
                 else -> {
                     draft.text=commitVoiceDraft(token,target,wireToken,draftScopeKey,draft.text,text,true).draft
-                    openEditor()
+                    openEditor(fromVoice=true)
                     VoiceDraftOffer.INSERTED
                 }
             }
@@ -555,7 +558,7 @@ class MainActivity : AppCompatActivity() {
             val commit=commitVoiceDraft(token,target,wireToken,draftScopeKey,draft.text,text,append)
             if(commit.accepted) {
                 draft.text=commit.draft
-                openEditor()
+                openEditor(fromVoice=true)
             }
             commit.accepted
         }
@@ -574,7 +577,7 @@ class MainActivity : AppCompatActivity() {
             if(host in listOf("localhost","127.0.0.1","::1","[::1]")) externalLink=uri else browser(uri)
         }
         val openLink by rememberUpdatedState<(String,String)->Unit>({token,uri ->
-            if(token==wireToken && token.isNotEmpty() && !showConfig && !editorOpen && !showTools && !showDetails && pendingReply==null && !voiceActive && quickReplyToken==null && copySnapshot==null && challenge==null && preview==null) {
+            if(token==wireToken && token.isNotEmpty() && !showConfig && !editorOpen && !showTools && !showDetails && !voiceActive && quickReplyTarget==null && copySnapshot==null && challenge==null && preview==null) {
                 val normalized=if(uri.contains("://")) uri else RemoteFilePaths.withoutLine(uri)
                 val parsed=android.net.Uri.parse(normalized)
                 when(parsed.scheme?.lowercase()) {
@@ -594,7 +597,7 @@ class MainActivity : AppCompatActivity() {
             }
         })
         SideEffect {
-            directInput.inputEnabled=keysEnabled && !editorOpen && !showTools && quickReplyToken==null && copySnapshot==null && pendingReply==null
+            directInput.inputEnabled=keysEnabled && !editorOpen && !showTools && quickReplyTarget==null && copySnapshot==null
             directInput.modifiers=sticky.modifiers
             directInput.onInputFocus={terminalView?.inputFocus(it)}
             directInput.onComposition={ if(it.isNotEmpty()) terminalView?.revealInput(); terminalView?.composition(it) }
@@ -675,8 +678,9 @@ class MainActivity : AppCompatActivity() {
                                 val request = pendingDraft
                                 if (request != null && request.token == token && request.id == id && token == wireToken && request.target == draftScopeKey && request.binding == replyPane) {
                                     submitBytes(token, data.toByteArray(Charsets.UTF_8), bound = request.binding, onWritten = {
-                                        if (draft.text == request.text) {
+                                        if (request.clearDraft && request.target == draftScopeKey && request.binding == replyPane && draft.text == request.text) {
                                             draft.text = ""
+                                            voiceDraftTargets.remove(request.target)
                                             editorOpen=false
                                             resumeDirectInput=true
                                         }
@@ -800,7 +804,7 @@ class MainActivity : AppCompatActivity() {
                             })
                             TerminalActions(keysEnabled,
                                 onTools={directInput.retire();clearModifiers();showTools=true},
-                                onReplies={directInput.retire();clearModifiers();quickReplyToken=wireToken}) {
+                                onReplies={directInput.retire();clearModifiers();quickReplyTarget=wireToken to draftScopeKey}) {
                                 if(!editorOpen) VoiceInputControl(modifier=Modifier, enabled=keysEnabled,
                                     connectionToken=wireToken,targetKey=draftScopeKey,onHideKeyboard=hideVoiceKeyboard,
                                     onOfferDraft=offerVoice,onCommitDraft=commitVoice,onStatus={status=it},onActive={voiceActive=it})
@@ -881,30 +885,25 @@ class MainActivity : AppCompatActivity() {
                                 terminalView?.snapshot { snapshot -> copySnapshot = snapshot }
                             }, shape=RoundedCornerShape(14.dp), modifier=Modifier.fillMaxWidth().height(48.dp).testTag("select-terminal-text")) { AppIcon(UiSymbol.COPY,modifier=Modifier.size(18.dp));Spacer(Modifier.width(8.dp));Text(stringResource(R.string.tools_select_copy)) }
                             
-                            TextButton(onClick = { draft.text = ""; showTools = false }) { Text(stringResource(R.string.tools_clear_draft),color=MaterialTheme.colorScheme.error) }
+                            TextButton(onClick = { draft.text = ""; voiceDraftTargets.remove(draftScopeKey); showTools = false }) { Text(stringResource(R.string.tools_clear_draft),color=MaterialTheme.colorScheme.error) }
                             Text(stringResource(R.string.tools_terminal_info, cols, rows, renderedBytes), style = MaterialTheme.typography.bodySmall.copy(fontFamily=FontFamily.Monospace),color=MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                             TonalActionButton(DialogAction(stringResource(R.string.common_close),{ showTools = false }),Modifier.fillMaxWidth().padding(top=8.dp))
                         }
                     }
                 }
-                quickReplyToken?.let { openedToken -> QuickReplySheet(onDismiss={quickReplyToken=null},onPick={text ->
-                    quickReplyToken=null
-                    if(openedToken!=wireToken || wireToken.isEmpty() || pastePending) status=TerminalStatus(uiText(R.string.status_quick_reply_stale), alert = true)
-                    else if(draft.text.isEmpty()) {draft.text=text;openEditor()}
-                    else pendingReply=openedToken to text
+                quickReplyTarget?.let { (openedToken,openedTarget) -> QuickReplySheet(onDismiss={quickReplyTarget=null},onPick={text ->
+                    quickReplyTarget=null
+                    if(!pastePending) {
+                        if(openedToken!=wireToken || openedTarget!=draftScopeKey || !keysEnabled)
+                            status=TerminalStatus(uiText(R.string.status_quick_reply_stale), alert = true)
+                        else sendDraft(text,true,openedToken,clearDraft=false)
+                    }
                 }) }
-                pendingReply?.let { (token,text) ->
-                    fun stale() { status=TerminalStatus(uiText(R.string.status_quick_reply_stale), alert = true) }
-                    val usable = token==wireToken && token.isNotEmpty() && !pastePending
-                    AppDialog(onDismiss={pendingReply=null},title=stringResource(R.string.quick_reply_keep_title),body=stringResource(R.string.quick_reply_keep_body),icon=UiSymbol.REPLY,
-                        confirm=DialogAction(stringResource(R.string.quick_reply_append),{if(usable) {draft.text=if(draft.text.isEmpty()) text else draft.text+"\n"+text;openEditor()} else stale();pendingReply=null},"append-quick-reply"),
-                        dismiss=DialogAction(stringResource(R.string.quick_reply_replace),{if(usable) {draft.text=text;openEditor()} else stale();pendingReply=null},"replace-quick-reply"),
-                        extra=DialogAction(stringResource(R.string.common_cancel),{pendingReply=null}))
-                }
                 copySnapshot?.let { snapshot -> TerminalCopyDialog(snapshot, fontSize, dark, onClose={copySnapshot=null}) }
                 if (editorOpen) {
                     val valid=editorToken==wireToken && editorTarget==draftScopeKey && wireToken.isNotEmpty()
+                    val sendWithEnter=voiceDraftTargets[draftScopeKey]==true && voiceSendWithEnter
                     AppSheet(onDismiss={if(!pastePending) editorOpen=false},floating=false,dismissible=!pastePending) {
                         Column(Modifier.fillMaxWidth().imePadding().padding(horizontal=8.dp).padding(bottom=8.dp),
                             verticalArrangement=Arrangement.spacedBy(10.dp)) {
@@ -926,9 +925,9 @@ class MainActivity : AppCompatActivity() {
                                     connectionToken=wireToken,targetKey=draftScopeKey,onHideKeyboard=hideVoiceKeyboard,
                                     onOfferDraft=offerVoice,onCommitDraft=commitVoice,onStatus={status=it},onActive={voiceActive=it})
                                 Spacer(Modifier.weight(1f))
-                                Button(onClick={sendDraft(draft.text,false,editorToken)},enabled=valid && draft.text.isNotEmpty() && !pastePending,
+                                Button(onClick={sendDraft(draft.text,sendWithEnter,editorToken)},enabled=valid && draft.text.isNotEmpty() && !pastePending,
                                     shape=RoundedCornerShape(14.dp),modifier=Modifier.height(46.dp).testTag("insert-terminal")) {
-                                    Text(stringResource(if(pastePending) R.string.terminal_sending else R.string.terminal_insert_text))
+                                    Text(stringResource(if(pastePending) R.string.terminal_sending else if(sendWithEnter) R.string.terminal_send_text else R.string.terminal_insert_text))
                                 }
                             }
                         }
@@ -974,7 +973,7 @@ data class TerminalStatus(val text: UiText, val alert: Boolean = false) {
     }
 }
 
-private data class PendingDraft(val id: String, val token: String, val target: String, val binding: PaneBinding?, val text: String, val enter: Boolean)
+private data class PendingDraft(val id: String, val token: String, val target: String, val binding: PaneBinding?, val text: String, val enter: Boolean, val clearDraft: Boolean)
 
 /** Terminal chrome heights; the grid takes what is left so the dock never covers the last row. */
 internal val TERMINAL_TOP_BAR = 54.dp

@@ -87,7 +87,7 @@
     <string name="status_credentials_unreadable">凭据无法读取，请返回服务器列表编辑配置</string>
     <string name="status_reply_target_confirmed">回复目标已确认为 %1$s</string>
     <string name="status_bind_failed">无法确认目标，请重新发现会话</string>
-    <string name="status_quick_reply_stale">连接已改变；快捷回复未填入</string>
+    <string name="status_quick_reply_stale">连接或输入目标已改变；快捷回复未发送</string>
     <string name="status_text_stale">连接已改变；文本未发送</string>
     <string name="status_host_key_saved">已保存该主机密钥，请重新连接</string>
     <string name="terminal_back_home">返回服务器首页</string>
@@ -121,8 +121,6 @@
     <string name="tools_select_copy">选择复制</string>
     <string name="tools_clear_draft">清空草稿</string>
     <string name="tools_terminal_info">终端 %1$d×%2$d，已解析字节：%3$d</string>
-    <string name="quick_reply_keep_title">保留已有草稿？</string>
-    <string name="quick_reply_keep_body">当前已有草稿。</string>
     <string name="quick_reply_append">追加到草稿</string>
     <string name="quick_reply_replace">替换草稿</string>
     <string name="preview_send_to">发送到 %1$s</string>
@@ -513,4 +511,6 @@
     <string name="preview_image_retry">点击重试图片</string>
     <string name="preview_image_failed">图片加载失败</string>
     <string name="preview_image_limit">图片过大</string>
+    <string name="voice_send_direct">编辑后直接发送</string>
+    <string name="terminal_send_text">发送</string>
 </resources>

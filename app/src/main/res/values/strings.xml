@@ -90,7 +90,7 @@
     <string name="status_credentials_unreadable">Credentials cannot be read. Go back to the server list and edit the server.</string>
     <string name="status_reply_target_confirmed">Reply target confirmed as %1$s</string>
     <string name="status_bind_failed">Cannot confirm the target. Discover sessions again.</string>
-    <string name="status_quick_reply_stale">The connection changed; quick reply not inserted.</string>
+    <string name="status_quick_reply_stale">The connection or input target changed; quick reply was not sent.</string>
     <string name="status_text_stale">The connection changed; text not sent.</string>
     <string name="status_host_key_saved">Host key saved. Connect again.</string>
     <string name="terminal_back_home">Back to servers</string>
@@ -124,8 +124,6 @@
     <string name="tools_select_copy">Select &amp; copy</string>
     <string name="tools_clear_draft">Clear draft</string>
     <string name="tools_terminal_info">Terminal %1$d×%2$d · Bytes parsed: %3$d</string>
-    <string name="quick_reply_keep_title">Keep the existing draft?</string>
-    <string name="quick_reply_keep_body">A draft already exists.</string>
     <string name="quick_reply_append">Append to draft</string>
     <string name="quick_reply_replace">Replace draft</string>
     <string name="preview_send_to">Send to %1$s</string>
@@ -523,4 +521,6 @@
     <string name="preview_image_retry">Tap to retry image</string>
     <string name="preview_image_failed">Image could not be loaded</string>
     <string name="preview_image_limit">Image too large</string>
+    <string name="voice_send_direct">Send directly after editing</string>
+    <string name="terminal_send_text">Send</string>
 </resources>
