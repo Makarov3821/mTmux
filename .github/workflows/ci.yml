@@ -3,6 +3,16 @@ on: [push, pull_request]
 permissions:
   contents: read
 jobs:
+  release-notes:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Test release notes generator
+        run: python3 -m unittest discover -s scripts/tests -p test_release_notes.py
+      - name: Validate current version changes
+        run: |
+          version=$(sed -n 's/^ *versionName = "\(.*\)"/\1/p' app/build.gradle.kts)
+          python3 scripts/release_notes.py --version "$version" --output "$RUNNER_TEMP/release-notes.md"
   test:
     runs-on: ubuntu-24.04
     steps:

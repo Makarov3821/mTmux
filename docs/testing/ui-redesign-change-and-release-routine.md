@@ -115,7 +115,7 @@ python3 scripts/summarize_android_results.py .tools/diagnostics/matrix/base-stan
 ### 3.4 发布预发行版
 
 1. 修改 `app/build.gradle.kts`：versionCode +1，versionName 改成新版本号。
-2. 写 `docs/releases/<版本>.md`（release workflow 会把它附进 Release 说明），同时更新 `CHANGELOG.md` 和 README 开头的版本说明。
+2. 写 `docs/releases/<版本>.md` 保存实现与验证结果，在 `CHANGELOG.md` 对应版本逐条说明用户变化；Release workflow 按[发布说明规范](../release-notes.md)直接提取该列表。README 维护产品介绍，发版时核对其内容是否仍准确。
 3. 预发行的标记方式：标签带 `-` 后缀（如 `v0.9.3-rc.1`）会自动标为预发行；不带后缀的版本号（如 0.9.1、0.9.2）需要在 `.github/workflows/release.yml` 的 `case` 里加上该标签。以后建议统一用 `-rc.N` 后缀，不再修改 workflow。
 4. 推送并打标签（标签名必须等于 `v` + versionName）：
    ```bash

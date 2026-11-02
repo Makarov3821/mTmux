@@ -37,6 +37,12 @@ jobs:
           [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "::error::Tag $GITHUB_REF_NAME does not match versionName $version in app/build.gradle.kts"; exit 1; }
           echo "Tag matches versionName $version"
 
+      - name: Validate and prepare release notes
+        run: |
+          python3 -m unittest discover -s scripts/tests
+          version=$(sed -n 's/^ *versionName = "\(.*\)"/\1/p' app/build.gradle.kts)
+          python3 scripts/release_notes.py --version "$version" --output release-notes.md
+
       # Only reports which secrets are missing; values are never printed (and are masked anyway).
       - name: Check signing secrets are present
         env:
@@ -75,7 +81,6 @@ jobs:
 
       - name: Fetch pinned X-ASR INT8 and sherpa runtime
         run: |
-          python3 -m unittest discover -s scripts/tests
           python3 scripts/fetch_voice.py
 
       - name: Test and build signed releases
@@ -112,18 +117,13 @@ jobs:
           sha256sum "$voice_name" > "$voice_name.sha256"
           echo "STANDARD_APK_NAME=$standard_name" >> "$GITHUB_ENV"
           echo "VOICE_APK_NAME=$voice_name" >> "$GITHUB_ENV"
-          printf 'mTmux %s\n' "$GITHUB_REF_NAME" > release-notes.md
-          version_notes="docs/releases/${GITHUB_REF_NAME#v}.md"
-          if [ -f "$version_notes" ]; then
-            printf '\n[Change record](https://github.com/%s/blob/%s/%s)\n' \
-              "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" "$version_notes" >> release-notes.md
-          fi
       - uses: actions/upload-artifact@v7
         with:
           name: signed-release-apks
           path: |
             mtmux-*.apk
             mtmux-*.apk.sha256
+            release-notes.md
 
       - name: Publish GitHub release
         if: startsWith(github.ref, 'refs/tags/v')

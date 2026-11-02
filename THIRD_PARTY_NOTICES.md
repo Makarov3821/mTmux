@@ -10,6 +10,8 @@
 | Bouncy Castle bcprov-jdk18on | 1.83 | MIT 风格许可证 | JSch 在 Android 上的现代密码算法实现；https://github.com/bcgit/bc-java |
 | xterm.js | 5.5.0 | MIT | 终端渲染与 VT 解析；https://github.com/xtermjs/xterm.js |
 | xterm addon-fit | 0.10.0 | MIT | 根据 WebView 容器计算行列 |
+| marked | 18.1.2 | MIT | Markdown 渲染；https://github.com/markedjs/marked |
+| DOMPurify | 3.4.17 | MPL-2.0 OR Apache-2.0（上游双许可） | 预览 HTML 清理；https://github.com/cure53/DOMPurify |
 | xterm headless | 5.5.0 | MIT | 仅 Node 测试，不进入 APK |
 | playwright-core | 1.56.1 | Apache-2.0 | 仅桌面浏览器测试，不进入 APK |
 | AndroidX Activity / AppCompat / Compose / WebKit | 见 app/build.gradle.kts 与依赖树 | Apache-2.0 | 原生 UI、生命周期、应用内语言与本地资产加载 |
@@ -28,6 +30,8 @@
 - `app/src/main/assets/LICENSE-bouncycastle.html`
 - `app/src/main/assets/terminal/LICENSE-xterm.txt`
 - `app/src/main/assets/terminal/LICENSE-addon-fit.txt`
+- `app/src/main/assets/preview/LICENSE-marked.txt`
+- `app/src/main/assets/preview/LICENSE-dompurify.txt`
 - `voice/src/main/assets/licenses/LICENSE-sherpa-onnx.txt`（voice APK）
 - `voice/src/main/assets/licenses/LICENSE-x-asr.txt` / `NOTICE-x-asr.txt`（voice APK）
 - `voice/src/main/assets/licenses/LICENSE-onnxruntime.txt` / `NOTICE-onnxruntime.txt`（voice APK）

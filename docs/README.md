@@ -1,21 +1,26 @@
 # 文档目录
 
-界面图集在本地生成并被 Git 忽略。采集与复现方法见 [截图说明](screenshots/README.md)；本地浏览路径为 `docs/screenshots/current/index.html`。
+## 使用产品
 
-版本变更摘要统一在根目录 [CHANGELOG.md](../CHANGELOG.md)；产品范围与路线在 [plan.md](../plan.md)。
+- [使用指南](usage.md)：安装、服务器与跳板、tmux Doctor、终端、语音、文件预览和问题反馈。
+- [隐私与安全说明](privacy-and-security.md)：凭据、主机指纹、输入与缓存、日志和截图设置。
+- [版本变化](../CHANGELOG.md)：面向用户的逐版本变化。
 
-本地测试、Android WebView 排障与 GitHub 签名发布的固定流程见 [WebView 测试与发布操作说明](testing/webview-and-release-runbook.md)，其中明确区分桌面 Chromium、原生 IME 和真实 Android WebView 的验证范围。
+## 开发与维护
 
-未发布工作区新增：[内置文件预览、分页点方向与首页下拉刷新](testing/terminal-file-preview.md)，包含实际 Android WebView / SFTP 验证说明。
+- [开发指南](development.md)：环境、模块、两种 APK、网页资产与测试入口。
+- [发布说明规范](release-notes.md)：CHANGELOG、Release 与内部交付记录的分工和生成方式。
+- [WebView 测试与签名发布](testing/webview-and-release-runbook.md)：测试分层、排障和固定发布操作。
+- [改动验收流程](testing/ui-redesign-change-and-release-routine.md)：按改动范围选择检查并核对证据。
+- [设计目录](design/)：界面、连接、输入和预览的设计与实现计划。
 
-| 目录 | 内容 |
-| --- | --- |
-| [releases/](releases/) | 每个版本的详细交付记录（`<版本>.md`）：原因、实现、验证结果、截图与 APK SHA-256 |
-| [design/](design/) | 设计与计划：[UI 方案](design/ui-plan.md)、[本轮美化方案](design/ui-beautification-plan.md)、[双版本语音输入计划](design/voice-input-plan.md)、[按住说话状态图](design/voice-hold-preview.md)、[100 MB 模型预算](design/voice-model-budget.md)、[下一阶段评估](design/next-phase-plan.md)（双语、语音、云同步）、[界面草图](design/mockups/) |
-| [testing/](testing/) | [P0 技术验证报告](testing/p0-report.md)（含 0.0.2、0.0.3）、[语音 V0 Android 基准](testing/voice-v0-report.md)、[连接性能与日志 v2](testing/connection-performance.md)、[真机验证清单](testing/device-checklist.md)、[UI 改版验证](testing/ui-refresh-report.md)、[终端组合键与循环翻页](testing/terminal-keyboard.md)、[按住说话与标点分析](testing/voice-hold-input.md)、[服务器管理](testing/server-management.md)、[tmux Doctor](testing/tmux-doctor.md)、[终端直接输入](testing/terminal-direct-input.md)、[输入连接恢复](testing/terminal-ime-recovery.md) |
-| `screenshots/current/`（本地产物） | 当前代码的 Android 原生页面、弹窗和固定状态图集 |
-| [evidence/](evidence/) | 测试日志与原始结果，按版本分子目录（旧目录沿用历史命名，如 `p1-011` = 0.1.1、`ui-062` = 0.6.2；0.7.0 起直接用版本号） |
+## 记录与专项资料
 
-当前主应用语音：[X-ASR INT8 迁移与验证](testing/voice-xasr.md)。[旧 q8 / SRF / CT 试验](testing/voice-models-20261023.md) 作为历史保留；独立 [Audio Lab](../test-audio/README.md) 不参与主应用发布。
+- [版本交付记录](releases/)：每版原因、实现与交付范围。
+- [测试记录](testing/) 与 [原始证据](evidence/)：保留对应版本和环境的结论。
+- [预览加载与缓存](design/preview-viewport-cache.md)及其[验证记录](testing/preview-viewport-cache.md)。
+- [连接性能与日志](testing/connection-performance.md)、[tmux Doctor](testing/tmux-doctor.md)、[输入恢复](testing/terminal-ime-recovery.md)。
+- [当前语音引擎迁移](testing/voice-xasr.md)与独立 [Audio Lab](../test-audio/README.md) 历史实验。
+- [图集采集说明](screenshots/README.md)：图集在本地生成并被 Git 忽略，不作为功能回归证据。
 
-新增版本时：在 `releases/` 写详细记录，在 CHANGELOG 顶部加摘要并链接，截图放入 `evidence/<版本>/`。
+原 README 临时汇总页已拆入使用、开发和隐私说明。历史版本的操作与结果以相应版本记录为准；项目编辑约定见 [AGENT.md](../AGENT.md)。

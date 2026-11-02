@@ -1,6 +1,6 @@
 # WebView 测试与签名发布流程
 
-2026-10-31，按当前仓库 workflow、测试源码和本机记录整理。此文固定操作与结果口径，不触发发布，也不更改用户正在进行的 UI 改动。文件预览功能仍处于[计划阶段](../design/terminal-file-preview-plan.md)。
+2026-10-31，按当前仓库 workflow、测试源码和本机记录整理。此文固定操作与结果口径，不触发发布，也不更改用户正在进行的 UI 改动。文件预览的实现与验证见[专项记录](terminal-file-preview.md)，发布正文格式见[发布说明规范](../release-notes.md)。
 
 ## 哪些测试实际运行 WebView
 
@@ -149,11 +149,11 @@ python3 scripts/test_ssh.py
 
 ## 固定签名与 GitHub 发布
 
-1. 选定版本，在 `app/build.gradle.kts` 更新 versionName 和递增 versionCode；standard/voice 保持相同包名和版本。写 `docs/releases/<版本>.md`、CHANGELOG，明确测试边界。只提交本次授权的文件，不把工作区其他改动一起扫入。
+1. 选定版本，在 `app/build.gradle.kts` 更新 versionName 和递增 versionCode；standard/voice 保持相同包名和版本。写 `docs/releases/<版本>.md` 明确实现与测试边界，在 CHANGELOG 对应版本只列用户变化；运行 `scripts/release_notes.py` 检查生成正文，见[发布说明规范](../release-notes.md)。只提交本次授权的文件，不把工作区其他改动一起扫入。
 2. 核对候选提交的检查结果和真实 Android 结果，确认终端 assets 已同步。截图遵循 [截图说明](../screenshots/README.md)，产物保持 Git 忽略，不因发布重新加入跟踪。
 3. 签名由 GitHub Actions 中既有 secrets 提供：`MTMUX_KEYSTORE_BASE64`、`MTMUX_KEYSTORE_PASSWORD`、`MTMUX_KEY_ALIAS`、`MTMUX_KEY_PASSWORD`；仓库变量 `MTMUX_CERT_SHA256` 必须匹配现有正式证书。不需要也不应从 GitHub 导出私钥。
 4. 需要签名测试 APK、暂不发布时，可手动运行 `release.yml`，其产物在 `signed-release-apks` artifact，不创建 Release。需要当前令牌具备 Actions 写权限；拒绝不能当构建成功，更不能擅自改成正式标签发布。
-5. 获得对应发布授权后，对已确认提交打新标签再推送；不覆盖已发布标签。标签必须严格等于 `v` + versionName。当前 workflow 对含 `-` 的标签生成 prerelease，例如 versionName=`0.x.y-rc.1` 对应 `v0.x.y-rc.1`。`v0.9.1` 是明确写在 workflow 中的历史特例，不代表未来所有普通版本标签都是预发行。
+5. 获得对应发布授权后，对已确认提交打新标签再推送；不覆盖已发布标签。标签必须严格等于 `v` + versionName。当前 workflow 对含 `-` 的标签生成 prerelease，例如 versionName=`0.x.y-rc.1` 对应 `v0.x.y-rc.1`。`v0.9.1` 和 `v0.9.2` 是明确写在 workflow 中的历史特例，不代表未来所有普通版本标签都是预发行。
 
 以下是模板，先替换版本和提交；不作为本次发布指令：
 
