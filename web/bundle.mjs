@@ -16,5 +16,5 @@ for(const [source,name] of [
   ['node_modules/marked/LICENSE','LICENSE-marked.txt'],
   ['node_modules/dompurify/dist/purify.min.js','purify.js'],
   ['node_modules/dompurify/LICENSE','LICENSE-dompurify.txt'],
-  ['preview.js','preview.js'],['preview-paths.js','preview-paths.js']
+  ['preview.js','preview.js'],['preview-paths.js','preview-paths.js'],['preview-lazy.js','preview-lazy.js']
 ]) copyFileSync(source,`${preview}/${name}`);

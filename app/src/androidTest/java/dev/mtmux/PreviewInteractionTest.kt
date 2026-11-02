@@ -171,7 +171,7 @@ class PreviewInteractionTest {
             compose.onNodeWithTag("preview-webview").performTouchInput {click(Offset((position.getDouble("x")*position.getDouble("scale")).toFloat(),(position.getDouble("y")*position.getDouble("scale")).toFloat()))}
             compose.waitUntil(20000) {webView()!=null && eval("document.querySelector('h1')?.textContent")=="\"Child document\""}
             compose.runOnIdle {requestPath="$directory/static.html"}
-            // JS is intentionally disabled for HTML; do not use evaluateJavascript as a readiness test.
+            // Only the app's nonce-authorized renderer runs; document scripts remain inert.
             compose.waitUntil(20000) {
                 val view=webView()
                 var title:String?=null
@@ -179,13 +179,19 @@ class PreviewInteractionTest {
                 title=="Static HTML"
             }
             val staticView=webView()!!
-            compose.runOnUiThread {assertFalse(staticView.settings.javaScriptEnabled)}
+            assertEquals("\"undefined\"",eval("typeof NativeTerminal"))
+            assertEquals("false",eval("document.title==='UNSAFE'"))
             val painted=CountDownLatch(1)
             compose.runOnUiThread {staticView.postVisualStateCallback(1,object:WebView.VisualStateCallback() {
                 override fun onComplete(requestId:Long) {painted.countDown()}
             })}
             assertTrue(painted.await(10,TimeUnit.SECONDS))
             saveImage("html-preview")
+            compose.waitUntil(15000) {eval("document.querySelector('img')?.naturalWidth")=="8"}
+            assertEquals("false",eval("!!document.querySelector('img').closest('a')"))
+            val htmlImagePosition=org.json.JSONObject(org.json.JSONTokener(eval("JSON.stringify((()=>{const r=document.querySelector('img').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,scale:devicePixelRatio}})())")).nextValue().toString())
+            compose.onNodeWithTag("preview-webview").performTouchInput {click(Offset((htmlImagePosition.getDouble("x")*htmlImagePosition.getDouble("scale")).toFloat(),(htmlImagePosition.getDouble("y")*htmlImagePosition.getDouble("scale")).toFloat()))}
+            compose.waitUntil(15000) {compose.onAllNodesWithTag("preview-image").fetchSemanticsNodes().isNotEmpty()}
             compose.runOnIdle {requestPath="$directory/pic.png"}
             compose.waitUntil(15000) {compose.onAllNodesWithTag("preview-image").fetchSemanticsNodes().isNotEmpty()}
             compose.onNodeWithTag("preview-image").assertIsDisplayed()
@@ -235,7 +241,7 @@ class PreviewInteractionTest {
             }}
             compose.waitUntil(30000) {webView()!=null && eval("document.querySelector('h1')?.textContent")=="\"Absolute Markdown\""}
             compose.waitUntil(15000) {eval("['absolute','file','localhost','same-host','entity'].every(alt=>document.querySelector('img[alt=\"'+alt+'\"]').naturalWidth===8)")=="true"}
-            assertEquals("true",eval("['absolute','file','localhost','same-host','entity'].every(alt=>document.querySelector('img[alt=\"'+alt+'\"]').src.startsWith('https://preview.mtmux.invalid/'))"))
+            assertEquals("true",eval("['absolute','file','localhost','same-host','entity'].every(alt=>{const i=document.querySelector('img[alt=\"'+alt+'\"]');return i.src.startsWith('blob:') && i.closest('a').href.startsWith('https://preview.mtmux.invalid/')})"))
             assertEquals("null",eval("document.querySelector('img[alt=foreign]').getAttribute('src')"))
             assertEquals("true",eval("['outside','escape'].every(alt=>document.querySelector('img[alt=\"'+alt+'\"]').naturalWidth===0)"))
             saveImage("absolute-markdown")
@@ -246,7 +252,7 @@ class PreviewInteractionTest {
                 title=="Absolute HTML"
             }
             val htmlView=webView()!!
-            compose.runOnUiThread {assertFalse(htmlView.settings.javaScriptEnabled)}
+            assertEquals("\"undefined\"",eval("typeof NativeTerminal"))
             val painted=CountDownLatch(1)
             compose.runOnUiThread {htmlView.postVisualStateCallback(2,object:WebView.VisualStateCallback() {
                 override fun onComplete(requestId:Long) {painted.countDown()}

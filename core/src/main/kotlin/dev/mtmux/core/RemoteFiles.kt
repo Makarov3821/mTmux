@@ -7,8 +7,9 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
-enum class FileProblem { INVALID_PATH, UNSUPPORTED, NOT_FILE, TOO_LARGE, OUTSIDE_ROOT, UNAVAILABLE, TIMEOUT, ENCODING, NOT_FOUND, PERMISSION }
-class RemoteFileException(val problem: FileProblem, cause: Throwable? = null) : Exception(problem.name, cause)
+enum class FileProblem { INVALID_PATH, UNSUPPORTED, NOT_FILE, TOO_LARGE, OUTSIDE_ROOT, UNAVAILABLE, TIMEOUT, ENCODING, NOT_FOUND, PERMISSION, CANCELLED }
+class RemoteFileException(val problem: FileProblem, cause: Throwable? = null,
+    val actualBytes:Long?=null,val limitBytes:Long?=null) : Exception(problem.name, cause)
 
 /** One owned, serialized SFTP channel. Cancelling this handle never cancels its SSH session. */
 class RemoteFiles internal constructor(private val channel: ChannelSftp, private val released: () -> Unit) : AutoCloseable {
@@ -47,11 +48,12 @@ class RemoteFiles internal constructor(private val channel: ChannelSftp, private
     fun connect() = operation { channel.connect(10_000) }
     fun home(): String = operation { channel.home }
     fun canonical(path: String): String = operation { channel.realpath(RemoteFilePaths.valid(path)) }
-    fun download(path: String, destination: File, limit: Long, onFirstByte: () -> Unit = {}): Long = operation {
+    fun download(path: String, destination: File, limit: Long, onSize:(Long)->Unit = {}, onFirstByte: () -> Unit = {}): Long = operation {
         val literal=RemoteFilePaths.valid(path).replace("\\","\\\\").replace("*","\\*").replace("?","\\?").replace("[","\\[")
         val attributes = channel.stat(literal)
         if (!attributes.isReg) throw RemoteFileException(FileProblem.NOT_FILE)
-        if (attributes.size > limit) throw RemoteFileException(FileProblem.TOO_LARGE)
+        if (attributes.size > limit) throw RemoteFileException(FileProblem.TOO_LARGE,actualBytes=attributes.size,limitBytes=limit)
+        onSize(attributes.size)
         var count = 0L
         try {
             destination.outputStream().use { output ->
@@ -64,7 +66,7 @@ class RemoteFiles internal constructor(private val channel: ChannelSftp, private
                     if(count==0L && n>0) onFirstByte()
                     if (closed.get()) throw RemoteFileException(if (expired) FileProblem.TIMEOUT else FileProblem.UNAVAILABLE)
                     count += n
-                    if (count > limit) throw RemoteFileException(FileProblem.TOO_LARGE)
+                    if (count > limit) throw RemoteFileException(FileProblem.TOO_LARGE,actualBytes=count,limitBytes=limit)
                     output.write(buffer, offset, n)
                     progress.set(System.nanoTime())
                     }

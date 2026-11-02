@@ -1,5 +1,7 @@
 # 内置文件预览、分页指示点与首页下拉刷新
 
+后续开发：2026-11-02 的按视口加载、可配置大小和 LRU 缓存见[新实现与验证](preview-viewport-cache.md)。下文保留前几轮实现及其当时的限制和测试记录。
+
 2026-11-01，基于 0.9.3-rc.3 后的未发布工作区实现。没有改版本号、提交或推送发布标签。设计依据：[预览计划](../design/terminal-file-preview-plan.md)、[交互修复计划](../design/terminal-and-home-interaction-plan.md)。
 
 ## 已实现

@@ -553,4 +553,12 @@
     <string name="preview_external_open">Open in browser</string>
     <string name="preview_copy_path">Copy path</string>
     <string name="preview_static">Static preview · scripts and internet resources are disabled</string>
+    <string name="settings_preview">File previews</string>
+    <string name="preview_file_limit">Single image or text file limit</string>
+    <string name="preview_cache_limit">Document preview cache limit</string>
+    <string name="preview_limit_range">Enter a whole number from 1 to %1$d.</string>
+    <string name="preview_cache_below_file">The cache limit must be at least the single file limit.</string>
+    <string name="preview_image_retry">Tap to retry image</string>
+    <string name="preview_image_failed">Image could not be loaded</string>
+    <string name="preview_image_limit">Image too large</string>
 </resources>

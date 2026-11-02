@@ -43,7 +43,6 @@ import java.util.concurrent.Executors
     val focus=LocalFocusManager.current
     val keyboard=LocalSoftwareKeyboardController.current
     val dispatcher=remember {Executors.newSingleThreadExecutor().asCoroutineDispatcher()}
-    var session by remember {mutableStateOf<FilePreviewSession?>(null)}
     var base by remember {mutableStateOf("")}
     var target by remember {mutableStateOf(request.target)}
     var pathText by remember {mutableStateOf(request.target)}
@@ -57,7 +56,7 @@ import java.util.concurrent.Executors
     var loadGeneration by remember {mutableIntStateOf(0)}
     val history=remember {mutableStateListOf<String>()}
     val holder=remember {java.util.concurrent.atomic.AtomicReference<FilePreviewSession?>()}
-    var sessionRetry by remember {mutableIntStateOf(-1)}
+    val sessionRetry=remember {java.util.concurrent.atomic.AtomicInteger(-1)}
     val alive=remember {java.util.concurrent.atomic.AtomicBoolean(true)}
     DisposableEffect(Unit) {onDispose {
         // Closing the channel unblocks IO; never wait for it on the main thread.
@@ -66,24 +65,26 @@ import java.util.concurrent.Executors
         CoroutineScope(Dispatchers.IO).launch {owned?.close();dispatcher.close()}
     }}
     LaunchedEffect(target,retry) {
+        withContext(Dispatchers.Main.immediate) {
         val generation=++loadGeneration
         val requestedTarget=target
+        val requestedBase=base
+        val needsPath=awaitingPath
         loading=true;error=null;blocked=false;document=null
         try {
             val loaded=withContext(dispatcher) {
-                if(sessionRetry!=retry) {
-                    holder.getAndSet(null)?.close();session=null;sessionRetry=retry
+                if(sessionRetry.get()!=retry) {
+                    holder.getAndSet(null)?.close();sessionRetry.set(retry)
                 }
-                val owner=session ?: FilePreviewSession(context,request).also {
+                val owner=holder.get() ?: FilePreviewSession(context,request).also {
                     holder.set(it)
                     if(!alive.get()) {holder.getAndSet(null)?.close();throw CancellationException()}
-                    session=it
                 }
-                if(base.isBlank()) base=if(requestedTarget.startsWith('/')) requestedTarget.substringBeforeLast('/').ifEmpty {"/"} else owner.base()
-                val resolved=owner.resolve(requestedTarget,base)
-                val root=if(RemoteFilePaths.inside(resolved,base)) base else resolved.substringBeforeLast('/').ifEmpty {"/"}
+                val initialBase=requestedBase.ifBlank {if(requestedTarget.startsWith('/')) requestedTarget.substringBeforeLast('/').ifEmpty {"/"} else owner.base()}
+                val resolved=owner.resolve(requestedTarget,initialBase)
+                val root=if(RemoteFilePaths.inside(resolved,initialBase)) initialBase else resolved.substringBeforeLast('/').ifEmpty {"/"}
                 withContext(Dispatchers.Main) {if(generation==loadGeneration) {pathText=resolved;base=root}}
-                if(awaitingPath) null else owner.open(resolved,root)
+                if(needsPath) null else owner.open(resolved,root)
             }
             if(generation==loadGeneration) {
                 if(awaitingPath) editPath=true
@@ -92,6 +93,7 @@ import java.util.concurrent.Executors
         } catch(e:CancellationException) {throw e}
         catch(e:Exception) {if(generation==loadGeneration) {error=e;DebugLog.event(DebugLog.Event.PREVIEW_FAILED,holder.get()?.id?.hashCode() ?: 0)}}
         finally {if(generation==loadGeneration) loading=false}
+        }
     }
     fun back() {if(history.isNotEmpty()) target=history.removeAt(history.lastIndex) else onClose()}
     fun openPath() {
@@ -129,13 +131,15 @@ import java.util.concurrent.Executors
                         loading -> Column(horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(14.dp)) {
                             CircularProgressIndicator(Modifier.size(28.dp),strokeWidth=2.dp);Text(stringResource(R.string.preview_loading),style=MaterialTheme.typography.bodyMedium)
                         }
-                        error!=null -> Text(stringResource(previewError(error)),Modifier.padding(24.dp),color=MaterialTheme.colorScheme.error)
+                        error!=null -> {
+                            Text(stringResource(previewError(error)),Modifier.padding(24.dp),color=MaterialTheme.colorScheme.error)
+                        }
                         document!=null -> {
                             val doc=document!!
                             if(doc.kind==RemoteFilePaths.Kind.IMAGE) key(doc.url) {PreviewImage(doc)}
                             else key(doc.url,MaterialTheme.colorScheme.surface,MaterialTheme.colorScheme.primary,MaterialTheme.colorScheme.onSurface) {
                                 val colors=MaterialTheme.colorScheme
-                                AndroidView(factory={ FilePreviewWebView(it,session!!,doc,colors,{link ->
+                                AndroidView(factory={ FilePreviewWebView(it,checkNotNull(holder.get()),doc,colors,{link ->
                     if(link.startsWith("https://") || link.startsWith("http://")) onExternal(link)
                                     else if(link!=doc.path) {if(history.size>=10) history.removeAt(0);history.add(doc.path);editPath=false;target=link}
                                 },{blocked=true},{error=RemoteFileException(FileProblem.UNAVAILABLE);document=null}) },modifier=Modifier.fillMaxSize().testTag(if(doc.kind==RemoteFilePaths.Kind.SVG) "preview-svg" else "preview-webview"),
@@ -146,8 +150,6 @@ import java.util.concurrent.Executors
                 }
                 if(blocked) Text(stringResource(R.string.preview_blocked),Modifier.padding(horizontal=16.dp,vertical=6.dp),
                     style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-                if(document?.kind !in setOf(RemoteFilePaths.Kind.IMAGE,RemoteFilePaths.Kind.SVG)) Text(stringResource(R.string.preview_static),Modifier.padding(horizontal=16.dp,vertical=10.dp),
-                    style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         BackHandler {back()}
@@ -166,10 +168,10 @@ internal fun previewError(error:Throwable?)=when((error as? RemoteFileException)
     else -> R.string.preview_error
 }
 
+
 @Composable private fun PreviewImage(document:PreviewDocument) {
     var bitmap by remember(document.url) {mutableStateOf<Bitmap?>(null)}
     var failed by remember {mutableStateOf(false)}
-    var sampled by remember {mutableStateOf(false)}
     var scale by remember {mutableFloatStateOf(1f)}
     var pan by remember {mutableStateOf(Offset.Zero)}
     var size by remember {mutableStateOf(IntSize.Zero)}
@@ -177,8 +179,9 @@ internal fun previewError(error:Throwable?)=when((error as? RemoteFileException)
     val alive=remember {java.util.concurrent.atomic.AtomicBoolean(true)}
     DisposableEffect(Unit) {onDispose {alive.set(false);owned.getAndSet(null)?.recycle()}}
     LaunchedEffect(document.url) {
+        withContext(Dispatchers.Main.immediate) {
         try {
-            bitmap=withContext(Dispatchers.IO) {
+            val loaded=withContext(Dispatchers.IO) {
                 val options=BitmapFactory.Options().apply {inJustDecodeBounds=true}
                 BitmapFactory.decodeFile(document.file.path,options)
                 if(options.outWidth<=0 || options.outHeight<=0 || options.outWidth>32768 || options.outHeight>32768 || options.outWidth.toLong()*options.outHeight>100_000_000L)
@@ -186,7 +189,6 @@ internal fun previewError(error:Throwable?)=when((error as? RemoteFileException)
                 var sample=1
                 val budget=minOf(8_000_000L,Runtime.getRuntime().maxMemory()/32)
                 while(options.outWidth.toLong()*options.outHeight/(sample.toLong()*sample)>budget) sample*=2
-                sampled=sample>1
                 val decoded=BitmapFactory.decodeFile(document.file.path,BitmapFactory.Options().apply {inSampleSize=sample})
                     ?: throw RemoteFileException(FileProblem.UNSUPPORTED)
                 val matrix=android.graphics.Matrix()
@@ -205,7 +207,9 @@ internal fun previewError(error:Throwable?)=when((error as? RemoteFileException)
                 if(!alive.get()) {owned.getAndSet(null)?.recycle();throw CancellationException()}
                 image
             }
+            bitmap=loaded
         } catch(e:CancellationException) {throw e} catch(_:Exception) {failed=true}
+        }
     }
     fun bounded(offset:Offset):Offset {
         val image=bitmap ?: return Offset.Zero
@@ -222,7 +226,5 @@ internal fun previewError(error:Throwable?)=when((error as? RemoteFileException)
                 .graphicsLayer {scaleX=scale;scaleY=scale;translationX=pan.x;translationY=pan.y}) }
         if(failed) Text(stringResource(R.string.preview_unsupported))
         else if(bitmap==null) CircularProgressIndicator()
-        if(sampled) Text(stringResource(R.string.preview_image_sampled),Modifier.align(Alignment.BottomCenter).padding(12.dp),
-            style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

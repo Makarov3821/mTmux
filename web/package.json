@@ -5,7 +5,8 @@
   "scripts": {
     "bundle": "node bundle.mjs",
     "test": "node --test *.test.mjs",
-    "test:browser": "node browser-check.mjs"
+    "test:browser": "node browser-check.mjs && node preview-browser-check.mjs",
+    "test:preview": "node preview-browser-check.mjs"
   },
   "dependencies": {
     "@xterm/addon-fit": "0.10.0",

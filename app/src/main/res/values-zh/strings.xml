@@ -543,4 +543,12 @@
     <string name="preview_external_open">用浏览器打开</string>
     <string name="preview_copy_path">复制路径</string>
     <string name="preview_static">静态预览 · 已禁用脚本和互联网资源</string>
+    <string name="settings_preview">文件预览</string>
+    <string name="preview_file_limit">图片或文本单文件上限</string>
+    <string name="preview_cache_limit">文档预览缓存上限</string>
+    <string name="preview_limit_range">请输入 1～%1$d 的整数。</string>
+    <string name="preview_cache_below_file">缓存上限不能小于单文件上限。</string>
+    <string name="preview_image_retry">点击重试图片</string>
+    <string name="preview_image_failed">图片加载失败</string>
+    <string name="preview_image_limit">图片过大</string>
 </resources>
