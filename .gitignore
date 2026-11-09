@@ -65,3 +65,6 @@ __pycache__/
 !/docs/screenshots/README.md
 /app/src/androidTestVoice/assets/ui-catalog/*.png
 /docs/plan-ui/png/
+
+# Local iOS migration research (not for source submission).
+/docs/local-plans/ios-migration-plan.md
