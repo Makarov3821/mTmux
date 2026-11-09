@@ -13,8 +13,8 @@ android {
         applicationId = "dev.mtmux"
         minSdk = 26
         targetSdk = 36
-        versionCode = 45
-        versionName = "0.9.4"
+        versionCode = 46
+        versionName = "0.9.5"
         buildConfigField("String", "DISTRIBUTION_CHANNEL", "\"$distributionChannel\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
