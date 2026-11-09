@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-"""Disposable OpenSSH fixture on loopback; no user authorized_keys/config is modified."""
 import os
 import argparse
 import base64
@@ -15,7 +13,7 @@ import time
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description="Disposable OpenSSH fixture on loopback")
     parser.add_argument("--android", action="store_true", help="Run Android UI + shell tests on an attached test device/emulator")
     parser.add_argument("--test-class", help="Optional Android instrumentation class or class#method filter")
     parser.add_argument("--core-test", action="append", help="Optional Gradle --tests filter for the loopback JVM fixture")
@@ -79,7 +77,7 @@ bind -n WheelDownPane {
                         "printf 'BEFORE_ATTACH_HISTORY\\n'; i=0; while [ $i -lt 160 ]; do printf 'history-%03d\\n' \"$i\"; i=$((i+1)); done; exec sleep 300"], check=True)
         if options.android:
             shell = folder / "fixture-shell"
-            shell.write_text('#!/bin/sh\nif [ -n "$SSH_ORIGINAL_COMMAND" ]; then exec /bin/sh -c "$SSH_ORIGINAL_COMMAND"; fi\n' + "cd /tmp\nprintf '\\033[32mMTMUX_SSH_WELCOME\\033[0m\\n'\nexport PS1='mtmux-test$ '\nexec /bin/sh -i\n")
+            shell.write_text('#!/bin/sh\nif [ -n "$SSH_ORIGINAL_COMMAND" ]; then exec /bin/sh -c "$SSH_ORIGINAL_COMMAND"; fi\n' + "cd " + shlex.quote(str(folder)) + "\nprintf '\\033[32mMTMUX_SSH_WELCOME\\033[0m\\n'\nexport PS1='mtmux-test$ '\nexec /bin/sh -i\n")
             shell.chmod(0o700)
             with config.open("a") as configuration:
                 configuration.write(f"ForceCommand {shell}\n")
