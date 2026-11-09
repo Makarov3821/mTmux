@@ -211,7 +211,7 @@ npm --prefix web run test:browser
 
 本机 localhost HTTP 被拒绝时，可用 `TERMINAL_TEST_FILE=1 npm --prefix web run test:browser` 作为补充，并明确记录为桌面 file origin；不能替代 CI 默认 HTTP 路径或 Android WebView 验证。Node、桌面浏览器、真实 WebView、原生输入组件和离线截图的结果分别列出。
 
-两个 Release APK 还要验证模型/runtime 固定输入、standard 无语音负载及录音权限、voice 有正确模型与 ABI、包名/版本一致、签名证书、体积和 16 KiB 对齐；CI 中已有这些检查。后续文件预览的 SFTP 测试不能直接沿用当前 SSH fixture 宣称已覆盖：该 fixture 尚未配置 SFTP subsystem，必须另补集成环境。
+两个 Release APK 需要验证模型/runtime 固定输入、standard 的负载与权限、voice 的模型与 ABI、包名/版本一致、签名证书、体积和 16 KiB 对齐；CI 中已有这些检查。当前 SSH fixture 已配置 SFTP subsystem，文件预览测试仍需逐项核对实际执行的读取、取消和缓存场景。
 
 ### 5.5 基线结论和偶发失败的表述
 

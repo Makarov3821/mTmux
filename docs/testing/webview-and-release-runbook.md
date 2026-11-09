@@ -109,7 +109,7 @@ python3 scripts/test_ssh.py --android --android-variant standard \
   --test-class 'dev.mtmux.TerminalUiTest#directTypingAndEditedPasteUseRemoteInputWithoutAutomaticSubmit'
 ```
 
-脚本自动启动临时 loopback sshd、生成临时密钥、使用专用 tmux socket 并 adb reverse；不改用户 authorized_keys 或现有 tmux。直接跑 Gradle 而没带 fixture 参数，一些用例会 assume/skip，必须查看 skipped 数量。此 fixture 目前没有配置 SFTP subsystem，不能原样作为未来文件预览下载集成测试，后续应在隔离 fixture 中补上。
+脚本自动启动临时 loopback sshd、生成临时密钥、使用专用 tmux socket 并 adb reverse。sshd 已配置 SFTP subsystem，可供远端文件预览集成用例使用。直接运行 Gradle 时需要提供 fixture 参数，并核对每项测试实际执行结果与 skipped 数量。
 
 ### 如何判断和复测
 
