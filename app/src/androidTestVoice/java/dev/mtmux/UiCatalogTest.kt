@@ -198,7 +198,11 @@ open class UiCatalogTest {
         require(BuildConfig.DEBUG && android.os.Build.HARDWARE in listOf("ranchu","goldfish")) {"Use a dedicated debug emulator"}
         require(store.all().all {it.id.startsWith("catalog-")}) {"Refusing to replace non-catalog server profiles"}
         try {
-            if(terminalRoot) {captureTerminal();return}
+            if(terminalRoot) {
+                if(args.getString("catalogGroup")=="key-order") captureKeyOrder() else captureTerminal()
+                return
+            }
+            if(args.getString("catalogGroup")=="about") { captureAbout(); return }
             if(selected("home")) captureHome()
             if(args.getString("catalogSmoke")=="true") return
             if(selected("server")) captureServer()
@@ -302,6 +306,20 @@ open class UiCatalogTest {
         compose.onNodeWithTag("privacy-display").performScrollTo();shot("settings","03-privacy-voice","设置：隐私与本地语音",source="AppSettings.kt / VoiceIntegration.kt")
         compose.onNodeWithTag("export-debug-log").performScrollTo();shot("settings","04-logs","设置：诊断日志导出与清除",source="DebugLogSettings.kt")
         dark=false;settings();shot("settings","05-light","设置：浅色主题",source="AppSettings.kt");dark=true
+    }
+
+    private fun captureAbout() {
+        home()
+        for (light in listOf(false, true)) {
+            dark=!light
+            settings()
+            compose.onNodeWithTag("app-issues-link").performScrollTo().assertIsDisplayed().assertHasClickAction()
+            compose.onNode(hasScrollAction() and hasAnyDescendant(hasTestTag("app-issues-link")))
+                .performSemanticsAction(SemanticsActions.ScrollBy) {it(0f,1000f)}
+            compose.onNodeWithTag("app-version").assertTextEquals(BuildConfig.VERSION_NAME)
+            compose.onNodeWithTag("app-install-source").assertTextEquals(if(BuildConfig.DISTRIBUTION_CHANNEL=="play") "Google Play" else "GitHub")
+            shot("about","${if(light) "light" else "dark"}","设置：当前版本、安装来源与项目链接",source="AppSettings.kt / AppAboutSettings.kt")
+        }
     }
 
     private fun captureExtras() {
@@ -539,12 +557,22 @@ open class UiCatalogTest {
         syncTerminalFixture()
         compose.waitForIdle()
     }
+    private fun captureKeyOrder() {
+        seed()
+        mainTerminal()
+        for (visual in listOf(2,3)) {
+            compose.onNodeWithTag("terminal-key-pages").performSemanticsAction(SemanticsActions.ScrollToIndex) {it(TERMINAL_KEY_PAGER_START-visual)}
+            compose.onNodeWithTag("terminal-key-${if(visual==2) "F1" else "F7"}").assertIsDisplayed()
+            shot("key-order","page-${visual+1}","终端：第 ${visual+1} 组 ${if(visual==2) "F1–F6" else "F7–F12"}",
+                kind="terminal-render-fixture",source="MainActivity.kt / TerminalKeys.kt",notes="原生快捷键为当前实现；终端正文为图集演示输出，无远端连接。")
+        }
+    }
     private fun captureTerminal() {
         seed()
         mainTerminal();shot("terminal","01-agent","终端：Agent 界面与直接输入","production-ui","MainActivity.kt / TerminalView.kt","真实终端组件与演示输出；无远端连接。")
         for(i in 1..3) {
             compose.onNodeWithTag("terminal-key-pages").performSemanticsAction(SemanticsActions.ScrollToIndex) {it(TERMINAL_KEY_PAGER_START+i)}
-            shot("terminal","keys-$i",listOf("F1–F6 快捷键","F7–F12 快捷键","Ctrl / Shift / Alt 与编辑键")[i-1],source="TerminalKeys.kt")
+            shot("terminal","keys-$i",listOf("F7–F12 快捷键","F1–F6 快捷键","Ctrl / Shift / Alt 与编辑键")[i-1],source="TerminalKeys.kt")
         }
         compose.mainClock.autoAdvance=false
         click("terminal-key-Ctrl");compose.mainClock.advanceTimeBy(500);click("terminal-key-Shift")

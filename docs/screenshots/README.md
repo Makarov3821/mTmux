@@ -4,6 +4,8 @@
 
 当前图集：`docs/screenshots/current/index.html`。包含主页、服务器配置、设置、终端与输入、语音状态、验证弹窗及 tmux Doctor。生产组件固定状态和离线 xterm 合成图逐张标注，不作为真实 SSH、录音或 Android WebView 验证。
 
+设置“关于”与 F 键顺序专项图集：`docs/screenshots/about-and-keys/index.html`，包含深浅色卡片和第三、四组快捷键。由当前生产原生组件采集；终端正文沿用演示图，不代表远端连接。采集时分别向下面第 3 步传入 `-e catalogGroup about -e class dev.mtmux.UiCatalogTest#captureCatalog` 和 `-e catalogGroup key-order -e class dev.mtmux.UiTerminalCatalogTest#captureCatalog`。
+
 复现流程：
 
 1. 在 `web/` 执行 `node render-catalog-terminal.mjs`。
