@@ -836,18 +836,20 @@ class TerminalUiTest {
                 assertTrue(bounds.zipWithNext().all {(a,b) -> b.left>=a.right-1})
             }
             verifyWidth(listOf("Esc","Tab","Ctrl-C","↑","↓","Enter"))
-            compose.onNodeWithTag("terminal-key-pages").performTouchInput {swipeRight()}
+            compose.onNodeWithTag("terminal-key-pages").performTouchInput {swipeLeft()}
+            compose.onNodeWithTag("terminal-key-Ctrl").assertIsDisplayed()
+            compose.onNodeWithTag("terminal-key-pages").performTouchInput {swipeLeft()}
             verifyWidth((1..6).map {"F$it"})
             saveScreenshot("terminal-keys-f1-f6")
             (1..6).forEach {compose.onNodeWithTag("terminal-key-F$it").performClick()}
-            compose.onNodeWithTag("terminal-key-pages").performTouchInput {swipeRight()}
+            compose.onNodeWithTag("terminal-key-pages").performTouchInput {swipeLeft()}
             verifyWidth((7..12).map {"F$it"})
             saveScreenshot("terminal-keys-f7-f12")
             (7..12).forEach {compose.onNodeWithTag("terminal-key-F$it").performClick()}
             val expected="1b4f501b4f511b4f521b4f531b5b31357e1b5b31377e1b5b31387e1b5b31397e1b5b32307e1b5b32317e1b5b32337e1b5b32347e"
             compose.waitUntil(15000) {controller.exec(dev.mtmux.core.Tmux.history(binding.pane,path)).output.replace("\n","").replace("\r","").contains("KEY_BYTES="+expected)}
             draftNode().assertTextContains("UNSENT_FUNCTION_DRAFT");closeEditor()
-            compose.onNodeWithTag("terminal-key-pages").performTouchInput {swipeLeft()}
+            compose.onNodeWithTag("terminal-key-pages").performTouchInput {swipeRight()}
             compose.onNodeWithTag("terminal-key-F1").assertIsDisplayed()
             disconnectFixture()
             compose.onNodeWithTag("terminal-key-F1").assertIsNotEnabled()

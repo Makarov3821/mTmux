@@ -32,8 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 
 private val keyPages = listOf(
     listOf("Esc" to "Escape", "Tab" to "Tab", "Ctrl-C" to "Ctrl-C", "↑" to "ArrowUp", "↓" to "ArrowDown", "Enter" to "Enter"),
-    (1..6).map { "F$it" to "F$it" },
     (7..12).map { "F$it" to "F$it" },
+    (1..6).map { "F$it" to "F$it" },
     listOf("Ctrl" to "Ctrl", "Shift" to "Shift", "Alt" to "Alt", "←" to "ArrowLeft", "→" to "ArrowRight", "⌫" to "Backspace")
 )
 
