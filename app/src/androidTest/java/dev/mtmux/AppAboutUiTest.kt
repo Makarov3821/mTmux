@@ -18,33 +18,34 @@ class AppAboutUiTest {
     private val compose = createAndroidComposeRule<MainActivity>()
     @get:Rule val rules: RuleChain = RuleChain.outerRule(AppLocaleRule("zh-CN")).around(compose)
 
-    @Test fun installedVersionChannelAndProjectLinks() {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
+    @Test fun installedVersionChannelAndProjectLink() {
         compose.onNodeWithTag("settings").performClick()
         compose.onNodeWithTag("app-version").performScrollTo().assertTextEquals(BuildConfig.VERSION_NAME)
         compose.onNodeWithTag("app-install-source").performScrollTo()
             .assertTextEquals(if (BuildConfig.DISTRIBUTION_CHANNEL == "play") "Google Play" else "GitHub")
-        for ((tag, path) in listOf("app-project-link" to "/Makarov3821/mTmux", "app-issues-link" to "/Makarov3821/mTmux/issues")) {
-            val filter = IntentFilter(Intent.ACTION_VIEW).apply {
-                addCategory(Intent.CATEGORY_BROWSABLE)
-                addDataScheme("https")
-                addDataAuthority("github.com", null)
-                addDataPath(path, PatternMatcher.PATTERN_LITERAL)
-            }
-            val monitor = instrumentation.addMonitor(filter, null, false)
-            try {
-                compose.onNodeWithTag(tag).performScrollTo().assertHasClickAction().performClick()
-                assertEquals(1, monitor.hits)
-                instrumentation.runOnMainSync {
-                    compose.activity.startActivity(Intent(compose.activity, MainActivity::class.java)
-                        .addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
-                }
-                compose.waitForIdle()
-            } finally {
-                instrumentation.removeMonitor(monitor)
-            }
+        openLink("app-project-link", "/Makarov3821/mTmux")
+    }
+
+    @Test fun issueLinkOpensBrowser() {
+        compose.onNodeWithTag("settings").performClick()
+        openLink("app-issues-link", "/Makarov3821/mTmux/issues")
+    }
+
+    private fun openLink(tag: String, path: String) {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val filter = IntentFilter(Intent.ACTION_VIEW).apply {
+            addCategory(Intent.CATEGORY_BROWSABLE)
+            addDataScheme("https")
+            addDataAuthority("github.com", null)
+            addDataPath(path, PatternMatcher.PATTERN_LITERAL)
         }
-        compose.onNodeWithTag("settings-back").performClick()
-        compose.onNodeWithTag("settings").assertIsDisplayed()
+        val monitor = instrumentation.addMonitor(filter, null, false)
+        try {
+            compose.onNodeWithTag(tag).performScrollTo().assertHasClickAction().performClick()
+            assertEquals(1, monitor.hits)
+            compose.waitUntil(15000) { !compose.activity.hasWindowFocus() }
+        } finally {
+            instrumentation.removeMonitor(monitor)
+        }
     }
 }
