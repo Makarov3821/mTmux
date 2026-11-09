@@ -187,6 +187,12 @@
     <string name="task_state_running">running</string>
     <string name="task_state_completed">turn finished or ready</string>
     <string name="settings_title">Settings</string>
+    <string name="settings_about">About mTmux</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_install_source">Installation source</string>
+    <string name="settings_project_feedback">Project and feedback</string>
+    <string name="settings_project">Project repository</string>
+    <string name="settings_issues">Report an issue</string>
     <string name="settings_appearance">Appearance</string>
     <string name="settings_ssh_retention">SSH connection retention</string>
     <string name="ssh_retention_none">None</string>

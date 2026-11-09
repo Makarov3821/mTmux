@@ -184,6 +184,12 @@
     <string name="task_state_running">正在运行</string>
     <string name="task_state_completed">本轮结束或已就绪</string>
     <string name="settings_title">设置</string>
+    <string name="settings_about">关于 mTmux</string>
+    <string name="settings_version">当前版本</string>
+    <string name="settings_install_source">安装来源</string>
+    <string name="settings_project_feedback">项目与反馈</string>
+    <string name="settings_project">项目地址</string>
+    <string name="settings_issues">问题反馈</string>
     <string name="settings_appearance">外观</string>
     <string name="settings_ssh_retention">SSH 连接保留</string>
     <string name="ssh_retention_none">无</string>

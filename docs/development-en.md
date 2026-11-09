@@ -28,6 +28,8 @@ Connections use JSch, terminal rendering uses xterm.js, and Markdown and static 
 
 ## Building both variants
 
+Settings displays the package's distribution channel and reads the version from `BuildConfig.VERSION_NAME`. The default channel is GitHub. Google Play builds use `-Pmtmux.distributionChannel=play`; this applies to both standard and voice.
+
 Build the standard debug APK:
 
 ```bash

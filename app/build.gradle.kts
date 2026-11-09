@@ -7,12 +7,15 @@ android {
     namespace = "dev.mtmux"
     ndkVersion = "28.2.13676358"
     compileSdk = 36
+    val distributionChannel = providers.gradleProperty("mtmux.distributionChannel").orElse("github").get()
+    require(distributionChannel in setOf("github", "play")) { "Unsupported mtmux.distributionChannel: $distributionChannel" }
     defaultConfig {
         applicationId = "dev.mtmux"
         minSdk = 26
         targetSdk = 36
         versionCode = 45
         versionName = "0.9.4"
+        buildConfigField("String", "DISTRIBUTION_CHANNEL", "\"$distributionChannel\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     // Release signing comes only from environment variables (CI secrets or

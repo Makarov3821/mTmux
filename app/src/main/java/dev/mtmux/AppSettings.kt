@@ -54,6 +54,7 @@ import dev.mtmux.core.WarmConnectionPool
                 SettingRow(stringResource(R.string.settings_privacy_display),icon=UiSymbol.EYE) { Switch(privacy,onPrivacy,modifier=Modifier.testTag("privacy-display")) }
             }
             BentoCard(title=stringResource(R.string.log_title)) { DebugLogSettings() }
+            AppAboutSettings()
             Spacer(Modifier.height(24.dp))
         }
     }

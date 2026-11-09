@@ -26,6 +26,8 @@ printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
 
 ## 构建两种版本
 
+设置页的“安装来源”展示安装包的发布渠道，版本读取 `BuildConfig.VERSION_NAME`。默认渠道为 GitHub；Google Play 构建使用 `-Pmtmux.distributionChannel=play`，此参数适用于 standard 与 voice。
+
 standard 调试版：
 
 ```bash
